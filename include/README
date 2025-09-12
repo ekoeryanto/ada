@@ -1,0 +1,19 @@
+
+This directory contains header files for the 0x3 ESP Project.
+
+Header files included:
+- config.h: Project configuration constants and settings
+- system_manager.h: System management and status handling
+- wifi_manager.h: WiFi connection and configuration management
+- web_server.h: Web server and API endpoint handling  
+- ota_handler.h: Over-the-air update functionality
+
+Each header file defines the interface for its corresponding implementation
+in the src/ directory. This modular approach ensures clean separation of
+concerns and maintainable code structure.
+
+The config.h file contains all project-wide constants that can be easily
+modified to customize the behavior of the system without changing the
+core implementation code.
+
+For more information about the 0x3 ESP Project, see the main README.md file.
