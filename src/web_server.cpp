@@ -1,6 +1,8 @@
 #include "web_server.h"
 #include "ota_handler.h"
 #include "system_manager.h"
+#include "sd_manager.h"
+#include "ntp_manager.h"
 
 // Global instance
 WebServerHandler webServer;
@@ -50,6 +52,26 @@ void WebServerHandler::setupRoutes() {
         doc["ota"]["status"] = otaHandler.getStatus();
         doc["ota"]["url"] = otaHandler.getUpdateURL();
         
+        // SD card status
+        doc["sd"]["mounted"] = sdMgr.isMounted();
+        if (sdMgr.isMounted()) {
+            // Safely get SD card info with timeout protection
+            try {
+                doc["sd"]["total_mb"] = sdMgr.getTotalBytes() / (1024 * 1024);
+                doc["sd"]["used_mb"] = sdMgr.getUsedBytes() / (1024 * 1024);
+                doc["sd"]["card_type"] = sdMgr.getCardType();
+            } catch (...) {
+                doc["sd"]["error"] = "Unable to read card info";
+            }
+        }
+        
+        // NTP/Time status
+        doc["ntp"]["initialized"] = ntpMgr.isInitialized();
+        doc["ntp"]["synced"] = ntpMgr.isSynced();
+        doc["ntp"]["last_sync"] = ntpMgr.getLastSyncTime();
+        doc["ntp"]["current_time"] = ntpMgr.getCurrentTimeString();
+        doc["ntp"]["rtc_available"] = ntpMgr.isRTCAvailable();
+        
         String response;
         serializeJson(doc, response);
         request->send(200, "application/json", response);
@@ -79,6 +101,52 @@ void WebServerHandler::setupRoutes() {
         delay(1000);
         wifiMgr.resetWiFiSettings();
         systemMgr.restart();
+    });
+    
+    // SD Card API endpoints
+    server.on("/api/sd/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        DynamicJsonDocument doc(512);
+        doc["mounted"] = sdMgr.isMounted();
+        doc["total_bytes"] = sdMgr.getTotalBytes();
+        doc["used_bytes"] = sdMgr.getUsedBytes();
+        doc["card_type"] = sdMgr.getCardType();
+        doc["card_size"] = sdMgr.getCardSize();
+        
+        String json;
+        serializeJson(doc, json);
+        request->send(200, "application/json", json);
+    });
+    
+    server.on("/api/sd/test", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        bool testResult = sdMgr.runSelfTest();
+        DynamicJsonDocument doc(256);
+        doc["test_passed"] = testResult;
+        doc["message"] = testResult ? "SD card test passed" : "SD card test failed";
+        
+        String json;
+        serializeJson(doc, json);
+        request->send(200, "application/json", json);
+    });
+    
+    server.on("/api/sd/files", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        String path = "/";
+        if (request->hasParam("path")) {
+            path = request->getParam("path")->value();
+        }
+        
+        std::vector<String> files = sdMgr.listDirectory(path);
+        DynamicJsonDocument doc(2048);
+        JsonArray fileArray = doc.createNestedArray("files");
+        
+        for (const String& file : files) {
+            fileArray.add(file);
+        }
+        doc["path"] = path;
+        doc["count"] = files.size();
+        
+        String json;
+        serializeJson(doc, json);
+        request->send(200, "application/json", json);
     });
     
     server.onNotFound([this](AsyncWebServerRequest *request) {

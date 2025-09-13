@@ -29,6 +29,8 @@
 #include "wifi_manager.h"
 #include "web_server.h"
 #include "ota_handler.h"
+#include "sd_manager.h"
+#include "ntp_manager.h"
 
 // Global variables for timing
 unsigned long lastStatusUpdate = 0;
@@ -40,6 +42,22 @@ void setup() {
     systemMgr.setStatus(SYSTEM_INITIALIZING);
     
     Serial.println("[Main] Starting 0x3 ESP Project...");
+    
+    // Initialize SD Manager early
+    Serial.println("[Main] Initializing SD Manager...");
+    if (sdMgr.initialize()) {
+        Serial.println("[Main] SD Manager initialized successfully");
+        
+        // Run SD card self-test
+        Serial.println("[Main] Running SD card self-test...");
+        if (sdMgr.runSelfTest()) {
+            Serial.println("[Main] SD card self-test passed!");
+        } else {
+            Serial.println("[Main] SD card self-test failed - continuing without SD");
+        }
+    } else {
+        Serial.println("[Main] SD Manager initialization failed - continuing without SD");
+    }
     
     // Initialize WiFi Manager
     if (!wifiMgr.initialize()) {
@@ -53,6 +71,14 @@ void setup() {
     if (wifiMgr.autoConnect()) {
         Serial.println("[Main] WiFi connected successfully!");
         systemMgr.setStatus(SYSTEM_WIFI_CONNECTED);
+        
+        // Initialize NTP Manager after WiFi connection
+        Serial.println("[Main] Initializing NTP Manager...");
+        if (ntpMgr.initialize()) {
+            Serial.println("[Main] NTP Manager initialized successfully");
+        } else {
+            Serial.println("[Main] NTP Manager initialization deferred - will retry when WiFi is stable");
+        }
         
         // Initialize web server
         if (!webServer.initialize()) {
@@ -98,6 +124,12 @@ void setup() {
 void loop() {
     // System manager loop (handles LED status updates)
     systemMgr.loop();
+    
+    // Handle SD Manager (hot-plug detection, etc.)
+    sdMgr.handle();
+    
+    // Handle NTP Manager (time synchronization)
+    ntpMgr.handle();
     
     // Handle WiFi connection monitoring
     if (millis() - lastWiFiCheck > 5000) { // Check every 5 seconds
