@@ -5,6 +5,7 @@
 #include <ElegantOTA.h>
 #include <WiFi.h>
 #include <Update.h>
+#include <ArduinoOTA.h>
 
 #include "config.h"
 
