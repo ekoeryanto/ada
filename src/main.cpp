@@ -34,6 +34,7 @@
 #include "analog_voltage_manager.h"
 #include "analytics_manager.h"
 #include "remote_diagnostics.h"
+#include "webhook_handler.h"
 
 // Global variables for timing
 unsigned long lastStatusUpdate = 0;
@@ -44,28 +45,28 @@ void setup() {
     systemMgr.initialize();
     systemMgr.setStatus(SYSTEM_INITIALIZING);
     
-    Serial.println("[Main] Starting 0x3 ESP Project...");
+    // Serial.println("[Main] Starting 0x3 ESP Project...");
     
     // Initialize SD Manager early
-    Serial.println("[Main] Initializing SD Manager...");
+    // Serial.println("[Main] Initializing SD Manager...");
     if (sdMgr.initialize()) {
-        Serial.println("[Main] SD Manager initialized successfully");
+        // Serial.println("[Main] SD Manager initialized successfully");
         
         // Run SD card self-test
-        Serial.println("[Main] Running SD card self-test...");
+        // Serial.println("[Main] Running SD card self-test...");
         if (sdMgr.runSelfTest()) {
-            Serial.println("[Main] SD card self-test passed!");
+            // Serial.println("[Main] SD card self-test passed!");
         } else {
-            Serial.println("[Main] SD card self-test failed - continuing without SD");
+            // Serial.println("[Main] SD card self-test failed - continuing without SD");
         }
     } else {
-        Serial.println("[Main] SD Manager initialization failed - continuing without SD");
+        // Serial.println("[Main] SD Manager initialization failed - continuing without SD");
     }
     
     // Initialize Analog Voltage Manager
-    Serial.println("[Main] Initializing Analog Voltage Manager...");
+    // Serial.println("[Main] Initializing Analog Voltage Manager...");
     if (analogVoltageMgr.begin()) {
-        Serial.println("[Main] Analog Voltage Manager initialized successfully");
+        // Serial.println("[Main] Analog Voltage Manager initialized successfully");
         
         // Configure sensors for different applications
         analogVoltageMgr.configureSensor(0, "Pressure Tank 1", "bar", 0.0, 10.0, 2.0, 8.0);
@@ -98,10 +99,10 @@ void setup() {
         analogVoltageMgr.setSmoothingFactor(2, 0.1);  // Very smooth for temperature
         analogVoltageMgr.enableOutlierDetection(2, true, 10.0);  // 10% outlier threshold for stable temp
         
-        Serial.println("[Main] Advanced filtering configured:");
-        Serial.println("[Main] - Pressure: EMA α=0.2, Outlier=15%");
-        Serial.println("[Main] - Flow: EMA α=0.4, Outlier=25%");
-        Serial.println("[Main] - Temperature: EMA α=0.1, Outlier=10%");
+        // Serial.println("[Main] Advanced filtering configured:");
+        // Serial.println("[Main] - Pressure: EMA α=0.2, Outlier=15%");
+        // Serial.println("[Main] - Flow: EMA α=0.4, Outlier=25%");
+        // Serial.println("[Main] - Temperature: EMA α=0.1, Outlier=10%");
         
         // Set reading interval to 2 seconds
         analogVoltageMgr.setReadInterval(2000);
@@ -112,11 +113,11 @@ void setup() {
         // Enable data logging if SD card is available
         analogVoltageMgr.enableLogging(sdMgr.isMounted());
         
-        Serial.println("[Main] Analog voltage sensors configured:");
-        Serial.println("[Main] - Sensor 0: Pressure Tank 1 (AI1) - 0-10 bar [PRESS_TK1_001]");
-        Serial.println("[Main] - Sensor 1: Flow Sensor (AI2) - 0-100 L/min [FLOW_LINE1_002]");
-        Serial.println("[Main] - Sensor 2: Temperature (AI3) - 0-100 °C [TEMP_AMB_003]");
-        Serial.println("[Main] - All sensors have enhanced identity and alarm configuration");
+        // Serial.println("[Main] Analog voltage sensors configured:");
+        // Serial.println("[Main] - Sensor 0: Pressure Tank 1 (AI1) - 0-10 bar [PRESS_TK1_001]");
+        // Serial.println("[Main] - Sensor 1: Flow Sensor (AI2) - 0-100 L/min [FLOW_LINE1_002]");
+        // Serial.println("[Main] - Sensor 2: Temperature (AI3) - 0-100 °C [TEMP_AMB_003]");
+        // Serial.println("[Main] - All sensors have enhanced identity and alarm configuration");
     } else {
         Serial.println("[Main] Analog Voltage Manager initialization failed!");
     }
@@ -129,17 +130,17 @@ void setup() {
     }
     
     // Attempt WiFi connection
-    Serial.println("[Main] Attempting WiFi connection...");
+    // Serial.println("[Main] Attempting WiFi connection...");
     if (wifiMgr.autoConnect()) {
-        Serial.println("[Main] WiFi connected successfully!");
+        // Serial.println("[Main] WiFi connected successfully!");
         systemMgr.setStatus(SYSTEM_WIFI_CONNECTED);
         
         // Initialize NTP Manager after WiFi connection
-        Serial.println("[Main] Initializing NTP Manager...");
+        // Serial.println("[Main] Initializing NTP Manager...");
         if (ntpMgr.initialize()) {
-            Serial.println("[Main] NTP Manager initialized successfully");
+            // Serial.println("[Main] NTP Manager initialized successfully");
         } else {
-            Serial.println("[Main] NTP Manager initialization deferred - will retry when WiFi is stable");
+            // Serial.println("[Main] NTP Manager initialization deferred - will retry when WiFi is stable");
         }
         
         // Initialize web server
@@ -156,13 +157,13 @@ void setup() {
         if (!otaHandler.initialize(webServer.getServer())) {  // Uses AsyncWebServer
             Serial.println("[Main] Failed to initialize OTA handler!");
         } else {
-            Serial.println("[Main] OTA handler initialized successfully");
+            // Serial.println("[Main] OTA handler initialized successfully");
         }
         
         systemMgr.setStatus(SYSTEM_RUNNING);
-        Serial.println("[Main] System initialization complete!");
-        Serial.printf("[Main] Web interface: http://%s\n", WiFi.localIP().toString().c_str());
-        Serial.printf("[Main] OTA updates: %s\n", otaHandler.getUpdateURL().c_str());
+        // Serial.println("[Main] System initialization complete!");
+        // Serial.printf("[Main] Web interface: http://%s\n", WiFi.localIP().toString().c_str());
+        // Serial.printf("[Main] OTA updates: %s\n", otaHandler.getUpdateURL().c_str());
         
     } else {
         Serial.println("[Main] WiFi connection failed!");
@@ -216,6 +217,20 @@ void setup() {
         Serial.println("[Main] Remote Diagnostics initialization failed!");
     }
     
+    // Initialize Webhook Handler
+    Serial.println("[Main] Initializing Webhook Handler...");
+    if (webhookHandler.begin()) {
+        Serial.println("[Main] Webhook Handler initialized successfully");
+        
+        // Add default webhook configuration (can be configured via API)
+        // String webhookId = webhookHandler.addWebhook("http://your-server.com/webhook", "your-secret");
+        // Serial.printf("[Main] Default webhook added: %s\n", webhookId.c_str());
+        
+        Serial.println("[Main] Webhook handler ready for configuration via API");
+    } else {
+        Serial.println("[Main] Webhook Handler initialization failed!");
+    }
+    
     Serial.println("[Main] Setup completed");
 }
 
@@ -238,6 +253,9 @@ void loop() {
     // Handle Remote Diagnostics (system health monitoring)
     remoteDiag.handle();
     
+    // Handle Webhook Handler (outbound data reporting)
+    webhookHandler.handle();
+    
     // Feed sensor data to analytics
     static unsigned long lastAnalyticsUpdate = 0;
     if (millis() - lastAnalyticsUpdate > 5000) {  // Every 5 seconds
@@ -250,6 +268,26 @@ void loop() {
             }
         }
         lastAnalyticsUpdate = millis();
+    }
+    
+    // Send periodic sensor data via webhooks
+    static unsigned long lastWebhookUpdate = 0;
+    if (millis() - lastWebhookUpdate > 30000) {  // Every 30 seconds
+        for (int i = 0; i < 3; i++) {
+            if (analogVoltageMgr.isSensorEnabled(i)) {
+                AnalogReading reading = analogVoltageMgr.getReading(i);
+                if (reading.valid) {
+                    String unit = analogVoltageMgr.getUnit(i);
+                    webhookHandler.sendSensorData(
+                        "sensor_" + String(i), 
+                        reading.scaledValue, 
+                        unit, 
+                        reading.timestamp
+                    );
+                }
+            }
+        }
+        lastWebhookUpdate = millis();
     }
     
     // Handle WiFi connection monitoring

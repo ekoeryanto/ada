@@ -28,7 +28,7 @@ bool SystemManager::initialize() {
     // Setup heartbeat
     heartbeatTicker.attach(HEARTBEAT_INTERVAL / 1000, heartbeatCallback);
     
-    Serial.println("[System] System manager initialized");
+    // Serial.println("[System] System manager initialized");
     printSystemInfo();
     
     return true;
@@ -42,7 +42,7 @@ void SystemManager::loop() {
 void SystemManager::setStatus(SystemStatus status) {
     if (currentStatus != status) {
         currentStatus = status;
-        Serial.printf("[System] Status changed to: %s\n", getStatusString().c_str());
+        // Serial.printf("[System] Status changed to: %s\n", getStatusString().c_str());
         updateStatusLED();
     }
 }
@@ -91,13 +91,13 @@ String SystemManager::getUptimeString() {
 }
 
 void SystemManager::restart() {
-    Serial.println("[System] Restarting system...");
+    // Serial.println("[System] Restarting system...");
     delay(1000);
     ESP.restart();
 }
 
 void SystemManager::factoryReset() {
-    Serial.println("[System] Performing factory reset...");
+    // Serial.println("[System] Performing factory reset...");
     
     // Reset WiFi settings
     wifiMgr.resetAllSettings();
@@ -108,7 +108,7 @@ void SystemManager::factoryReset() {
 
 void SystemManager::enableDebug(bool enable) {
     debugEnabled = enable;
-    Serial.printf("[System] Debug %s\n", enable ? "enabled" : "disabled");
+    // Serial.printf("[System] Debug %s\n", enable ? "enabled" : "disabled");
 }
 
 uint32_t SystemManager::getFreeHeap() {
@@ -224,8 +224,8 @@ void SystemManager::toggleStatusLED() {
 
 void SystemManager::heartbeatCallback() {
     if (systemMgr.debugEnabled && systemMgr.currentStatus == SYSTEM_RUNNING) {
-        Serial.printf("[System] Heartbeat - Uptime: %s, Free Heap: %u bytes\n", 
-                     systemMgr.getUptimeString().c_str(), 
-                     systemMgr.getFreeHeap());
+        // Serial.printf("[System] Heartbeat - Uptime: %s, Free Heap: %u bytes\n", 
+        //              systemMgr.getUptimeString().c_str(), 
+        //              systemMgr.getFreeHeap());
     }
 }

@@ -2,6 +2,7 @@
 #include "sd_manager.h"
 #include "ntp_manager.h"
 #include "web_server.h"
+#include "webhook_handler.h"
 
 // Global instance
 AnalogVoltageManager analogVoltageMgr;
@@ -52,9 +53,9 @@ AnalogVoltageManager::AnalogVoltageManager() :
 }
 
 bool AnalogVoltageManager::begin() {
-    if (DEBUG_ENABLED) {
-        Serial.println("[AV] Initializing Analog Voltage Manager...");
-    }
+    // if (DEBUG_ENABLED) {
+    //     // Serial.println("[AV] Initializing Analog Voltage Manager...");
+    // }
     
     // Set analog resolution
     analogReadResolution(12);  // 12-bit resolution (0-4095)
@@ -69,10 +70,10 @@ bool AnalogVoltageManager::begin() {
     initialized = true;
     lastReadTime = millis();
     
-    if (DEBUG_ENABLED) {
-        Serial.println("[AV] Analog Voltage Manager initialized successfully");
-        Serial.printf("[AV] Configured sensors: AI1 (GPIO35), AI2 (GPIO34), AI3 (GPIO36)\n");
-    }
+    // if (DEBUG_ENABLED) {
+    //     // Serial.println("[AV] Analog Voltage Manager initialized successfully");
+    //     // Serial.printf("[AV] Configured sensors: AI1 (GPIO35), AI2 (GPIO34), AI3 (GPIO36)\n");
+    // }
     
     return true;
 }
@@ -92,10 +93,10 @@ void AnalogVoltageManager::configureSensor(int sensorIndex, const String& locati
     // Reset filter when reconfiguring
     resetFilter(sensorIndex);
     
-    if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Sensor %d configured: %s (%.1f-%.1f %s)\n", 
-                     sensorIndex, location.c_str(), minValue, maxValue, unit.c_str());
-    }
+    // if (DEBUG_ENABLED) {
+    //     // Serial.printf("[AV] Sensor %d configured: %s (%.1f-%.1f %s)\n", 
+    //                  sensorIndex, location.c_str(), minValue, maxValue, unit.c_str());
+    // }
 }
 
 void AnalogVoltageManager::setReadInterval(unsigned long interval) {
@@ -109,18 +110,18 @@ void AnalogVoltageManager::setLogInterval(unsigned long interval) {
 void AnalogVoltageManager::enableLogging(bool enable) {
     loggingEnabled = enable;
     
-    if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Data logging %s\n", enable ? "enabled" : "disabled");
-    }
+    // if (DEBUG_ENABLED) {
+    //     // Serial.printf("[AV] Data logging %s\n", enable ? "enabled" : "disabled");
+    // }
 }
 
 void AnalogVoltageManager::enableSensor(int sensorIndex, bool enable) {
     if (sensorIndex < 0 || sensorIndex >= 3) return;
     sensors[sensorIndex].enabled = enable;
     
-    if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Sensor %d %s\n", sensorIndex, enable ? "enabled" : "disabled");
-    }
+    // if (DEBUG_ENABLED) {
+    //     // Serial.printf("[AV] Sensor %d %s\n", sensorIndex, enable ? "enabled" : "disabled");
+    // }
 }
 
 void AnalogVoltageManager::handle() {
@@ -185,8 +186,8 @@ void AnalogVoltageManager::requestReading() {
             rawADC = (int)(calibratedVoltage * 4095.0 / 3.3);  // Approximate reverse conversion
             
             if (DEBUG_ENABLED && totalReadings % 50 == 0) {
-                Serial.printf("[AV] Sensor %d SIMULATED: %.2f %s (%.3fV)\n", 
-                             i, simulatedValue, sensors[i].unit.c_str(), calibratedVoltage);
+                // // Serial.printf("[AV] Sensor %d SIMULATED: %.2f %s (%.3fV)\n", 
+                //              i, simulatedValue, sensors[i].unit.c_str(), calibratedVoltage);
             }
             
         } else {
@@ -281,8 +282,8 @@ float AnalogVoltageManager::processAnalogReading(int sensorIndex, int rawADC) {
     // Apply outlier detection if enabled
     if (sensors[sensorIndex].outlierDetection && isOutlier(sensorIndex, voltage)) {
         if (DEBUG_ENABLED) {
-            Serial.printf("[AV] Outlier detected on sensor %d: %.2fV, using last valid: %.2fV\n", 
-                         sensorIndex, voltage, lastValidReading[sensorIndex]);
+            // // Serial.printf("[AV] Outlier detected on sensor %d: %.2fV, using last valid: %.2fV\n", 
+            //              sensorIndex, voltage, lastValidReading[sensorIndex]);
         }
         voltage = lastValidReading[sensorIndex]; // Use last valid reading
     } else {
@@ -377,10 +378,10 @@ void AnalogVoltageManager::updateSensorStatus(int sensorIndex) {
         errorCount[sensorIndex]++;
         
         if (DEBUG_ENABLED && errorCount[sensorIndex] % 10 == 1) {
-            Serial.printf("[AV] Sensor %d (%s) error: %s\n", 
-                         sensorIndex, 
-                         sensors[sensorIndex].location.c_str(),
-                         getStatusString(sensorIndex).c_str());
+            // // Serial.printf("[AV] Sensor %d (%s) error: %s\n", 
+            //              sensorIndex, 
+            //              sensors[sensorIndex].location.c_str(),
+            //              getStatusString(sensorIndex).c_str());
         }
     }
 }
@@ -509,8 +510,8 @@ void AnalogVoltageManager::calibrateSensor(int sensorIndex, float actualValue, f
     // This is a placeholder for more advanced calibration
     // For now, just log the calibration attempt
     if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Calibration point for sensor %d: %.1f%s = %.2fV\n", 
-                     sensorIndex, actualValue, sensors[sensorIndex].unit.c_str(), measuredVoltage);
+        // // Serial.printf("[AV] Calibration point for sensor %d: %.1f%s = %.2fV\n", 
+        //              sensorIndex, actualValue, sensors[sensorIndex].unit.c_str(), measuredVoltage);
     }
 }
 
@@ -521,7 +522,7 @@ void AnalogVoltageManager::resetErrorCounts() {
     totalReadings = 0;
     
     if (DEBUG_ENABLED) {
-        Serial.println("[AV] Error counts reset");
+        // // Serial.println("[AV] Error counts reset");
     }
 }
 
@@ -568,11 +569,11 @@ void AnalogVoltageManager::logSensorData() {
     // Log to SD card with timestamp
     if (sdMgr.logDataWithTimestamp("AV," + logEntry)) {
         if (DEBUG_ENABLED) {
-            Serial.println("[AV] Data logged: " + logEntry);
+            // // Serial.println("[AV] Data logged: " + logEntry);
         }
     } else {
         if (DEBUG_ENABLED) {
-            Serial.println("[AV] Failed to log data to SD card");
+            // // Serial.println("[AV] Failed to log data to SD card");
         }
     }
 }
@@ -586,7 +587,7 @@ void AnalogVoltageManager::setSmoothingFactor(int sensorIndex, float factor) {
     sensors[sensorIndex].smoothingFactor = factor;
     
     if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Sensor %d smoothing factor set to %.2f\n", sensorIndex, factor);
+        // // Serial.printf("[AV] Sensor %d smoothing factor set to %.2f\n", sensorIndex, factor);
     }
 }
 
@@ -600,9 +601,9 @@ void AnalogVoltageManager::enableOutlierDetection(int sensorIndex, bool enable, 
     }
     
     if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Sensor %d outlier detection %s (threshold: %.1f%%)\n", 
-                     sensorIndex, enable ? "enabled" : "disabled", 
-                     sensors[sensorIndex].outlierThreshold);
+        // // Serial.printf("[AV] Sensor %d outlier detection %s (threshold: %.1f%%)\n", 
+        //              sensorIndex, enable ? "enabled" : "disabled", 
+        //              sensors[sensorIndex].outlierThreshold);
     }
 }
 
@@ -614,7 +615,7 @@ void AnalogVoltageManager::resetFilter(int sensorIndex) {
     filterInitTime[sensorIndex] = 0;
     
     if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Filter reset for sensor %d\n", sensorIndex);
+        // Serial.printf("[AV] Filter reset for sensor %d\n", sensorIndex);
     }
 }
 
@@ -683,12 +684,12 @@ void AnalogVoltageManager::evaluateSensorHealth(int sensorIndex) {
     health.healthScore = calculateHealthScore(sensorIndex);
     
     if (DEBUG_ENABLED && (health.isDead || health.isStuck || health.hasAnomalies)) {
-        Serial.printf("[AV] Sensor %d health issue: Dead=%s, Stuck=%s, Anomalies=%s, Score=%.1f%%\n",
-                     sensorIndex, 
-                     health.isDead ? "YES" : "NO",
-                     health.isStuck ? "YES" : "NO", 
-                     health.hasAnomalies ? "YES" : "NO",
-                     health.healthScore);
+        // Serial.printf("[AV] Sensor %d health issue: Dead=%s, Stuck=%s, Anomalies=%s, Score=%.1f%%\n",
+        //              sensorIndex, 
+        //              health.isDead ? "YES" : "NO",
+        //              health.isStuck ? "YES" : "NO", 
+        //              health.hasAnomalies ? "YES" : "NO",
+        //              health.healthScore);
     }
 }
 
@@ -753,8 +754,8 @@ void AnalogVoltageManager::setCalibration(int sensorIndex, float offset, float g
     sensors[sensorIndex].calibrated = true;
     
     if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Sensor %d calibration set: offset=%.3f, gain=%.3f\n", 
-                     sensorIndex, offset, gain);
+        // Serial.printf("[AV] Sensor %d calibration set: offset=%.3f, gain=%.3f\n", 
+        //              sensorIndex, offset, gain);
     }
 }
 
@@ -766,7 +767,7 @@ void AnalogVoltageManager::resetCalibration(int sensorIndex) {
     sensors[sensorIndex].calibrated = false;
     
     if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Sensor %d calibration reset\n", sensorIndex);
+        // Serial.printf("[AV] Sensor %d calibration reset\n", sensorIndex);
     }
 }
 
@@ -823,7 +824,7 @@ void AnalogVoltageManager::resetHealthData(int sensorIndex) {
     healthData[sensorIndex] = {0.0, 0.0, 0.0, {0}, 0, 0, 0, millis(), false, false, false, 100.0};
     
     if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Health data reset for sensor %d\n", sensorIndex);
+        // Serial.printf("[AV] Health data reset for sensor %d\n", sensorIndex);
     }
 }
 
@@ -845,8 +846,8 @@ void AnalogVoltageManager::configureSensorIdentity(int sensorIndex, const String
     sensors[sensorIndex].tags = tags;
     
     if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Sensor %d identity updated: ID=%s, Mfg=%s, Model=%s\n", 
-                     sensorIndex, sensorId.c_str(), manufacturer.c_str(), model.c_str());
+        // Serial.printf("[AV] Sensor %d identity updated: ID=%s, Mfg=%s, Model=%s\n", 
+        //              sensorIndex, sensorId.c_str(), manufacturer.c_str(), model.c_str());
     }
 }
 
@@ -858,8 +859,8 @@ void AnalogVoltageManager::setAlarmConfig(int sensorIndex, int severity, const S
     sensors[sensorIndex].alarmEnabled = enabled;
     
     if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Sensor %d alarm config: Severity=%d, Enabled=%s\n", 
-                     sensorIndex, severity, enabled ? "YES" : "NO");
+        // Serial.printf("[AV] Sensor %d alarm config: Severity=%d, Enabled=%s\n", 
+        //              sensorIndex, severity, enabled ? "YES" : "NO");
     }
 }
 
@@ -934,7 +935,7 @@ void AnalogVoltageManager::enableStreaming(bool enable) {
     streamingEnabled = enable;
     
     if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Real-time streaming %s\n", enable ? "enabled" : "disabled");
+        // Serial.printf("[AV] Real-time streaming %s\n", enable ? "enabled" : "disabled");
     }
 }
 
@@ -942,7 +943,7 @@ void AnalogVoltageManager::setStreamInterval(unsigned long interval) {
     streamInterval = max(interval, 100UL);  // Minimum 100ms
     
     if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Stream interval set to %lu ms\n", streamInterval);
+        // Serial.printf("[AV] Stream interval set to %lu ms\n", streamInterval);
     }
 }
 
@@ -977,7 +978,7 @@ void AnalogVoltageManager::generateDataStreamEvent() {
     notifyWebSocketClients();
     
     if (DEBUG_ENABLED && totalReadings % 60 == 0) { // Log every 60 readings
-        Serial.println("[AV] Stream data generated: " + streamData.substring(0, 100) + "...");
+        // Serial.println("[AV] Stream data generated: " + streamData.substring(0, 100) + "...");
     }
 }
 
@@ -1014,12 +1015,27 @@ void AnalogVoltageManager::triggerAlarmNotification(int sensorIndex, const Strin
         sdMgr.logDataWithTimestamp("ALARM," + alarmData);
     }
     
+    // Send webhook notification
+    String sensorId = "sensor_" + String(sensorIndex);
+    if (alarmType.indexOf("HIGH") >= 0) {
+        webhookHandler.sendAlarmTriggered(sensorId, alarmType, 
+                                        readings[sensorIndex].scaledValue, 
+                                        sensors[sensorIndex].highThreshold);
+    } else if (alarmType.indexOf("LOW") >= 0) {
+        webhookHandler.sendAlarmTriggered(sensorId, alarmType, 
+                                        readings[sensorIndex].scaledValue, 
+                                        sensors[sensorIndex].lowThreshold);
+    } else {
+        // Health-based alarms (SENSOR_DEAD, SENSOR_STUCK, etc.)
+        webhookHandler.sendHealthAlert(sensorId, message, "critical");
+    }
+    
     // Notify WebSocket clients
     notifyWebSocketClients();
     
     if (DEBUG_ENABLED) {
-        Serial.println("[AV] ALARM: " + alarmType + " on sensor " + String(sensorIndex) + " (" + sensors[sensorIndex].location + ")");
-        Serial.println("[AV] Alarm data: " + alarmData);
+        // Serial.println("[AV] ALARM: " + alarmType + " on sensor " + String(sensorIndex) + " (" + sensors[sensorIndex].location + ")");
+        // Serial.println("[AV] Alarm data: " + alarmData);
     }
 }
 
@@ -1054,8 +1070,8 @@ void AnalogVoltageManager::notifyWebSocketClients() {
     webServer.broadcastToWebSocket(streamData);
     
     if (DEBUG_ENABLED && totalReadings % 100 == 0) {
-        Serial.printf("[AV] WebSocket notification sent to %d clients\n", 
-                     webServer.getWebSocketClientCount());
+        // Serial.printf("[AV] WebSocket notification sent to %d clients\n", 
+        //              webServer.getWebSocketClientCount());
     }
 }
 
@@ -1098,7 +1114,7 @@ void AnalogVoltageManager::enableSimulation(bool enable) {
     }
     
     if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Sensor simulation %s\n", enable ? "enabled" : "disabled");
+        // Serial.printf("[AV] Sensor simulation %s\n", enable ? "enabled" : "disabled");
     }
 }
 
@@ -1110,7 +1126,7 @@ void AnalogVoltageManager::setSimulationMode(int sensorIndex, const String& mode
     simulationStartTime[sensorIndex] = millis();
     
     if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Sensor %d simulation mode set to: %s\n", sensorIndex, mode.c_str());
+        // Serial.printf("[AV] Sensor %d simulation mode set to: %s\n", sensorIndex, mode.c_str());
     }
 }
 
@@ -1121,7 +1137,7 @@ void AnalogVoltageManager::setSimulationValue(int sensorIndex, float value) {
     sensorSimulated[sensorIndex] = true;
     
     if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Sensor %d simulation value set to: %.2f\n", sensorIndex, simulationValue[sensorIndex]);
+        // Serial.printf("[AV] Sensor %d simulation value set to: %.2f\n", sensorIndex, simulationValue[sensorIndex]);
     }
 }
 
@@ -1135,8 +1151,8 @@ void AnalogVoltageManager::setSimulationPattern(int sensorIndex, const String& p
     simulationStartTime[sensorIndex] = millis();
     
     if (DEBUG_ENABLED) {
-        Serial.printf("[AV] Sensor %d simulation pattern: %s, amplitude: %.2f, frequency: %.3f Hz\n", 
-                     sensorIndex, pattern.c_str(), amplitude, frequency);
+        // Serial.printf("[AV] Sensor %d simulation pattern: %s, amplitude: %.2f, frequency: %.3f Hz\n", 
+        //              sensorIndex, pattern.c_str(), amplitude, frequency);
     }
 }
 

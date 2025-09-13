@@ -2,6 +2,7 @@
 #include "sd_manager.h"
 #include "wifi_manager.h"
 #include "analog_voltage_manager.h"
+#include "webhook_handler.h"
 #include <WiFi.h>
 #include <ESP.h>
 #include <esp_system.h>
@@ -358,6 +359,13 @@ void RemoteDiagnostics::addAlert(DiagnosticLevel level, const String& category, 
                          (level == DIAG_WARNING) ? "WARNING" : "INFO";
         Serial.printf("[RemoteDiag] %s [%s]: %s\n", levelStr.c_str(), category.c_str(), message.c_str());
     }
+    
+    // Send webhook notification for diagnostic alerts
+    extern WebhookHandler webhookHandler;
+    String levelStr = (level == DIAG_CRITICAL) ? "critical" : 
+                     (level == DIAG_ERROR) ? "error" : 
+                     (level == DIAG_WARNING) ? "warning" : "info";
+    webhookHandler.sendDiagnosticAlert(category, message, levelStr);
 }
 
 float RemoteDiagnostics::calculateCPUUsage() {

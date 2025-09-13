@@ -6,6 +6,7 @@
 #include "analog_voltage_manager.h"
 #include "analytics_manager.h"
 #include "remote_diagnostics.h"
+#include "webhook_handler.h"
 
 // Global instance
 WebServerHandler webServer;
@@ -17,12 +18,12 @@ WebServerHandler::WebServerHandler()
 }
 
 bool WebServerHandler::initialize() {
-    Serial.println("[WebServer] Initializing web server...");
+    // Serial.println("[WebServer] Initializing web server...");
     
     setupRoutes();
     setupWebSocket();
     
-    Serial.printf("[WebServer] Web server initialized on port %d with WebSocket support\n", WEB_SERVER_PORT);
+    // Serial.printf("[WebServer] Web server initialized on port %d with WebSocket support\n", WEB_SERVER_PORT);
     return true;
 }
 
@@ -568,6 +569,109 @@ void WebServerHandler::setupRoutes() {
         request->send(200, "application/json", json);
     });
     
+    // Webhook Management Endpoints
+    server.on("/api/webhooks", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern WebhookHandler webhookHandler;
+        request->send(200, "application/json", webhookHandler.getWebhooksJSON());
+    });
+    
+    server.on("/api/webhooks", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        extern WebhookHandler webhookHandler;
+        
+        String url = "";
+        String secret = "";
+        String authToken = "";
+        
+        if (request->hasParam("url", true)) {
+            url = request->getParam("url", true)->value();
+        }
+        if (request->hasParam("secret", true)) {
+            secret = request->getParam("secret", true)->value();
+        }
+        if (request->hasParam("auth_token", true)) {
+            authToken = request->getParam("auth_token", true)->value();
+        }
+        
+        if (url.length() == 0) {
+            request->send(400, "application/json", "{\"error\":\"URL is required\"}");
+            return;
+        }
+        
+        String webhookId = webhookHandler.addWebhook(url, secret, authToken);
+        if (webhookId.length() > 0) {
+            DynamicJsonDocument doc(256);
+            doc["success"] = true;
+            doc["webhook_id"] = webhookId;
+            doc["message"] = "Webhook added successfully";
+            
+            String json;
+            serializeJson(doc, json);
+            request->send(200, "application/json", json);
+        } else {
+            request->send(400, "application/json", "{\"error\":\"Failed to add webhook\"}");
+        }
+    });
+    
+    server.on("/api/webhooks/test", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        extern WebhookHandler webhookHandler;
+        
+        String webhookId = "";
+        if (request->hasParam("webhook_id", true)) {
+            webhookId = request->getParam("webhook_id", true)->value();
+        }
+        
+        bool success = webhookHandler.testWebhook(webhookId);
+        
+        DynamicJsonDocument doc(256);
+        doc["success"] = success;
+        doc["message"] = success ? "Test webhook sent" : "Failed to send test webhook";
+        
+        String json;
+        serializeJson(doc, json);
+        request->send(200, "application/json", json);
+    });
+    
+    server.on("/api/webhooks/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern WebhookHandler webhookHandler;
+        request->send(200, "application/json", webhookHandler.getStatus());
+    });
+    
+    server.on("/api/webhooks/statistics", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern WebhookHandler webhookHandler;
+        request->send(200, "application/json", webhookHandler.getStatistics());
+    });
+    
+    server.on("/api/webhooks/queue", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern WebhookHandler webhookHandler;
+        request->send(200, "application/json", webhookHandler.getQueueStatus());
+    });
+    
+    server.on("/api/webhooks/queue/clear", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        extern WebhookHandler webhookHandler;
+        webhookHandler.clearQueue();
+        
+        DynamicJsonDocument doc(256);
+        doc["success"] = true;
+        doc["message"] = "Webhook queue cleared";
+        
+        String json;
+        serializeJson(doc, json);
+        request->send(200, "application/json", json);
+    });
+    
+    server.on("/api/webhooks/queue/retry", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        extern WebhookHandler webhookHandler;
+        webhookHandler.retryFailed();
+        
+        DynamicJsonDocument doc(256);
+        doc["success"] = true;
+        doc["message"] = "Retrying failed webhooks";
+        
+        String json;
+        serializeJson(doc, json);
+        request->send(200, "application/json", json);
+    });
+    
     server.onNotFound([this](AsyncWebServerRequest *request) {
         request->send(404, "application/json", "{\"error\":\"Not found\"}");
     });
@@ -578,14 +682,14 @@ void WebServerHandler::begin() {
     server.addHandler(&ws);  // Add WebSocket handler
     server.begin();
     serverStarted = true;
-    Serial.println("[WebServer] Web server started with WebSocket support");
+    // Serial.println("[WebServer] Web server started with WebSocket support");
 }
 
 void WebServerHandler::end() {
     if (serverStarted) {
         server.end();
         serverStarted = false;
-        Serial.println("[WebServer] Web server stopped");
+        // Serial.println("[WebServer] Web server stopped");
     }
 }
 
@@ -718,15 +822,15 @@ void WebServerHandler::setupWebSocket() {
         onWebSocketEvent(server, client, type, arg, data, len);
     });
     
-    Serial.println("[WebServer] WebSocket handler configured");
+    // Serial.println("[WebServer] WebSocket handler configured");
 }
 
 void WebServerHandler::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, 
                                         AwsEventType type, void *arg, uint8_t *data, size_t len) {
     switch(type) {
         case WS_EVT_CONNECT:
-            Serial.printf("[WebSocket] Client #%u connected from %s\n", 
-                         client->id(), client->remoteIP().toString().c_str());
+            // Serial.printf("[WebSocket] Client #%u connected from %s\n", 
+            //              client->id(), client->remoteIP().toString().c_str());
             // Send initial sensor data to new client
             {
                 DynamicJsonDocument doc(1024);
@@ -740,7 +844,7 @@ void WebServerHandler::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketCl
             break;
             
         case WS_EVT_DISCONNECT:
-            Serial.printf("[WebSocket] Client #%u disconnected\n", client->id());
+            // Serial.printf("[WebSocket] Client #%u disconnected\n", client->id());
             break;
             
         case WS_EVT_DATA:
@@ -759,7 +863,7 @@ void WebServerHandler::handleWebSocketMessage(void *arg, uint8_t *data, size_t l
         data[len] = 0;
         String message = (char*)data;
         
-        Serial.printf("[WebSocket] Received message: %s\n", message.c_str());
+        // Serial.printf("[WebSocket] Received message: %s\n", message.c_str());
         
         // Parse JSON message
         DynamicJsonDocument doc(512);
@@ -798,8 +902,8 @@ void WebServerHandler::handleWebSocketMessage(void *arg, uint8_t *data, size_t l
                 serializeJson(response, responseStr);
                 ws.textAll(responseStr);
                 
-                Serial.printf("[WebSocket] Streaming %s with interval %lu ms\n", 
-                             enable ? "enabled" : "disabled", interval);
+                // Serial.printf("[WebSocket] Streaming %s with interval %lu ms\n", 
+                //              enable ? "enabled" : "disabled", interval);
             }
         }
     }

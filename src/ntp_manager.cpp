@@ -17,11 +17,11 @@ NTPManager::NTPManager() {
 }
 
 bool NTPManager::initialize() {
-    Serial.println("[NTP] Initializing NTP Manager...");
+    // Serial.println("[NTP] Initializing NTP Manager...");
     
     // Only initialize if WiFi is connected
     if (!isWiFiConnected()) {
-        Serial.println("[NTP] WiFi not connected - deferring NTP initialization");
+        // Serial.println("[NTP] WiFi not connected - deferring NTP initialization");
         currentStatus = NTP_NOT_INITIALIZED;
         return false;
     }
@@ -30,15 +30,15 @@ bool NTPManager::initialize() {
     
     // Initialize RTC first
     if (initializeRTC()) {
-        Serial.println("[NTP] RTC initialized successfully");
+        // Serial.println("[NTP] RTC initialized successfully");
         rtcAvailable = true;
     } else {
-        Serial.println("[NTP] RTC not available - continuing with NTP only");
+        // Serial.println("[NTP] RTC not available - continuing with NTP only");
         rtcAvailable = false;
     }
     
     // Configure NTP
-    Serial.println("[NTP] Configuring NTP servers...");
+    // Serial.println("[NTP] Configuring NTP servers...");
     configTime(3600 * timezone, daylightSavingTime * 3600, ntpServer1, ntpServer2, ntpServer3);
     
     ntpInitialized = true;
@@ -47,7 +47,7 @@ bool NTPManager::initialize() {
     // Start first sync attempt
     requestSync();
     
-    Serial.println("[NTP] NTP Manager initialized - sync in progress");
+    // Serial.println("[NTP] NTP Manager initialized - sync in progress");
     return true;
 }
 
@@ -55,7 +55,7 @@ void NTPManager::handle() {
     // Only handle if WiFi is connected
     if (!isWiFiConnected()) {
         if (currentStatus != NTP_NOT_INITIALIZED) {
-            Serial.println("[NTP] WiFi disconnected - pausing NTP operations");
+            // Serial.println("[NTP] WiFi disconnected - pausing NTP operations");
             currentStatus = NTP_NOT_INITIALIZED;
             ntpInitialized = false;
         }
@@ -73,7 +73,7 @@ void NTPManager::handle() {
     // Handle ongoing sync
     if (syncInProgress) {
         if (currentTime - syncStartTime > SYNC_TIMEOUT) {
-            Serial.println("[NTP] Sync timeout - marking as failed");
+            // Serial.println("[NTP] Sync timeout - marking as failed");
             syncInProgress = false;
             currentStatus = NTP_SYNC_FAILED;
         } else {
@@ -86,7 +86,7 @@ void NTPManager::handle() {
                     currentStatus = NTP_SYNCED;
                     lastSyncAttempt = currentTime;
                     
-                    Serial.printf("[NTP] Time synchronized: %s\n", formatTime(timeinfo).c_str());
+                    // Serial.printf("[NTP] Time synchronized: %s\n", formatTime(timeinfo).c_str());
                     
                     // Sync RTC if available
                     if (rtcAvailable) {
@@ -99,13 +99,13 @@ void NTPManager::handle() {
     
     // Periodic sync check
     if (timeIsSynced && (currentTime - lastSyncAttempt > syncInterval)) {
-        Serial.println("[NTP] Performing periodic sync...");
+        // Serial.println("[NTP] Performing periodic sync...");
         requestSync();
     }
     
     // Periodic RTC sync
     if (rtcAvailable && timeIsSynced && (currentTime - lastRTCSync > rtcSyncInterval)) {
-        Serial.println("[NTP] Performing periodic RTC sync...");
+        // Serial.println("[NTP] Performing periodic RTC sync...");
         syncRTCWithNTP();
     }
 }
@@ -183,7 +183,7 @@ bool NTPManager::setRTCTime(const DateTime& dt) {
     if (!rtcAvailable) return false;
     
     rtc.adjust(dt);
-    Serial.printf("[NTP] RTC time set to: %s\n", formatDateTime(dt).c_str());
+    // Serial.printf("[NTP] RTC time set to: %s\n", formatDateTime(dt).c_str());
     return true;
 }
 
@@ -199,7 +199,7 @@ bool NTPManager::requestSync() {
         return false;
     }
     
-    Serial.println("[NTP] Starting NTP sync...");
+    // Serial.println("[NTP] Starting NTP sync...");
     syncInProgress = true;
     syncStartTime = millis();
     currentStatus = NTP_SYNCING;
@@ -276,12 +276,12 @@ bool NTPManager::initializeRTC() {
     Wire.begin(I2C_SDA, I2C_SCL);
     
     if (!rtc.begin()) {
-        Serial.println("[NTP] RTC DS3231 not found");
+        // Serial.println("[NTP] RTC DS3231 not found");
         return false;
     }
     
     if (rtc.lostPower()) {
-        Serial.println("[NTP] RTC lost power - will sync with NTP");
+        // Serial.println("[NTP] RTC lost power - will sync with NTP");
     }
     
     return true;
@@ -308,7 +308,7 @@ bool NTPManager::syncRTCWithNTP() {
     
     struct tm timeinfo;
     if (!getLocalTime(&timeinfo, 1000)) {
-        Serial.println("[NTP] Failed to get NTP time for RTC sync");
+        // Serial.println("[NTP] Failed to get NTP time for RTC sync");
         return false;
     }
     
@@ -320,7 +320,7 @@ bool NTPManager::syncRTCWithNTP() {
     lastRTCSync = millis();
     currentStatus = NTP_RTC_SYNCED;
     
-    Serial.printf("[NTP] RTC synchronized with NTP time: %s\n", formatDateTime(ntpTime).c_str());
+    // Serial.printf("[NTP] RTC synchronized with NTP time: %s\n", formatDateTime(ntpTime).c_str());
     return true;
 }
 
