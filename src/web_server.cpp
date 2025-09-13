@@ -3,12 +3,15 @@
 #include "system_manager.h"
 #include "sd_manager.h"
 #include "ntp_manager.h"
+#include "analog_voltage_manager.h"
+#include "analytics_manager.h"
+#include "remote_diagnostics.h"
 
 // Global instance
 WebServerHandler webServer;
 
 WebServerHandler::WebServerHandler() 
-    : server(WEB_SERVER_PORT)
+    : server(WEB_SERVER_PORT), ws("/ws")
 {
     serverStarted = false;
 }
@@ -17,8 +20,9 @@ bool WebServerHandler::initialize() {
     Serial.println("[WebServer] Initializing web server...");
     
     setupRoutes();
+    setupWebSocket();
     
-    Serial.printf("[WebServer] Web server initialized on port %d\n", WEB_SERVER_PORT);
+    Serial.printf("[WebServer] Web server initialized on port %d with WebSocket support\n", WEB_SERVER_PORT);
     return true;
 }
 
@@ -30,7 +34,7 @@ void WebServerHandler::setupRoutes() {
     });
     
     server.on("/api/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        DynamicJsonDocument doc(1024);
+        DynamicJsonDocument doc(2048);  // Increased size for water level data
         doc["project"] = PROJECT_NAME;
         doc["version"] = PROJECT_VERSION;
         doc["author"] = PROJECT_AUTHOR;
@@ -71,6 +75,193 @@ void WebServerHandler::setupRoutes() {
         doc["ntp"]["last_sync"] = ntpMgr.getLastSyncTime();
         doc["ntp"]["current_time"] = ntpMgr.getCurrentTimeString();
         doc["ntp"]["rtc_available"] = ntpMgr.isRTCAvailable();
+        
+        // Analog voltage sensors status
+        doc["analog_voltage"]["initialized"] = analogVoltageMgr.isInitialized();
+        doc["analog_voltage"]["total_readings"] = analogVoltageMgr.getTotalReadings();
+        doc["analog_voltage"]["alarm_status"] = analogVoltageMgr.getAlarmStatus();
+        doc["analog_voltage"]["has_errors"] = analogVoltageMgr.hasErrors();
+        
+        for (int i = 0; i < 3; i++) {
+            String sensorKey = "sensor_" + String(i);
+            doc["analog_voltage"]["sensors"][sensorKey]["location"] = analogVoltageMgr.getLocation(i);
+            doc["analog_voltage"]["sensors"][sensorKey]["enabled"] = analogVoltageMgr.isSensorEnabled(i);
+            doc["analog_voltage"]["sensors"][sensorKey]["value"] = analogVoltageMgr.getScaledValue(i);
+            doc["analog_voltage"]["sensors"][sensorKey]["unit"] = analogVoltageMgr.getUnit(i);
+            doc["analog_voltage"]["sensors"][sensorKey]["voltage"] = analogVoltageMgr.getVoltage(i);
+            doc["analog_voltage"]["sensors"][sensorKey]["raw_voltage"] = analogVoltageMgr.getRawVoltage(i);
+            doc["analog_voltage"]["sensors"][sensorKey]["status"] = analogVoltageMgr.getStatusString(i);
+            doc["analog_voltage"]["sensors"][sensorKey]["health_score"] = analogVoltageMgr.getSensorHealth(i);
+            doc["analog_voltage"]["sensors"][sensorKey]["is_dead"] = analogVoltageMgr.isSensorDead(i);
+            doc["analog_voltage"]["sensors"][sensorKey]["is_stuck"] = analogVoltageMgr.isSensorStuck(i);
+            doc["analog_voltage"]["sensors"][sensorKey]["is_calibrated"] = analogVoltageMgr.isCalibrated(i);
+            doc["analog_voltage"]["sensors"][sensorKey]["low_alarm"] = analogVoltageMgr.isLowValue(i);
+            doc["analog_voltage"]["sensors"][sensorKey]["high_alarm"] = analogVoltageMgr.isHighValue(i);
+            doc["analog_voltage"]["sensors"][sensorKey]["errors"] = analogVoltageMgr.getErrorCount(i);
+        }
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    // Analog Voltage API endpoint
+    server.on("/api/analog-voltage", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        DynamicJsonDocument doc(1024);
+        
+        doc["initialized"] = analogVoltageMgr.isInitialized();
+        doc["total_readings"] = analogVoltageMgr.getTotalReadings();
+        doc["alarm_status"] = analogVoltageMgr.getAlarmStatus();
+        doc["has_errors"] = analogVoltageMgr.hasErrors();
+        
+        for (int i = 0; i < 3; i++) {
+            AnalogReading reading = analogVoltageMgr.getReading(i);
+            String sensorKey = "sensor_" + String(i);
+            
+            doc["sensors"][sensorKey]["location"] = analogVoltageMgr.getLocation(i);
+            doc["sensors"][sensorKey]["enabled"] = analogVoltageMgr.isSensorEnabled(i);
+            doc["sensors"][sensorKey]["value"] = reading.scaledValue;
+            doc["sensors"][sensorKey]["unit"] = analogVoltageMgr.getUnit(i);
+            doc["sensors"][sensorKey]["voltage"] = reading.calibratedVoltage;
+            doc["sensors"][sensorKey]["raw_adc"] = reading.rawADC;
+            doc["sensors"][sensorKey]["raw_voltage"] = reading.voltage;
+            doc["sensors"][sensorKey]["status"] = analogVoltageMgr.getStatusString(i);
+            doc["sensors"][sensorKey]["valid"] = reading.valid;
+            doc["sensors"][sensorKey]["timestamp"] = reading.timestamp;
+            doc["sensors"][sensorKey]["low_alarm"] = analogVoltageMgr.isLowValue(i);
+            doc["sensors"][sensorKey]["high_alarm"] = analogVoltageMgr.isHighValue(i);
+            doc["sensors"][sensorKey]["errors"] = analogVoltageMgr.getErrorCount(i);
+        }
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    // Sensor health monitoring endpoint
+    server.on("/api/analog-voltage/health", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        DynamicJsonDocument doc(1536);
+        
+        doc["timestamp"] = millis();
+        doc["system_health"] = "OK";
+        
+        for (int i = 0; i < 3; i++) {
+            String sensorKey = "sensor_" + String(i);
+            
+            doc["sensors"][sensorKey]["location"] = analogVoltageMgr.getLocation(i);
+            doc["sensors"][sensorKey]["health_score"] = analogVoltageMgr.getSensorHealth(i);
+            doc["sensors"][sensorKey]["is_dead"] = analogVoltageMgr.isSensorDead(i);
+            doc["sensors"][sensorKey]["is_stuck"] = analogVoltageMgr.isSensorStuck(i);
+            doc["sensors"][sensorKey]["is_calibrated"] = analogVoltageMgr.isCalibrated(i);
+            doc["sensors"][sensorKey]["error_count"] = analogVoltageMgr.getErrorCount(i);
+            doc["sensors"][sensorKey]["total_readings"] = analogVoltageMgr.getTotalReadings();
+            
+            // Calculate error rate
+            float errorRate = 0.0;
+            if (analogVoltageMgr.getTotalReadings() > 0) {
+                errorRate = (float)analogVoltageMgr.getErrorCount(i) / analogVoltageMgr.getTotalReadings() * 100.0;
+            }
+            doc["sensors"][sensorKey]["error_rate_percent"] = errorRate;
+        }
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    // Calibration endpoint
+    server.on("/api/analog-voltage/calibrate", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        String body = "";
+        if (request->hasParam("body", true)) {
+            body = request->getParam("body", true)->value();
+        }
+        
+        DynamicJsonDocument doc(512);
+        DeserializationError error = deserializeJson(doc, body);
+        
+        if (error) {
+            request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+            return;
+        }
+        
+        if (!doc.containsKey("sensor") || !doc.containsKey("offset") || !doc.containsKey("gain")) {
+            request->send(400, "application/json", "{\"error\":\"Missing parameters\"}");
+            return;
+        }
+        
+        int sensor = doc["sensor"];
+        float offset = doc["offset"];
+        float gain = doc["gain"];
+        
+        if (sensor < 0 || sensor >= 3) {
+            request->send(400, "application/json", "{\"error\":\"Invalid sensor index\"}");
+            return;
+        }
+        
+        analogVoltageMgr.setCalibration(sensor, offset, gain);
+        
+        DynamicJsonDocument response(256);
+        response["success"] = true;
+        response["sensor"] = sensor;
+        response["offset"] = offset;
+        response["gain"] = gain;
+        response["message"] = "Calibration updated successfully";
+        
+        String responseStr;
+        serializeJson(response, responseStr);
+        request->send(200, "application/json", responseStr);
+    });
+    
+    // Reset calibration endpoint
+    server.on("/api/analog-voltage/reset-calibration", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        if (!request->hasParam("sensor", true)) {
+            request->send(400, "application/json", "{\"error\":\"Missing sensor parameter\"}");
+            return;
+        }
+        
+        int sensor = request->getParam("sensor", true)->value().toInt();
+        
+        if (sensor < 0 || sensor >= 3) {
+            request->send(400, "application/json", "{\"error\":\"Invalid sensor index\"}");
+            return;
+        }
+        
+        analogVoltageMgr.resetCalibration(sensor);
+        
+        DynamicJsonDocument response(256);
+        response["success"] = true;
+        response["sensor"] = sensor;
+        response["message"] = "Calibration reset successfully";
+        
+        String responseStr;
+        serializeJson(response, responseStr);
+        request->send(200, "application/json", responseStr);
+    });
+    
+    // Sensor information endpoint
+    server.on("/api/analog-voltage/info", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        DynamicJsonDocument doc(2048);
+        
+        doc["timestamp"] = millis();
+        doc["system"] = "Analog Voltage Manager";
+        doc["version"] = "2.0.0";
+        
+        for (int i = 0; i < 3; i++) {
+            String sensorKey = "sensor_" + String(i);
+            
+            doc["sensors"][sensorKey]["sensor_id"] = analogVoltageMgr.getSensorId(i);
+            doc["sensors"][sensorKey]["location"] = analogVoltageMgr.getLocation(i);
+            doc["sensors"][sensorKey]["manufacturer"] = analogVoltageMgr.getManufacturer(i);
+            doc["sensors"][sensorKey]["model"] = analogVoltageMgr.getModel(i);
+            doc["sensors"][sensorKey]["serial_number"] = analogVoltageMgr.getSerialNumber(i);
+            doc["sensors"][sensorKey]["installation_date"] = analogVoltageMgr.getInstallationDate(i);
+            doc["sensors"][sensorKey]["description"] = analogVoltageMgr.getDescription(i);
+            doc["sensors"][sensorKey]["group"] = analogVoltageMgr.getGroup(i);
+            doc["sensors"][sensorKey]["tags"] = analogVoltageMgr.getTags(i);
+            doc["sensors"][sensorKey]["unit"] = analogVoltageMgr.getUnit(i);
+            doc["sensors"][sensorKey]["enabled"] = analogVoltageMgr.isSensorEnabled(i);
+            doc["sensors"][sensorKey]["calibrated"] = analogVoltageMgr.isCalibrated(i);
+        }
         
         String response;
         serializeJson(doc, response);
@@ -149,6 +340,234 @@ void WebServerHandler::setupRoutes() {
         request->send(200, "application/json", json);
     });
     
+    // Simulation control endpoints
+    server.on("/api/simulation/enable", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        bool enable = false;
+        if (request->hasParam("enable", true)) {
+            enable = request->getParam("enable", true)->value() == "true";
+        }
+        
+        extern AnalogVoltageManager analogVoltageMgr;
+        analogVoltageMgr.enableSimulation(enable);
+        
+        DynamicJsonDocument doc(256);
+        doc["success"] = true;
+        doc["message"] = enable ? "Simulation enabled" : "Simulation disabled";
+        doc["simulation_enabled"] = enable;
+        
+        String json;
+        serializeJson(doc, json);
+        request->send(200, "application/json", json);
+    });
+    
+    server.on("/api/simulation/sensor", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        int sensorIndex = -1;
+        String mode = "fixed";
+        float value = 50.0;
+        float amplitude = 10.0;
+        float frequency = 0.1;
+        
+        if (request->hasParam("sensor", true)) {
+            sensorIndex = request->getParam("sensor", true)->value().toInt();
+        }
+        if (request->hasParam("mode", true)) {
+            mode = request->getParam("mode", true)->value();
+        }
+        if (request->hasParam("value", true)) {
+            value = request->getParam("value", true)->value().toFloat();
+        }
+        if (request->hasParam("amplitude", true)) {
+            amplitude = request->getParam("amplitude", true)->value().toFloat();
+        }
+        if (request->hasParam("frequency", true)) {
+            frequency = request->getParam("frequency", true)->value().toFloat();
+        }
+        
+        extern AnalogVoltageManager analogVoltageMgr;
+        
+        if (sensorIndex >= 0 && sensorIndex < 3) {
+            analogVoltageMgr.setSimulationMode(sensorIndex, mode);
+            analogVoltageMgr.setSimulationValue(sensorIndex, value);
+            
+            if (mode != "fixed") {
+                analogVoltageMgr.setSimulationPattern(sensorIndex, mode, amplitude, frequency);
+            }
+            
+            DynamicJsonDocument doc(512);
+            doc["success"] = true;
+            doc["message"] = "Simulation configured for sensor " + String(sensorIndex);
+            doc["sensor"] = sensorIndex;
+            doc["mode"] = mode;
+            doc["value"] = value;
+            doc["amplitude"] = amplitude;
+            doc["frequency"] = frequency;
+            
+            String json;
+            serializeJson(doc, json);
+            request->send(200, "application/json", json);
+        } else {
+            request->send(400, "application/json", "{\"error\":\"Invalid sensor index\"}");
+        }
+    });
+    
+    server.on("/api/simulation/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern AnalogVoltageManager analogVoltageMgr;
+        
+        DynamicJsonDocument doc(1024);
+        doc["simulation_enabled"] = analogVoltageMgr.isSimulationEnabled();
+        
+        JsonArray sensors = doc.createNestedArray("sensors");
+        for (int i = 0; i < 3; i++) {
+            JsonObject sensor = sensors.createNestedObject();
+            sensor["id"] = i;
+            sensor["simulated"] = analogVoltageMgr.isSensorSimulated(i);
+            sensor["location"] = analogVoltageMgr.getLocation(i);
+        }
+        
+        String json;
+        serializeJson(doc, json);
+        request->send(200, "application/json", json);
+    });
+    
+    // Analytics endpoints
+    server.on("/api/analytics/summary", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern AnalyticsManager analyticsMgr;
+        String json = analyticsMgr.getAnalyticsSummary();
+        request->send(200, "application/json", json);
+    });
+    
+    server.on("/api/analytics/statistics", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        int sensor = -1;
+        if (request->hasParam("sensor")) {
+            sensor = request->getParam("sensor")->value().toInt();
+        }
+        
+        extern AnalyticsManager analyticsMgr;
+        
+        if (sensor >= 0 && sensor < 3) {
+            String json = analyticsMgr.getStatisticsJSON(sensor);
+            request->send(200, "application/json", json);
+        } else {
+            // Return all sensors
+            DynamicJsonDocument doc(2048);
+            JsonArray sensors = doc.createNestedArray("sensors");
+            
+            for (int i = 0; i < 3; i++) {
+                DynamicJsonDocument sensorDoc(1024);
+                deserializeJson(sensorDoc, analyticsMgr.getStatisticsJSON(i));
+                sensors.add(sensorDoc.as<JsonObject>());
+            }
+            
+            String json;
+            serializeJson(doc, json);
+            request->send(200, "application/json", json);
+        }
+    });
+    
+    server.on("/api/analytics/trends", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        int sensor = -1;
+        if (request->hasParam("sensor")) {
+            sensor = request->getParam("sensor")->value().toInt();
+        }
+        
+        extern AnalyticsManager analyticsMgr;
+        
+        if (sensor >= 0 && sensor < 3) {
+            String json = analyticsMgr.getTrendJSON(sensor);
+            request->send(200, "application/json", json);
+        } else {
+            // Return all sensors
+            DynamicJsonDocument doc(2048);
+            JsonArray sensors = doc.createNestedArray("sensors");
+            
+            for (int i = 0; i < 3; i++) {
+                DynamicJsonDocument trendDoc(512);
+                deserializeJson(trendDoc, analyticsMgr.getTrendJSON(i));
+                sensors.add(trendDoc.as<JsonObject>());
+            }
+            
+            String json;
+            serializeJson(doc, json);
+            request->send(200, "application/json", json);
+        }
+    });
+    
+    server.on("/api/analytics/prediction", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        int sensor = -1;
+        unsigned long futureTime = millis() + 300000;  // Default: 5 minutes ahead
+        
+        if (request->hasParam("sensor")) {
+            sensor = request->getParam("sensor")->value().toInt();
+        }
+        if (request->hasParam("time")) {
+            futureTime = request->getParam("time")->value().toInt();
+        }
+        
+        extern AnalyticsManager analyticsMgr;
+        
+        if (sensor >= 0 && sensor < 3) {
+            float prediction = analyticsMgr.predictNextValue(sensor, futureTime);
+            
+            DynamicJsonDocument doc(256);
+            doc["sensor"] = sensor;
+            doc["predicted_value"] = prediction;
+            doc["prediction_time"] = futureTime;
+            doc["confidence"] = "medium";  // Placeholder
+            
+            String json;
+            serializeJson(doc, json);
+            request->send(200, "application/json", json);
+        } else {
+            request->send(400, "application/json", "{\"error\":\"Invalid sensor index\"}");
+        }
+    });
+    
+    // Remote diagnostics endpoints
+    server.on("/api/diagnostics/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern RemoteDiagnostics remoteDiag;
+        String json = remoteDiag.getStatus();
+        request->send(200, "application/json", json);
+    });
+    
+    server.on("/api/diagnostics/all", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern RemoteDiagnostics remoteDiag;
+        String json = remoteDiag.getAllDiagnosticsJSON();
+        request->send(200, "application/json", json);
+    });
+    
+    server.on("/api/diagnostics/alerts", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern RemoteDiagnostics remoteDiag;
+        String json = remoteDiag.getAlertsJSON();
+        request->send(200, "application/json", json);
+    });
+    
+    server.on("/api/diagnostics/health", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern RemoteDiagnostics remoteDiag;
+        
+        DynamicJsonDocument doc(512);
+        doc["health_score"] = remoteDiag.getOverallHealthScore();
+        doc["status"] = remoteDiag.isSystemHealthy() ? "healthy" : "needs_attention";
+        doc["last_check"] = remoteDiag.getLastDiagnosticTime();
+        doc["alerts_count"] = remoteDiag.getAlertCount();
+        
+        String json;
+        serializeJson(doc, json);
+        request->send(200, "application/json", json);
+    });
+    
+    server.on("/api/diagnostics/clear-alerts", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        extern RemoteDiagnostics remoteDiag;
+        remoteDiag.clearAlerts();
+        
+        DynamicJsonDocument doc(256);
+        doc["success"] = true;
+        doc["message"] = "All alerts cleared";
+        
+        String json;
+        serializeJson(doc, json);
+        request->send(200, "application/json", json);
+    });
+    
     server.onNotFound([this](AsyncWebServerRequest *request) {
         request->send(404, "application/json", "{\"error\":\"Not found\"}");
     });
@@ -156,9 +575,10 @@ void WebServerHandler::setupRoutes() {
 
 void WebServerHandler::begin() {
     // Start AsyncWebServer
+    server.addHandler(&ws);  // Add WebSocket handler
     server.begin();
     serverStarted = true;
-    Serial.println("[WebServer] Web server started");
+    Serial.println("[WebServer] Web server started with WebSocket support");
 }
 
 void WebServerHandler::end() {
@@ -289,4 +709,150 @@ String WebServerHandler::generateWebPage() {
     html += "</body></html>";
     
     return html;
+}
+
+// WebSocket implementation
+void WebServerHandler::setupWebSocket() {
+    ws.onEvent([this](AsyncWebSocket *server, AsyncWebSocketClient *client, 
+                     AwsEventType type, void *arg, uint8_t *data, size_t len) {
+        onWebSocketEvent(server, client, type, arg, data, len);
+    });
+    
+    Serial.println("[WebServer] WebSocket handler configured");
+}
+
+void WebServerHandler::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, 
+                                        AwsEventType type, void *arg, uint8_t *data, size_t len) {
+    switch(type) {
+        case WS_EVT_CONNECT:
+            Serial.printf("[WebSocket] Client #%u connected from %s\n", 
+                         client->id(), client->remoteIP().toString().c_str());
+            // Send initial sensor data to new client
+            {
+                DynamicJsonDocument doc(1024);
+                doc["type"] = "welcome";
+                doc["message"] = "Connected to ESP32 Analog Sensor System";
+                doc["timestamp"] = millis();
+                String response;
+                serializeJson(doc, response);
+                client->text(response);
+            }
+            break;
+            
+        case WS_EVT_DISCONNECT:
+            Serial.printf("[WebSocket] Client #%u disconnected\n", client->id());
+            break;
+            
+        case WS_EVT_DATA:
+            handleWebSocketMessage(arg, data, len);
+            break;
+            
+        case WS_EVT_PONG:
+        case WS_EVT_ERROR:
+            break;
+    }
+}
+
+void WebServerHandler::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
+    AwsFrameInfo *info = (AwsFrameInfo*)arg;
+    if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+        data[len] = 0;
+        String message = (char*)data;
+        
+        Serial.printf("[WebSocket] Received message: %s\n", message.c_str());
+        
+        // Parse JSON message
+        DynamicJsonDocument doc(512);
+        DeserializationError error = deserializeJson(doc, message);
+        
+        if (!error) {
+            String command = doc["command"] | "";
+            
+            if (command == "ping") {
+                // Respond to ping
+                DynamicJsonDocument response(256);
+                response["type"] = "pong";
+                response["timestamp"] = millis();
+                String responseStr;
+                serializeJson(response, responseStr);
+                ws.textAll(responseStr);
+                
+            } else if (command == "get_sensor_data") {
+                // Send current sensor data
+                broadcastSensorData();
+                
+            } else if (command == "enable_streaming") {
+                bool enable = doc["enable"] | false;
+                unsigned long interval = doc["interval"] | 1000;  // Default 1 second
+                
+                // Enable/disable streaming via analog voltage manager
+                extern AnalogVoltageManager analogVoltageMgr;
+                analogVoltageMgr.enableStreaming(enable);
+                analogVoltageMgr.setStreamInterval(interval);
+                
+                DynamicJsonDocument response(256);
+                response["type"] = "streaming_config";
+                response["enabled"] = enable;
+                response["interval"] = interval;
+                String responseStr;
+                serializeJson(response, responseStr);
+                ws.textAll(responseStr);
+                
+                Serial.printf("[WebSocket] Streaming %s with interval %lu ms\n", 
+                             enable ? "enabled" : "disabled", interval);
+            }
+        }
+    }
+}
+
+void WebServerHandler::notifyWebSocketClients(const String& message) {
+    if (ws.count() > 0) {
+        ws.textAll(message);
+    }
+}
+
+void WebServerHandler::broadcastToWebSocket(const String& message) {
+    notifyWebSocketClients(message);
+}
+
+int WebServerHandler::getWebSocketClientCount() {
+    return ws.count();
+}
+
+void WebServerHandler::broadcastSensorData() {
+    extern AnalogVoltageManager analogVoltageMgr;
+    if (!analogVoltageMgr.isInitialized()) return;
+    
+    DynamicJsonDocument doc(2048);
+    doc["type"] = "sensor_data";
+    doc["timestamp"] = millis();
+    
+    JsonArray sensors = doc.createNestedArray("sensors");
+    AnalogReading* readings = analogVoltageMgr.getAllReadings();
+    
+    for (int i = 0; i < 3; i++) {
+        JsonObject sensor = sensors.createNestedObject();
+        sensor["id"] = i;
+        sensor["location"] = analogVoltageMgr.getLocation(i);
+        sensor["value"] = readings[i].scaledValue;
+        sensor["unit"] = analogVoltageMgr.getUnit(i);
+        sensor["voltage"] = readings[i].calibratedVoltage;
+        sensor["status"] = analogVoltageMgr.getStatusString(i);
+        sensor["timestamp"] = readings[i].timestamp;
+        sensor["valid"] = readings[i].valid;
+        
+        // Health data
+        sensor["health_score"] = analogVoltageMgr.getHealthScore(i);
+        sensor["is_dead"] = analogVoltageMgr.isDeadSensor(i);
+        sensor["is_stuck"] = analogVoltageMgr.isStuckSensor(i);
+        
+        // Alarm status
+        sensor["is_alarm"] = (analogVoltageMgr.isLowValue(i) || analogVoltageMgr.isHighValue(i));
+        sensor["low_threshold"] = analogVoltageMgr.getLowThreshold(i);
+        sensor["high_threshold"] = analogVoltageMgr.getHighThreshold(i);
+    }
+    
+    String message;
+    serializeJson(doc, message);
+    notifyWebSocketClients(message);
 }

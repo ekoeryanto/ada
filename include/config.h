@@ -24,7 +24,9 @@
 #define WEB_SERVER_PORT 80
 
 // Hardware Configuration
+#ifndef LED_BUILTIN
 #define LED_BUILTIN 2        // Built-in LED pin for status indication
+#endif
 #define STATUS_LED_PIN LED_BUILTIN
 
 // Debug Configuration

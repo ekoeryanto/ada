@@ -15,11 +15,19 @@ class OTAHandler;
 class WebServerHandler {
 private:
     AsyncWebServer server;
+    AsyncWebSocket ws;
     bool serverStarted;
     
     // Helper functions
     void setupRoutes();
+    void setupWebSocket();
     String generateWebPage();
+    
+    // WebSocket functions
+    void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, 
+                         AwsEventType type, void *arg, uint8_t *data, size_t len);
+    void handleWebSocketMessage(void *arg, uint8_t *data, size_t len);
+    void notifyWebSocketClients(const String& message);
     
 public:
     WebServerHandler();
@@ -29,6 +37,11 @@ public:
     void handle();
     bool isRunning();
     AsyncWebServer* getServer();
+    
+    // WebSocket functions for external access
+    void broadcastToWebSocket(const String& message);
+    void broadcastSensorData();
+    int getWebSocketClientCount();
 };
 
 // Global instance declaration
