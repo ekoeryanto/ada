@@ -4,6 +4,7 @@
 #include "sd_manager.h"
 #include "ntp_manager.h"
 #include "analog_voltage_manager.h"
+#include "analog_current_manager.h"
 #include "analytics_manager.h"
 #include "remote_diagnostics.h"
 #include "webhook_handler.h"
@@ -308,6 +309,127 @@ void WebServerHandler::setupRoutes() {
             doc["sensors"][sensorKey]["unit"] = analogVoltageMgr.getUnit(i);
             doc["sensors"][sensorKey]["enabled"] = analogVoltageMgr.isSensorEnabled(i);
             doc["sensors"][sensorKey]["calibrated"] = analogVoltageMgr.isCalibrated(i);
+        }
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    // Analog Current (4-20mA) API endpoints
+    server.on("/api/analog-current", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern AnalogCurrentManager analogCurrentMgr;
+        DynamicJsonDocument doc(1024);
+        
+        doc["initialized"] = analogCurrentMgr.isInitialized();
+        doc["total_readings"] = analogCurrentMgr.getTotalReadings();
+        doc["alarm_status"] = analogCurrentMgr.getAlarmStatus();
+        doc["has_errors"] = analogCurrentMgr.hasErrors();
+        
+        for (int i = 0; i < 3; i++) {
+            CurrentReading reading = analogCurrentMgr.getReading(i);
+            String sensorKey = "sensor_" + String(i);
+            
+            doc["sensors"][sensorKey]["location"] = analogCurrentMgr.getLocation(i);
+            doc["sensors"][sensorKey]["enabled"] = analogCurrentMgr.isSensorEnabled(i);
+            doc["sensors"][sensorKey]["value"] = reading.scaledValue;
+            doc["sensors"][sensorKey]["unit"] = analogCurrentMgr.getUnit(i);
+            doc["sensors"][sensorKey]["current"] = reading.current;
+            doc["sensors"][sensorKey]["voltage"] = reading.voltage;
+            doc["sensors"][sensorKey]["raw_adc"] = reading.rawADC;
+            doc["sensors"][sensorKey]["status"] = analogCurrentMgr.getStatusString(i);
+            doc["sensors"][sensorKey]["valid"] = reading.valid;
+            doc["sensors"][sensorKey]["timestamp"] = reading.timestamp;
+            doc["sensors"][sensorKey]["loop_resistance"] = reading.loopResistance;
+            doc["sensors"][sensorKey]["signal_quality"] = reading.signalQuality;
+            doc["sensors"][sensorKey]["low_alarm"] = analogCurrentMgr.isLowValue(i);
+            doc["sensors"][sensorKey]["high_alarm"] = analogCurrentMgr.isHighValue(i);
+            doc["sensors"][sensorKey]["errors"] = analogCurrentMgr.getErrorCount(i);
+        }
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    server.on("/api/analog-current/health", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern AnalogCurrentManager analogCurrentMgr;
+        DynamicJsonDocument doc(1024);
+        
+        doc["initialized"] = analogCurrentMgr.isInitialized();
+        doc["total_readings"] = analogCurrentMgr.getTotalReadings();
+        doc["alarm_status"] = analogCurrentMgr.getAlarmStatus();
+        doc["has_errors"] = analogCurrentMgr.hasErrors();
+        
+        for (int i = 0; i < 3; i++) {
+            CurrentReading reading = analogCurrentMgr.getReading(i);
+            String sensorKey = "sensor_" + String(i);
+            
+            doc["sensors"][sensorKey]["location"] = analogCurrentMgr.getLocation(i);
+            doc["sensors"][sensorKey]["enabled"] = analogCurrentMgr.isSensorEnabled(i);
+            doc["sensors"][sensorKey]["current"] = reading.current;
+            doc["sensors"][sensorKey]["expected_range"] = "4.0-20.0 mA";
+            doc["sensors"][sensorKey]["status"] = analogCurrentMgr.getStatusString(i);
+            doc["sensors"][sensorKey]["valid"] = reading.valid;
+            doc["sensors"][sensorKey]["loop_resistance"] = reading.loopResistance;
+            doc["sensors"][sensorKey]["signal_quality"] = reading.signalQuality;
+            doc["sensors"][sensorKey]["timestamp"] = reading.timestamp;
+            doc["sensors"][sensorKey]["low_alarm"] = analogCurrentMgr.isLowValue(i);
+            doc["sensors"][sensorKey]["high_alarm"] = analogCurrentMgr.isHighValue(i);
+            doc["sensors"][sensorKey]["errors"] = analogCurrentMgr.getErrorCount(i);
+            doc["sensors"][sensorKey]["needs_calibration"] = !analogCurrentMgr.isCalibrated(i);
+        }
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    server.on("/api/analog-current/info", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern AnalogCurrentManager analogCurrentMgr;
+        DynamicJsonDocument doc(1024);
+        
+        doc["system"] = "Analog Current Manager (4-20mA)";
+        doc["initialized"] = analogCurrentMgr.isInitialized();
+        doc["total_readings"] = analogCurrentMgr.getTotalReadings();
+        
+        for (int i = 0; i < 3; i++) {
+            String sensorKey = "sensor_" + String(i);
+            doc["sensors"][sensorKey]["location"] = analogCurrentMgr.getLocation(i);
+            doc["sensors"][sensorKey]["unit"] = analogCurrentMgr.getUnit(i);
+            doc["sensors"][sensorKey]["manufacturer"] = analogCurrentMgr.getManufacturer(i);
+            doc["sensors"][sensorKey]["model"] = analogCurrentMgr.getModel(i);
+            doc["sensors"][sensorKey]["serial_number"] = analogCurrentMgr.getSerialNumber(i);
+            doc["sensors"][sensorKey]["sensor_id"] = analogCurrentMgr.getSensorId(i);
+            doc["sensors"][sensorKey]["enabled"] = analogCurrentMgr.isSensorEnabled(i);
+            doc["sensors"][sensorKey]["calibrated"] = analogCurrentMgr.isCalibrated(i);
+        }
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    server.on("/api/analog-current/diagnostics", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern AnalogCurrentManager analogCurrentMgr;
+        DynamicJsonDocument doc(1024);
+        
+        doc["system"] = "4-20mA Loop Diagnostics";
+        doc["initialized"] = analogCurrentMgr.isInitialized();
+        
+        for (int i = 0; i < 3; i++) {
+            CurrentReading reading = analogCurrentMgr.getReading(i);
+            String sensorKey = "sensor_" + String(i);
+            
+            doc["sensors"][sensorKey]["location"] = analogCurrentMgr.getLocation(i);
+            doc["sensors"][sensorKey]["current_reading"] = reading.current;
+            doc["sensors"][sensorKey]["loop_resistance"] = reading.loopResistance;
+            doc["sensors"][sensorKey]["signal_quality"] = reading.signalQuality;
+            doc["sensors"][sensorKey]["status"] = analogCurrentMgr.getStatusString(i);
+            doc["sensors"][sensorKey]["loop_integrity"] = reading.current >= 3.8 && reading.current <= 20.5 ? "OK" : "FAULT";
+            doc["sensors"][sensorKey]["wire_resistance"] = reading.loopResistance > 500 ? "HIGH" : "NORMAL";
+            doc["sensors"][sensorKey]["signal_noise"] = reading.signalQuality < 80 ? "HIGH" : "LOW";
+            doc["sensors"][sensorKey]["calibration_drift"] = !analogCurrentMgr.isCalibrated(i) ? "DETECTED" : "NONE";
         }
         
         String response;

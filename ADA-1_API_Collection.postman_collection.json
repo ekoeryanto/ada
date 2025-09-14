@@ -1,0 +1,622 @@
+{
+  "info": {
+    "name": "ADA-1 Board API",
+    "description": "Complete API collection for ADA-1 ESP32 Modbus Dashboard with PLC-like functionality",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://192.168.1.100/api",
+      "description": "Base URL for ADA-1 board - change IP as needed"
+    },
+    {
+      "key": "boardIP",
+      "value": "192.168.1.100",
+      "description": "ADA-1 board IP address"
+    },
+    {
+      "key": "hostname",
+      "value": "ada-1.local",
+      "description": "mDNS hostname for the board"
+    }
+  ],
+  "item": [
+    {
+      "name": "System Management",
+      "item": [
+        {
+          "name": "Get System Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["status"]
+            },
+            "description": "Get comprehensive system status including all modules, sensors, and health information"
+          }
+        },
+        {
+          "name": "Get Health Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Get health status of all system modules (WiFi, Modbus, WebServer, SD, NTP, OTA, Analytics, Diagnostics)"
+          }
+        },
+        {
+          "name": "Get Current Time",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/time",
+              "host": ["{{baseUrl}}"],
+              "path": ["time"]
+            },
+            "description": "Get current system time and NTP sync status"
+          }
+        },
+        {
+          "name": "Force NTP Sync",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/time/sync",
+              "host": ["{{baseUrl}}"],
+              "path": ["time", "sync"]
+            },
+            "description": "Force NTP time synchronization"
+          }
+        },
+        {
+          "name": "Restart System",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/restart",
+              "host": ["{{baseUrl}}"],
+              "path": ["restart"]
+            },
+            "description": "Restart the ADA-1 system"
+          }
+        },
+        {
+          "name": "Reset WiFi Settings",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reset",
+              "host": ["{{baseUrl}}"],
+              "path": ["reset"]
+            },
+            "description": "Reset WiFi settings and restart system"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analog Voltage Sensors",
+      "item": [
+        {
+          "name": "Get All Analog Sensors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analog-voltage",
+              "host": ["{{baseUrl}}"],
+              "path": ["analog-voltage"]
+            },
+            "description": "Get detailed analog sensor readings and configuration for all sensors"
+          }
+        },
+        {
+          "name": "Get Sensor 0 (Pressure)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analog-voltage/sensor/0",
+              "host": ["{{baseUrl}}"],
+              "path": ["analog-voltage", "sensor", "0"]
+            },
+            "description": "Get Sensor 0 data (Pressure Tank 1)"
+          }
+        },
+        {
+          "name": "Get Sensor 1 (Flow)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analog-voltage/sensor/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["analog-voltage", "sensor", "1"]
+            },
+            "description": "Get Sensor 1 data (Flow Sensor)"
+          }
+        },
+        {
+          "name": "Get Sensor 2 (Temperature)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analog-voltage/sensor/2",
+              "host": ["{{baseUrl}}"],
+              "path": ["analog-voltage", "sensor", "2"]
+            },
+            "description": "Get Sensor 2 data (Temperature)"
+          }
+        },
+        {
+          "name": "Configure Sensor 0",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": \"Pressure Tank 1\",\n  \"unit\": \"bar\",\n  \"min_value\": 0.0,\n  \"max_value\": 10.0,\n  \"low_alarm\": 2.0,\n  \"high_alarm\": 8.0,\n  \"enabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/analog-voltage/sensor/0/config",
+              "host": ["{{baseUrl}}"],
+              "path": ["analog-voltage", "sensor", "0", "config"]
+            },
+            "description": "Configure Sensor 0 parameters"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Modbus RTU Operations",
+      "item": [
+        {
+          "name": "Get Modbus Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/modbus/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["modbus", "status"]
+            },
+            "description": "Get Modbus system status and device count"
+          }
+        },
+        {
+          "name": "List All Modbus Devices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/modbus/devices",
+              "host": ["{{baseUrl}}"],
+              "path": ["modbus", "devices"]
+            },
+            "description": "List all configured Modbus devices"
+          }
+        },
+        {
+          "name": "Get Device 1 Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/modbus/devices/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["modbus", "devices", "1"]
+            },
+            "description": "Get specific device details and register values"
+          }
+        },
+        {
+          "name": "Add New Modbus Device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Energy Meter\",\n  \"address\": 2,\n  \"enabled\": true,\n  \"registers\": [\n    {\n      \"address\": 30001,\n      \"name\": \"Voltage L1\",\n      \"unit\": \"V\",\n      \"data_type\": \"float\",\n      \"read_interval\": 5000\n    },\n    {\n      \"address\": 30003,\n      \"name\": \"Current L1\",\n      \"unit\": \"A\",\n      \"data_type\": \"float\",\n      \"read_interval\": 5000\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/modbus/devices",
+              "host": ["{{baseUrl}}"],
+              "path": ["modbus", "devices"]
+            },
+            "description": "Add new Modbus device with register configuration"
+          }
+        },
+        {
+          "name": "Read Modbus Registers",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_address\": 1,\n  \"function\": 3,\n  \"start_address\": 30001,\n  \"quantity\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/modbus/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["modbus", "read"]
+            },
+            "description": "Read specific Modbus registers from a device"
+          }
+        },
+        {
+          "name": "Write Modbus Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_address\": 1,\n  \"function\": 6,\n  \"address\": 40001,\n  \"value\": 1234\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/modbus/write",
+              "host": ["{{baseUrl}}"],
+              "path": ["modbus", "write"]
+            },
+            "description": "Write to a Modbus register"
+          }
+        },
+        {
+          "name": "Auto-Discover Devices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/modbus/auto-discover?start_address=1&end_address=10&timeout=1000",
+              "host": ["{{baseUrl}}"],
+              "path": ["modbus", "auto-discover"],
+              "query": [
+                {
+                  "key": "start_address",
+                  "value": "1",
+                  "description": "Starting slave address"
+                },
+                {
+                  "key": "end_address",
+                  "value": "10",
+                  "description": "Ending slave address"
+                },
+                {
+                  "key": "timeout",
+                  "value": "1000",
+                  "description": "Timeout per device in ms"
+                }
+              ]
+            },
+            "description": "Auto-discover Modbus devices on the network"
+          }
+        },
+        {
+          "name": "Update Device Configuration",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Energy Meter\",\n  \"enabled\": true,\n  \"registers\": [\n    {\n      \"address\": 30001,\n      \"name\": \"Voltage L1-N\",\n      \"unit\": \"V\",\n      \"data_type\": \"float\",\n      \"read_interval\": 3000\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/modbus/devices/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["modbus", "devices", "1"]
+            },
+            "description": "Update device configuration"
+          }
+        },
+        {
+          "name": "Delete Modbus Device",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/modbus/devices/2",
+              "host": ["{{baseUrl}}"],
+              "path": ["modbus", "devices", "2"]
+            },
+            "description": "Remove device from configuration"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Network & WiFi",
+      "item": [
+        {
+          "name": "Get WiFi Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/wifi/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["wifi", "status"]
+            },
+            "description": "Get WiFi connection status and network details"
+          }
+        },
+        {
+          "name": "Scan WiFi Networks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/wifi/scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["wifi", "scan"]
+            },
+            "description": "Scan for available WiFi networks"
+          }
+        },
+        {
+          "name": "Connect to WiFi",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ssid\": \"YourWiFi\",\n  \"password\": \"your_password\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/wifi/connect",
+              "host": ["{{baseUrl}}"],
+              "path": ["wifi", "connect"]
+            },
+            "description": "Connect to a WiFi network"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Data Logging & Analytics",
+      "item": [
+        {
+          "name": "Get Available Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/logs",
+              "host": ["{{baseUrl}}"],
+              "path": ["logs"]
+            },
+            "description": "Get list of available log files on SD card"
+          }
+        },
+        {
+          "name": "Download Log File",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/logs/sensors_2025-09-14.csv",
+              "host": ["{{baseUrl}}"],
+              "path": ["logs", "sensors_2025-09-14.csv"]
+            },
+            "description": "Download specific log file"
+          }
+        },
+        {
+          "name": "Get Analytics Data",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics"]
+            },
+            "description": "Get analytics and trends data for sensors and system performance"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "Get Webhook Configuration",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/webhooks",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhooks"]
+            },
+            "description": "Get current webhook configuration"
+          }
+        },
+        {
+          "name": "Configure Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Server\",\n  \"url\": \"https://your-server.com/webhook\",\n  \"enabled\": true,\n  \"events\": [\"sensor_alarm\", \"device_offline\", \"system_error\"],\n  \"headers\": {\n    \"Authorization\": \"Bearer your-token\",\n    \"Content-Type\": \"application/json\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/webhooks",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhooks"]
+            },
+            "description": "Configure webhook endpoint for notifications"
+          }
+        },
+        {
+          "name": "Test Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://your-server.com/webhook\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/webhooks/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["webhooks", "test"]
+            },
+            "description": "Test webhook endpoint connectivity"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PLC-like Functions",
+      "item": [
+        {
+          "name": "Get Board as Modbus Slave",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/modbus/slave/registers",
+              "host": ["{{baseUrl}}"],
+              "path": ["modbus", "slave", "registers"]
+            },
+            "description": "Get board's Modbus slave register mapping (Board address: 1)"
+          }
+        },
+        {
+          "name": "Read Board Slave Register",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/modbus/slave/register/40001",
+              "host": ["{{baseUrl}}"],
+              "path": ["modbus", "slave", "register", "40001"]
+            },
+            "description": "Read specific slave register from this board"
+          }
+        },
+        {
+          "name": "Write Board Slave Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"address\": 40001,\n  \"value\": 1234\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/modbus/slave/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["modbus", "slave", "register"]
+            },
+            "description": "Write to board's slave register"
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-set timestamps for requests",
+          "pm.globals.set('timestamp', Date.now());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Basic response validation",
+          "pm.test('Status code is 200', function () {",
+          "    pm.response.to.have.status(200);",
+          "});",
+          "",
+          "pm.test('Response time is less than 5000ms', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});",
+          "",
+          "// Log response for debugging",
+          "console.log('Response:', pm.response.json());"
+        ]
+      }
+    }
+  ]
+}
