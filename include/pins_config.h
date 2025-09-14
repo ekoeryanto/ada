@@ -12,6 +12,10 @@
 #define AI2_PIN 34
 #define AI3_PIN 36
 
+// Analog Current Inputs (4-20mA via ADS1115)
+#define ACI1_CHANNEL 0  // ADS1115 Channel 0
+#define ACI2_CHANNEL 1  // ADS1115 Channel 1
+
 // Digital Outputs
 #define DO1_PIN 15
 #define DO2_PIN 13

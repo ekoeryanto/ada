@@ -161,16 +161,34 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       }
     }
 
+    // Map sensor key to GPIO pin (based on pins_config.h and ESP32 firmware)
+    function getGPIOPin(key: string): number {
+      const pinMap: { [key: string]: number } = {
+        'a11': 35,  // A11 -> GPIO 35 (AI1_PIN)
+        'a12': 34,  // A12 -> GPIO 34 (AI2_PIN)  
+        'a13': 36   // A13 -> GPIO 36 (AI3_PIN)
+      };
+      return pinMap[key.toLowerCase()] || 0;
+    }
+
     // Render voltage sensors
-    function renderSensors(sensors: any[]) {
-      sensorsGrid.innerHTML = sensors.map((sensor, index) => {
-        const statusDisplay = getStatusDisplay(sensor.status);
-        const voltagePercent = Math.min(Math.max((sensor.voltage / 10) * 100, 0), 100);
+    function renderSensors(sensors: any) {
+      if (!sensors || typeof sensors !== 'object') {
+        sensorsGrid.innerHTML = '<div class="text-slate-400">No sensor data available</div>';
+        return;
+      }
+
+      sensorsGrid.innerHTML = Object.entries(sensors).map(([key, sensor]: [string, any]) => {
+        const statusDisplay = getStatusDisplay(sensor.status || 'OK');
+        const voltagePercent = Math.min(Math.max((sensor.value / 10) * 100, 0), 100);
+        // Convert key to display name: a11 -> A11, a12 -> A12, a13 -> A13 (matching ESP32 firmware)
+        const displayName = key.toUpperCase(); 
+        const gpioPin = getGPIOPin(key);
         
         return `
           <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border ${statusDisplay.borderColor}">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-white">AI${sensor.id}</h3>
+              <h3 class="text-lg font-semibold text-white">${displayName} (GPIO${gpioPin})</h3>
               <div class="px-2 py-1 rounded-full text-xs font-medium ${statusDisplay.bgColor} ${statusDisplay.color} ${statusDisplay.borderColor} border">
                 ${statusDisplay.text}
               </div>
@@ -179,7 +197,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
             <div class="mb-4">
               <div class="flex justify-between text-sm mb-2">
                 <span class="text-slate-400">Voltage</span>
-                <span class="text-white font-bold">${sensor.voltage.toFixed(3)} V</span>
+                <span class="text-white font-bold">${sensor.value.toFixed(3)} V</span>
               </div>
               <div class="w-full bg-slate-700 rounded-full h-3">
                 <div class="bg-gradient-to-r from-yellow-500 to-orange-400 h-3 rounded-full transition-all duration-500" 
@@ -194,16 +212,24 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
 
             <div class="space-y-2 text-sm">
               <div class="flex justify-between">
-                <span class="text-slate-400">Raw Value:</span>
-                <span class="text-white">${sensor.raw}</span>
+                <span class="text-slate-400">Raw ADC:</span>
+                <span class="text-white">${sensor.raw_adc || 0}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-slate-400">Pin:</span>
-                <span class="text-white">GPIO${35 + sensor.id - 1}</span>
+                <span class="text-slate-400">Location:</span>
+                <span class="text-white">${sensor.location || 'Not Set'}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Enabled:</span>
+                <span class="text-white">${sensor.enabled ? 'Yes' : 'No'}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Health Score:</span>
+                <span class="text-white">${(sensor.health_score || 0).toFixed(1)}%</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-slate-400">Last Update:</span>
-                <span class="text-white">${new Date(sensor.timestamp * 1000).toLocaleTimeString()}</span>
+                <span class="text-white">${sensor.timestamp ? new Date(sensor.timestamp * 1000).toLocaleTimeString() : 'N/A'}</span>
               </div>
             </div>
           </div>
@@ -212,10 +238,16 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     }
 
     // Update calibration sensor select
-    function updateCalibrationSensor(sensors: any[]) {
-      const options = sensors.map(sensor => 
-        `<option value="${sensor.id}">AI${sensor.id} (GPIO${35 + sensor.id - 1})</option>`
-      ).join('');
+    function updateCalibrationSensor(sensors: any) {
+      if (!sensors || typeof sensors !== 'object') {
+        calibrationSensor.innerHTML = '<option value="">No sensors available</option>';
+        return;
+      }
+
+      const options = Object.entries(sensors).map(([key, sensor]: [string, any]) => {
+        const gpioPin = getGPIOPin(key);
+        return `<option value="${key}">${key.toUpperCase()} (GPIO${gpioPin}) - ${sensor.location || 'Unknown'}</option>`;
+      }).join('');
       
       calibrationSensor.innerHTML = '<option value="">Select Sensor</option>' + options;
     }
@@ -303,20 +335,29 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         const health = await adaApi.getSensorHealth();
         
         if (health && health.sensors) {
-          healthStatus.innerHTML = health.sensors.map((sensor: any) => `
-            <div class="bg-slate-700/50 rounded-lg p-4">
-              <div class="flex justify-between items-center mb-2">
-                <h4 class="font-semibold text-white">AI${sensor.id}</h4>
-                <span class="text-sm ${sensor.health === 'OK' ? 'text-green-400' : 'text-red-400'}">
-                  ${sensor.health}
-                </span>
+          // Check if sensors is object or array format
+          const sensorsData = Array.isArray(health.sensors) ? health.sensors : Object.entries(health.sensors);
+          
+          healthStatus.innerHTML = sensorsData.map((item: any) => {
+            // Handle both array and object formats
+            const sensor = Array.isArray(health.sensors) ? item : item[1];
+            const sensorKey = Array.isArray(health.sensors) ? `AI${sensor.id}` : item[0].toUpperCase();
+            
+            return `
+              <div class="bg-slate-700/50 rounded-lg p-4">
+                <div class="flex justify-between items-center mb-2">
+                  <h4 class="font-semibold text-white">${sensorKey}</h4>
+                  <span class="text-sm ${sensor.health === 'OK' ? 'text-green-400' : 'text-red-400'}">
+                    ${sensor.health || 'OK'}
+                  </span>
+                </div>
+                <div class="text-sm text-slate-400">
+                  <div>Error Count: ${sensor.error_count || 0}</div>
+                  <div>Last Reading: ${sensor.last_reading ? new Date(sensor.last_reading * 1000).toLocaleTimeString() : 'N/A'}</div>
+                </div>
               </div>
-              <div class="text-sm text-slate-400">
-                <div>Error Count: ${sensor.error_count}</div>
-                <div>Last Reading: ${new Date(sensor.last_reading * 1000).toLocaleTimeString()}</div>
-              </div>
-            </div>
-          `).join('');
+            `;
+          }).join('');
         } else {
           healthStatus.innerHTML = '<div class="text-slate-400 text-sm">No health data available</div>';
         }
@@ -326,10 +367,18 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     }
 
     // Update statistics
-    function updateStats(sensors: any[], metadata?: any) {
-      const totalSensors = sensors.length;
-      const activeSensors = sensors.filter(s => s.status === 'OK').length;
-      const avgVoltage = sensors.reduce((sum, s) => sum + s.voltage, 0) / totalSensors;
+    function updateStats(sensors: any, metadata?: any) {
+      if (!sensors || typeof sensors !== 'object') {
+        sensorInfo.innerHTML = '<div class="text-slate-400">No sensor data</div>';
+        samplingStats.innerHTML = '<div class="text-slate-400">No statistics</div>';
+        return;
+      }
+
+      const sensorArray = Object.values(sensors);
+      const totalSensors = sensorArray.length;
+      const activeSensors = sensorArray.filter((s: any) => s.enabled && s.valid).length;
+      const avgVoltage = sensorArray.reduce((sum: number, s: any) => sum + (s.value || 0), 0) / totalSensors;
+      const voltages = sensorArray.map((s: any) => s.value || 0);
       
       sensorInfo.innerHTML = `
         <div class="flex justify-between text-sm">
@@ -357,11 +406,15 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         </div>
         <div class="flex justify-between text-sm">
           <span class="text-slate-400">Min Voltage:</span>
-          <span class="text-white">${Math.min(...sensors.map(s => s.voltage)).toFixed(3)}V</span>
+          <span class="text-white">${Math.min(...voltages).toFixed(3)}V</span>
         </div>
         <div class="flex justify-between text-sm">
           <span class="text-slate-400">Max Voltage:</span>
-          <span class="text-white">${Math.max(...sensors.map(s => s.voltage)).toFixed(3)}V</span>
+          <span class="text-white">${Math.max(...voltages).toFixed(3)}V</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-400">Range:</span>
+          <span class="text-white">${(Math.max(...voltages) - Math.min(...voltages)).toFixed(3)}V</span>
         </div>
         <div class="flex justify-between text-sm">
           <span class="text-slate-400">Sampling Rate:</span>
@@ -377,7 +430,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         systemStatus.innerHTML = `
           <div class="flex justify-between text-sm">
             <span class="text-slate-400">Uptime:</span>
-            <span class="text-white">${Math.floor((status.uptime || 0) / 3600)}h ${Math.floor(((status.uptime || 0) % 3600) / 60)}m</span>
+            <span class="text-white">${Math.floor((Number(status.uptime) || 0) / 3600)}h ${Math.floor(((Number(status.uptime) || 0) % 3600) / 60)}m</span>
           </div>
           <div class="flex justify-between text-sm">
             <span class="text-slate-400">ADC Status:</span>
@@ -385,7 +438,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
           </div>
           <div class="flex justify-between text-sm">
             <span class="text-slate-400">Free Memory:</span>
-            <span class="text-white">${Math.round((status.heap || 0) / 1024)}KB</span>
+            <span class="text-white">${Math.round((status.freeHeap || 0) / 1024)}KB</span>
           </div>
         `;
       } catch (error) {

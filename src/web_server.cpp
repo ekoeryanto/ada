@@ -518,7 +518,7 @@ void WebServerHandler::setupRoutes() {
         
         for (int i = 0; i < 4; i++) {
             DigitalInputReading reading = digitalIOMgr.getInputReading(i);
-            String inputKey = "d" + String(i + 11);  // d11, d12, d13, d14
+            String inputKey = "di" + String(i + 1);  // di1, di2, di3, di4
             
             doc["inputs"][inputKey]["name"] = digitalIOMgr.getInputName(i);
             doc["inputs"][inputKey]["info"] = digitalIOMgr.getInputInfo(i);
@@ -550,7 +550,7 @@ void WebServerHandler::setupRoutes() {
         // Digital Inputs
         for (int i = 0; i < 4; i++) {
             DigitalInputReading reading = digitalIOMgr.getInputReading(i);
-            String inputKey = "d" + String(i + 11);  // d11, d12, d13, d14
+            String inputKey = "di" + String(i + 1);  // di1, di2, di3, di4
             
             doc["inputs"][inputKey]["name"] = digitalIOMgr.getInputName(i);
             doc["inputs"][inputKey]["state"] = reading.currentState == DI_HIGH ? "HIGH" : "LOW";
@@ -591,7 +591,7 @@ void WebServerHandler::setupRoutes() {
         
         for (int i = 0; i < 4; i++) {
             DigitalInputReading reading = digitalIOMgr.getInputReading(i);
-            String inputKey = "d" + String(i + 11);  // d11, d12, d13, d14
+            String inputKey = "di" + String(i + 1);  // di1, di2, di3, di4
             
             doc["inputs"][inputKey]["name"] = digitalIOMgr.getInputName(i);
             doc["inputs"][inputKey]["info"] = digitalIOMgr.getInputInfo(i);

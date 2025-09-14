@@ -126,6 +126,21 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
   <script>
     import { adaApi } from '../lib/api';
 
+    // Hardware pin mapping (consistent with pins_config.h)
+    const DIGITAL_INPUT_PINS = {
+      'di1': 27,  // DI1_PIN
+      'di2': 26,  // DI2_PIN  
+      'di3': 25,  // DI3_PIN
+      'di4': 33   // DI4_PIN
+    };
+
+    const DIGITAL_OUTPUT_PINS = {
+      'do1': 15,  // DO1_PIN
+      'do2': 13,  // DO2_PIN
+      'do3': 12,  // DO3_PIN
+      'do4': 14   // DO4_PIN
+    };
+
     let updateInterval: ReturnType<typeof setInterval>;
     let sequenceRunning = false;
     let isConnected = true;
@@ -183,66 +198,89 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     }
 
     // Render digital inputs
-    function renderDigitalInputs(inputs: any[]) {
-      digitalInputs.innerHTML = inputs.map(input => {
-        const statusColor = input.state ? 'text-green-400 bg-green-500/20 border-green-500/30' : 'text-gray-400 bg-gray-500/20 border-gray-500/30';
-        const statusIcon = input.state ? '●' : '○';
+    function renderDigitalInputs(inputs: any) {
+      if (!inputs || typeof inputs !== 'object') {
+        digitalInputs.innerHTML = '<div class="text-slate-400">No input data available</div>';
+        return;
+      }
+
+      digitalInputs.innerHTML = Object.entries(inputs).map(([key, input]: [string, any]) => {
+        const isHigh = input.state === 'HIGH' || input.state === true || input.state === 1;
+        const statusColor = isHigh ? 'text-green-400 bg-green-500/20 border-green-500/30' : 'text-gray-400 bg-gray-500/20 border-gray-500/30';
+        const statusIcon = isHigh ? '●' : '○';
+        const displayName = key.toUpperCase(); // di1 -> DI1, di2 -> DI2, etc.
+        const pinNumber = DIGITAL_INPUT_PINS[key as keyof typeof DIGITAL_INPUT_PINS] || 'N/A';
         
         return `
-          <div class="bg-slate-700/50 rounded-lg p-4 border ${input.state ? 'border-green-500/30' : 'border-gray-500/30'}">
+          <div class="bg-slate-700/50 rounded-lg p-4 border ${isHigh ? 'border-green-500/30' : 'border-gray-500/30'}">
             <div class="flex items-center justify-between mb-2">
-              <h3 class="font-semibold text-white">DI${input.id}</h3>
+              <div>
+                <h3 class="font-semibold text-white">${displayName}</h3>
+                <span class="text-xs text-slate-400">Pin ${pinNumber}</span>
+              </div>
               <div class="flex items-center space-x-2">
                 <span class="text-2xl ${statusColor}">${statusIcon}</span>
                 <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColor} border">
-                  ${input.state ? 'HIGH' : 'LOW'}
+                  ${isHigh ? 'HIGH' : 'LOW'}
                 </span>
               </div>
             </div>
             <div class="text-sm text-slate-400">
-              <div>Pin: GPIO${input.pin}</div>
-              <div>Pull-up: ${input.pullup ? 'Enabled' : 'Disabled'}</div>
-              <div>Last Change: ${new Date(input.last_change * 1000).toLocaleTimeString()}</div>
+              <div>Name: ${input.name || 'Digital Input'}</div>
+              <div>Pulses: ${input.pulse_count || 0} (Total: ${input.total_pulses || 0})</div>
+              <div>Last Change: ${input.last_change ? new Date(input.last_change * 1000).toLocaleTimeString() : 'N/A'}</div>
             </div>
           </div>
         `;
       }).join('');
     }
 
-    // Render digital outputs
-    function renderDigitalOutputs(outputs: any[]) {
-      digitalOutputs.innerHTML = outputs.map(output => {
-        const statusColor = output.state ? 'text-green-400 bg-green-500/20 border-green-500/30' : 'text-gray-400 bg-gray-500/20 border-gray-500/30';
-        const statusIcon = output.state ? '●' : '○';
+    // Render digital outputs  
+    function renderDigitalOutputs(outputs: any) {
+      if (!outputs || typeof outputs !== 'object') {
+        digitalOutputs.innerHTML = '<div class="text-slate-400">No output data available</div>';
+        return;
+      }
+
+      digitalOutputs.innerHTML = Object.entries(outputs).map(([key, output]: [string, any]) => {
+        const isOn = output.state === true || output.state === 1 || output.state === 'HIGH';
+        const statusColor = isOn ? 'text-green-400 bg-green-500/20 border-green-500/30' : 'text-gray-400 bg-gray-500/20 border-gray-500/30';
+        const statusIcon = isOn ? '●' : '○';
+        const displayName = key.toUpperCase(); // do1 -> DO1, do2 -> DO2, etc.
+        const pinNumber = DIGITAL_OUTPUT_PINS[key as keyof typeof DIGITAL_OUTPUT_PINS] || 'N/A';
         
         return `
-          <div class="bg-slate-700/50 rounded-lg p-4 border ${output.state ? 'border-green-500/30' : 'border-gray-500/30'}">
+          <div class="bg-slate-700/50 rounded-lg p-4 border ${isOn ? 'border-green-500/30' : 'border-gray-500/30'}">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="font-semibold text-white">DO${output.id}</h3>
+              <div>
+                <h3 class="font-semibold text-white">${displayName}</h3>
+                <span class="text-xs text-slate-400">Pin ${pinNumber}</span>
+              </div>
               <div class="flex items-center space-x-2">
                 <span class="text-2xl ${statusColor}">${statusIcon}</span>
                 <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColor} border">
-                  ${output.state ? 'HIGH' : 'LOW'}
+                  ${isOn ? 'HIGH' : 'LOW'}
                 </span>
               </div>
             </div>
             
             <div class="space-y-2">
               <div class="flex space-x-2">
-                <button onclick="setOutput(${output.id}, true)" 
-                        class="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors ${output.state ? 'opacity-50' : ''}" 
-                        ${output.state ? 'disabled' : ''}>
+                <button onclick="setOutput('${key}', true)" 
+                        class="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors ${isOn ? 'opacity-50' : ''}" 
+                        ${isOn ? 'disabled' : ''}>
                   ON
                 </button>
-                <button onclick="setOutput(${output.id}, false)" 
-                        class="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors ${!output.state ? 'opacity-50' : ''}" 
-                        ${!output.state ? 'disabled' : ''}>
+                <button onclick="setOutput('${key}', false)" 
+                        class="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors ${!isOn ? 'opacity-50' : ''}" 
+                        ${!isOn ? 'disabled' : ''}>
                   OFF
                 </button>
               </div>
               <div class="text-sm text-slate-400">
-                <div>Pin: GPIO${output.pin}</div>
-                <div>Last Change: ${new Date(output.last_change * 1000).toLocaleTimeString()}</div>
+                <div>Name: ${output.name || 'Digital Output'}</div>
+                <div>Operations: ${output.operations || 0}</div>
+                <div>Last Change: ${output.last_change ? new Date(output.last_change * 1000).toLocaleTimeString() : 'N/A'}</div>
               </div>
             </div>
           </div>
@@ -251,13 +289,26 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     }
 
     // Set output state
-    async function setOutput(outputId: number, state: boolean) {
+    async function setOutput(outputKey: string, state: boolean) {
       try {
-        await adaApi.setDigitalOutput(outputId, state);
-        addLogEntry(`DO${outputId} set to ${state ? 'HIGH' : 'LOW'}`, 'success');
+        // For the new key naming system (do1-do4), we need to send POST request with key-value pairs
+        const postData: Record<string, boolean> = {};
+        postData[outputKey] = state;
+        
+        const response = await fetch('/api/digital-io/outputs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(postData)
+        });
+        
+        if (!response.ok) throw new Error('Failed to set output');
+        
+        addLogEntry(`${outputKey.toUpperCase()} set to ${state ? 'HIGH' : 'LOW'}`, 'success');
         await updateData(); // Refresh data immediately
       } catch (error) {
-        addLogEntry(`Failed to set DO${outputId}`, 'error');
+        addLogEntry(`Failed to set ${outputKey.toUpperCase()}`, 'error');
       }
     }
 
@@ -266,9 +317,22 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       try {
         const data = await adaApi.getDigitalIO();
         if (data && data.outputs) {
-          for (const output of data.outputs) {
-            await adaApi.setDigitalOutput(output.id, state);
-          }
+          // Create a object with all output keys set to the desired state
+          const postData: Record<string, boolean> = {};
+          Object.keys(data.outputs).forEach(key => {
+            postData[key] = state;
+          });
+          
+          const response = await fetch('/api/digital-io/outputs', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(postData)
+          });
+          
+          if (!response.ok) throw new Error('Failed to set outputs');
+          
           addLogEntry(`All outputs set to ${state ? 'HIGH' : 'LOW'}`, 'success');
           await updateData();
         }

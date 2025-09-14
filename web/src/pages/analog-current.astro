@@ -148,27 +148,48 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     // Get status color and text
     function getStatusDisplay(status: string) {
       switch (status) {
+        case 'Normal':
         case 'OK':
-          return { color: 'text-green-400', bgColor: 'bg-green-500/20', borderColor: 'border-green-500/30', text: 'GOOD' };
+          return { color: 'text-green-400', bgColor: 'bg-green-500/20', borderColor: 'border-green-500/30', text: 'NORMAL' };
+        case 'Low':
         case 'WARNING':
-          return { color: 'text-yellow-400', bgColor: 'bg-yellow-500/20', borderColor: 'border-yellow-500/30', text: 'WARNING' };
+          return { color: 'text-yellow-400', bgColor: 'bg-yellow-500/20', borderColor: 'border-yellow-500/30', text: 'LOW' };
+        case 'High':
         case 'ERROR':
-          return { color: 'text-red-400', bgColor: 'bg-red-500/20', borderColor: 'border-red-500/30', text: 'ERROR' };
+          return { color: 'text-red-400', bgColor: 'bg-red-500/20', borderColor: 'border-red-500/30', text: 'HIGH' };
         default:
           return { color: 'text-slate-400', bgColor: 'bg-slate-500/20', borderColor: 'border-slate-500/30', text: 'UNKNOWN' };
       }
     }
 
+    // Map sensor key to ADS1115 channel (based on ESP32 firmware)
+    function getADS1115Channel(key: string): number {
+      const channelMap: { [key: string]: number } = {
+        'a21': 0,  // A21 -> ADS1115 Channel 0 (AIN0)
+        'a22': 1   // A22 -> ADS1115 Channel 1 (AIN1)
+      };
+      return channelMap[key.toLowerCase()] || 0;
+    }
+
     // Render current sensors
-    function renderSensors(sensors: any[]) {
-      sensorsGrid.innerHTML = sensors.map((sensor, index) => {
-        const statusDisplay = getStatusDisplay(sensor.status);
-        const currentPercent = Math.min(Math.max(((sensor.current - 4) / 16) * 100, 0), 100);
+    function renderSensors(sensors: any) {
+      if (!sensors || typeof sensors !== 'object') {
+        sensorsGrid.innerHTML = '<div class="text-slate-400">No sensor data available</div>';
+        return;
+      }
+
+      sensorsGrid.innerHTML = Object.entries(sensors).map(([key, sensor]: [string, any]) => {
+        const statusDisplay = getStatusDisplay(sensor.status || 'Normal');
+        const currentValue = sensor.current || sensor.value || 4; // Support both current and value fields
+        const currentPercent = Math.min(Math.max(((currentValue - 4) / 16) * 100, 0), 100);
+        // Convert key to display name: a21 -> A21, a22 -> A22 (matching ESP32 firmware)
+        const displayName = key.toUpperCase(); 
+        const adsChannel = getADS1115Channel(key);
         
         return `
           <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border ${statusDisplay.borderColor}">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-white">AI${sensor.id}</h3>
+              <h3 class="text-lg font-semibold text-white">${displayName} (ADS1115 Ch${adsChannel})</h3>
               <div class="px-2 py-1 rounded-full text-xs font-medium ${statusDisplay.bgColor} ${statusDisplay.color} ${statusDisplay.borderColor} border">
                 ${statusDisplay.text}
               </div>
@@ -177,7 +198,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
             <div class="mb-4">
               <div class="flex justify-between text-sm mb-2">
                 <span class="text-slate-400">Current</span>
-                <span class="text-white font-bold">${sensor.current.toFixed(3)} mA</span>
+                <span class="text-white font-bold">${currentValue.toFixed(3)} mA</span>
               </div>
               <div class="w-full bg-slate-700 rounded-full h-3">
                 <div class="bg-gradient-to-r from-orange-500 to-red-400 h-3 rounded-full transition-all duration-500" 
@@ -192,16 +213,32 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
 
             <div class="space-y-2 text-sm">
               <div class="flex justify-between">
-                <span class="text-slate-400">Raw Value:</span>
-                <span class="text-white">${sensor.raw}</span>
+                <span class="text-slate-400">Raw ADC:</span>
+                <span class="text-white">${sensor.raw_adc || 0}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-slate-400">Pin:</span>
-                <span class="text-white">GPIO${35 + sensor.id - 1}</span>
+                <span class="text-slate-400">Voltage:</span>
+                <span class="text-white">${(sensor.voltage || 0).toFixed(3)} V</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Location:</span>
+                <span class="text-white">${sensor.location || 'Not Set'}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Loop Resistance:</span>
+                <span class="text-white">${(sensor.loop_resistance || 0).toFixed(1)} Ω</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Signal Quality:</span>
+                <span class="text-white">${(sensor.signal_quality || 0).toFixed(1)}%</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Enabled:</span>
+                <span class="text-white">${sensor.enabled ? 'Yes' : 'No'}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-slate-400">Last Update:</span>
-                <span class="text-white">${new Date(sensor.timestamp * 1000).toLocaleTimeString()}</span>
+                <span class="text-white">${sensor.timestamp ? new Date(sensor.timestamp * 1000).toLocaleTimeString() : 'N/A'}</span>
               </div>
             </div>
           </div>
@@ -210,10 +247,11 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     }
 
     // Update calibration sensor select
-    function updateCalibrationSensor(sensors: any[]) {
-      const options = sensors.map(sensor => 
-        `<option value="${sensor.id}">AI${sensor.id} (GPIO${35 + sensor.id - 1})</option>`
-      ).join('');
+    function updateCalibrationSensor(sensors: any) {
+      const options = Object.entries(sensors).map(([key, sensor]: [string, any]) => {
+        const adsChannel = getADS1115Channel(key);
+        return `<option value="${key}">${key.toUpperCase()} (ADS1115 Ch${adsChannel}) - ${sensor.location || 'Unknown'}</option>`;
+      }).join('');
       
       calibrationSensor.innerHTML = '<option value="">Select Sensor</option>' + options;
     }
@@ -375,7 +413,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         systemStatus.innerHTML = `
           <div class="flex justify-between text-sm">
             <span class="text-slate-400">Uptime:</span>
-            <span class="text-white">${Math.floor((status.uptime || 0) / 3600)}h ${Math.floor(((status.uptime || 0) % 3600) / 60)}m</span>
+            <span class="text-white">${Math.floor((Number(status.uptime) || 0) / 3600)}h ${Math.floor(((Number(status.uptime) || 0) % 3600) / 60)}m</span>
           </div>
           <div class="flex justify-between text-sm">
             <span class="text-slate-400">ADC Status:</span>
@@ -383,7 +421,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
           </div>
           <div class="flex justify-between text-sm">
             <span class="text-slate-400">Free Memory:</span>
-            <span class="text-white">${Math.round((status.heap || 0) / 1024)}KB</span>
+            <span class="text-white">${Math.round((status.freeHeap || 0) / 1024)}KB</span>
           </div>
         `;
       } catch (error) {

@@ -1,14 +1,167 @@
-# ADA-1 Board API Documentation
+# ESP32 Industrial Controller API Documentation
 
 ## Overview
-API documentation for ADA-1 ESP32-based Modbus dashboard with PLC-like functionality. The board supports analog sensors, Modbus RTU communication, and real-time monitoring.
+Complete REST API documentation for ESP32-based industrial automation controller with digital I/O, analog sensors, Modbus communication, and system management capabilities.
 
-**Base URL:** `http://<board-ip>/api`
-**Default IP:** Check via WiFi network or use mDNS: `ada-1.local`
-**Authentication:** None required for most endpoints
+**Base URL**: `http://<ESP32_IP>/api`
+**Content-Type**: `application/json`
 
-## Table of Contents
-1. [System Endpoints](#system-endpoints)
+## Hardware Mapping
+### Digital I/O
+- **Digital Inputs**: d11, d12, d13, d14 (GPIO 27, 26, 25, 33)
+- **Digital Outputs**: do1, do2, do3, do4 (GPIO 15, 13, 12, 14)
+
+### Analog Sensors
+- **Analog Voltage (0-10V)**: a11, a12, a13 (GPIO 35, 34, 36)
+- **Analog Current (4-20mA)**: a21, a22 (ADS1115 AIN0, AIN1)
+
+---
+
+## API Endpoints
+
+### 1. System Status
+#### GET /api/status
+Get overall system status and health information.
+
+**Response:**
+```json
+{
+  "system": "ESP32 Industrial Controller",
+  "uptime": 145623,
+  "free_heap": 234567,
+  "chip_id": "0x123456",
+  "firmware_version": "1.0.0",
+  "wifi": {
+    "ssid": "Industrial_WiFi",
+    "signal_strength": -45,
+    "ip_address": "192.168.1.100"
+  },
+  "timestamp": 1726308000,
+  "status": "running"
+}
+```
+
+#### GET /api/health
+System health check with component status.
+
+**Response:**
+```json
+{
+  "system_health": "OK",
+  "components": {
+    "wifi": "connected",
+    "sd_card": "mounted",
+    "i2c": "active",
+    "ads1115": "ready",
+    "rtc": "synchronized"
+  },
+  "memory": {
+    "free_heap": 234567,
+    "min_free_heap": 180000,
+    "heap_usage_percent": 15.2
+  },
+  "temperature": 45.6,
+  "uptime_hours": 40.4
+}
+```
+
+### 2. Digital I/O
+
+#### GET /api/digital-io
+Get all digital inputs and outputs status.
+
+**Response:**
+```json
+{
+  "system": "Digital I/O",
+  "total_inputs": 4,
+  "total_outputs": 4,
+  "inputs": {
+    "d11": {
+      "name": "Digital Input 1",
+      "state": "HIGH",
+      "valid": true,
+      "pulse_count": 15,
+      "total_pulses": 1542,
+      "state_time": 2500,
+      "last_change": 1726307950,
+      "alarm_active": false,
+      "timestamp": 1726308000
+    },
+    "d12": {
+      "name": "Digital Input 2",
+      "state": "LOW",
+      "valid": true,
+      "pulse_count": 0,
+      "total_pulses": 892,
+      "state_time": 5000,
+      "last_change": 1726307800,
+      "alarm_active": false,
+      "timestamp": 1726308000
+    },
+    "d13": {
+      "name": "Digital Input 3", 
+      "state": "HIGH",
+      "valid": true,
+      "pulse_count": 3,
+      "total_pulses": 234,
+      "state_time": 1200,
+      "last_change": 1726307980,
+      "alarm_active": false,
+      "timestamp": 1726308000
+    },
+    "d14": {
+      "name": "Digital Input 4",
+      "state": "LOW",
+      "valid": true,
+      "pulse_count": 0,
+      "total_pulses": 45,
+      "state_time": 8000,
+      "last_change": 1726307600,
+      "alarm_active": false,
+      "timestamp": 1726308000
+    }
+  },
+  "outputs": {
+    "do1": {
+      "name": "Digital Output 1",
+      "state": true,
+      "physical_state": true,
+      "duty_cycle": 100,
+      "operations": 523,
+      "last_change": 1726307950,
+      "timestamp": 1726308000
+    },
+    "do2": {
+      "name": "Digital Output 2",
+      "state": false,
+      "physical_state": false,
+      "duty_cycle": 0,
+      "operations": 312,
+      "last_change": 1726307800,
+      "timestamp": 1726308000
+    },
+    "do3": {
+      "name": "Digital Output 3",
+      "state": true,
+      "physical_state": true,
+      "duty_cycle": 75,
+      "operations": 156,
+      "last_change": 1726307980,
+      "timestamp": 1726308000
+    },
+    "do4": {
+      "name": "Digital Output 4",
+      "state": false,
+      "physical_state": false,
+      "duty_cycle": 0,
+      "operations": 89,
+      "last_change": 1726307600,
+      "timestamp": 1726308000
+    }
+  }
+}
+```
 2. [Health Monitoring](#health-monitoring)
 3. [Analog Voltage Sensors](#analog-voltage-sensors)
 4. [Modbus RTU Operations](#modbus-rtu-operations)
