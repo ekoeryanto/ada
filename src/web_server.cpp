@@ -165,7 +165,7 @@ void WebServerHandler::setupRoutes() {
         
         for (int i = 0; i < 3; i++) {
             AnalogReading reading = analogVoltageMgr.getReading(i);
-            String sensorKey = "sensor_" + String(i);
+            String sensorKey = "a1" + String(i + 1);  // a11, a12, a13
             
             doc["sensors"][sensorKey]["location"] = analogVoltageMgr.getLocation(i);
             doc["sensors"][sensorKey]["enabled"] = analogVoltageMgr.isSensorEnabled(i);
@@ -195,7 +195,7 @@ void WebServerHandler::setupRoutes() {
         doc["system_health"] = "OK";
         
         for (int i = 0; i < 3; i++) {
-            String sensorKey = "sensor_" + String(i);
+            String sensorKey = "a1" + String(i + 1);  // a11, a12, a13
             
             doc["sensors"][sensorKey]["location"] = analogVoltageMgr.getLocation(i);
             doc["sensors"][sensorKey]["health_score"] = analogVoltageMgr.getSensorHealth(i);
@@ -296,7 +296,7 @@ void WebServerHandler::setupRoutes() {
         doc["version"] = "2.0.0";
         
         for (int i = 0; i < 3; i++) {
-            String sensorKey = "sensor_" + String(i);
+            String sensorKey = "a1" + String(i + 1);  // a11, a12, a13
             
             doc["sensors"][sensorKey]["sensor_id"] = analogVoltageMgr.getSensorId(i);
             doc["sensors"][sensorKey]["location"] = analogVoltageMgr.getLocation(i);
@@ -329,7 +329,7 @@ void WebServerHandler::setupRoutes() {
         
         for (int i = 0; i < 2; i++) {  // Hardware only has 2 current sensors (ADS1115 AIN0, AIN1)
             CurrentReading reading = analogCurrentMgr.getReading(i);
-            String sensorKey = "sensor_" + String(i);
+            String sensorKey = "a2" + String(i + 1);  // a21, a22
             
             doc["sensors"][sensorKey]["location"] = analogCurrentMgr.getLocation(i);
             doc["sensors"][sensorKey]["enabled"] = analogCurrentMgr.isSensorEnabled(i);
@@ -518,7 +518,7 @@ void WebServerHandler::setupRoutes() {
         
         for (int i = 0; i < 4; i++) {
             DigitalInputReading reading = digitalIOMgr.getInputReading(i);
-            String inputKey = "di" + String(i + 1);  // di1, di2, di3, di4
+            String inputKey = "d" + String(i + 11);  // d11, d12, d13, d14
             
             doc["inputs"][inputKey]["name"] = digitalIOMgr.getInputName(i);
             doc["inputs"][inputKey]["info"] = digitalIOMgr.getInputInfo(i);
@@ -550,7 +550,7 @@ void WebServerHandler::setupRoutes() {
         // Digital Inputs
         for (int i = 0; i < 4; i++) {
             DigitalInputReading reading = digitalIOMgr.getInputReading(i);
-            String inputKey = "di" + String(i + 1);  // di1, di2, di3, di4
+            String inputKey = "d" + String(i + 11);  // d11, d12, d13, d14
             
             doc["inputs"][inputKey]["name"] = digitalIOMgr.getInputName(i);
             doc["inputs"][inputKey]["state"] = reading.currentState == DI_HIGH ? "HIGH" : "LOW";
@@ -591,7 +591,7 @@ void WebServerHandler::setupRoutes() {
         
         for (int i = 0; i < 4; i++) {
             DigitalInputReading reading = digitalIOMgr.getInputReading(i);
-            String inputKey = "di" + String(i + 1);  // di1, di2, di3, di4
+            String inputKey = "d" + String(i + 11);  // d11, d12, d13, d14
             
             doc["inputs"][inputKey]["name"] = digitalIOMgr.getInputName(i);
             doc["inputs"][inputKey]["info"] = digitalIOMgr.getInputInfo(i);
