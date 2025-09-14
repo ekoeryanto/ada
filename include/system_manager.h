@@ -24,6 +24,10 @@ private:
     unsigned long uptimeStart;
     bool debugEnabled;
     
+    // Health monitoring
+    SystemHealthStatus systemHealth;
+    unsigned long lastHealthCheck;
+    
     // LED control
     static void toggleStatusLED();
     void setStatusLED(bool state);
@@ -32,6 +36,9 @@ private:
     // Status management
     void updateStatusLED();
     static void heartbeatCallback();
+    
+    // Health monitoring functions
+    void updateModuleHealth();
     
 public:
     SystemManager();
@@ -46,6 +53,12 @@ public:
     String getStatusString();
     unsigned long getUptime();
     String getUptimeString();
+    
+    // Health monitoring
+    SystemHealthStatus getSystemHealth();
+    void setModuleHealth(const String& module, ModuleHealth health);
+    bool isSystemHealthy();
+    String getHealthReport();
     
     // System functions
     void restart();

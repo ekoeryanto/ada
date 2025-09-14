@@ -21,6 +21,7 @@ public:
     // Main functions
     bool initialize();
     bool autoConnect();
+    bool quickConnect(unsigned long timeoutMs = 10000);  // Non-blocking quick connect
     bool startConfigPortal();
     void handleWiFi();
     bool isConnected();

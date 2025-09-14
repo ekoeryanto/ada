@@ -9,6 +9,19 @@ SystemManager::SystemManager() {
     currentStatus = SYSTEM_INITIALIZING;
     uptimeStart = 0;
     debugEnabled = DEBUG_ENABLED;
+    lastHealthCheck = 0;
+    
+    // Initialize health status
+    systemHealth.wifi = HEALTH_UNKNOWN;
+    systemHealth.modbus = HEALTH_UNKNOWN;
+    systemHealth.webserver = HEALTH_UNKNOWN;
+    systemHealth.sd = HEALTH_UNKNOWN;
+    systemHealth.ntp = HEALTH_UNKNOWN;
+    systemHealth.ota = HEALTH_UNKNOWN;
+    systemHealth.analytics = HEALTH_UNKNOWN;
+    systemHealth.diagnostics = HEALTH_UNKNOWN;
+    systemHealth.lastHealthCheck = 0;
+    systemHealth.systemHealthy = false;
 }
 
 bool SystemManager::initialize() {
@@ -37,6 +50,13 @@ bool SystemManager::initialize() {
 void SystemManager::loop() {
     // Update status LED based on current status
     updateStatusLED();
+    
+    // Perform health check
+    unsigned long currentTime = millis();
+    if (currentTime - lastHealthCheck >= SYSTEM_HEALTH_CHECK_INTERVAL) {
+        updateModuleHealth();
+        lastHealthCheck = currentTime;
+    }
 }
 
 void SystemManager::setStatus(SystemStatus status) {
@@ -228,4 +248,89 @@ void SystemManager::heartbeatCallback() {
         //              systemMgr.getUptimeString().c_str(), 
         //              systemMgr.getFreeHeap());
     }
+}
+
+void SystemManager::updateModuleHealth() {
+    systemHealth.lastHealthCheck = millis();
+    
+    // Check WiFi health
+    if (WiFi.status() == WL_CONNECTED) {
+        systemHealth.wifi = HEALTH_OK;
+    } else {
+        systemHealth.wifi = HEALTH_ERROR;
+    }
+    
+    // Check overall system health
+    int healthyModules = 0;
+    int totalModules = 8;
+    
+    if (systemHealth.wifi == HEALTH_OK) healthyModules++;
+    if (systemHealth.modbus == HEALTH_OK) healthyModules++;
+    if (systemHealth.webserver == HEALTH_OK) healthyModules++;
+    if (systemHealth.sd == HEALTH_OK) healthyModules++;
+    if (systemHealth.ntp == HEALTH_OK) healthyModules++;
+    if (systemHealth.ota == HEALTH_OK) healthyModules++;
+    if (systemHealth.analytics == HEALTH_OK) healthyModules++;
+    if (systemHealth.diagnostics == HEALTH_OK) healthyModules++;
+    
+    // System is healthy if at least 75% modules are OK
+    systemHealth.systemHealthy = (healthyModules >= (totalModules * 3 / 4));
+}
+
+SystemHealthStatus SystemManager::getSystemHealth() {
+    return systemHealth;
+}
+
+void SystemManager::setModuleHealth(const String& module, ModuleHealth health) {
+    if (module == "wifi") {
+        systemHealth.wifi = health;
+    } else if (module == "modbus") {
+        systemHealth.modbus = health;
+    } else if (module == "webserver") {
+        systemHealth.webserver = health;
+    } else if (module == "sd") {
+        systemHealth.sd = health;
+    } else if (module == "ntp") {
+        systemHealth.ntp = health;
+    } else if (module == "ota") {
+        systemHealth.ota = health;
+    } else if (module == "analytics") {
+        systemHealth.analytics = health;
+    } else if (module == "diagnostics") {
+        systemHealth.diagnostics = health;
+    }
+}
+
+bool SystemManager::isSystemHealthy() {
+    return systemHealth.systemHealthy;
+}
+
+String SystemManager::getHealthReport() {
+    String report = "System Health Report:\n";
+    report += "WiFi: " + String(systemHealth.wifi == HEALTH_OK ? "OK" : 
+                               systemHealth.wifi == HEALTH_WARNING ? "WARNING" : 
+                               systemHealth.wifi == HEALTH_ERROR ? "ERROR" : "UNKNOWN") + "\n";
+    report += "Modbus: " + String(systemHealth.modbus == HEALTH_OK ? "OK" : 
+                                 systemHealth.modbus == HEALTH_WARNING ? "WARNING" : 
+                                 systemHealth.modbus == HEALTH_ERROR ? "ERROR" : "UNKNOWN") + "\n";
+    report += "WebServer: " + String(systemHealth.webserver == HEALTH_OK ? "OK" : 
+                                    systemHealth.webserver == HEALTH_WARNING ? "WARNING" : 
+                                    systemHealth.webserver == HEALTH_ERROR ? "ERROR" : "UNKNOWN") + "\n";
+    report += "SD Card: " + String(systemHealth.sd == HEALTH_OK ? "OK" : 
+                                  systemHealth.sd == HEALTH_WARNING ? "WARNING" : 
+                                  systemHealth.sd == HEALTH_ERROR ? "ERROR" : "UNKNOWN") + "\n";
+    report += "NTP: " + String(systemHealth.ntp == HEALTH_OK ? "OK" : 
+                              systemHealth.ntp == HEALTH_WARNING ? "WARNING" : 
+                              systemHealth.ntp == HEALTH_ERROR ? "ERROR" : "UNKNOWN") + "\n";
+    report += "OTA: " + String(systemHealth.ota == HEALTH_OK ? "OK" : 
+                              systemHealth.ota == HEALTH_WARNING ? "WARNING" : 
+                              systemHealth.ota == HEALTH_ERROR ? "ERROR" : "UNKNOWN") + "\n";
+    report += "Analytics: " + String(systemHealth.analytics == HEALTH_OK ? "OK" : 
+                                    systemHealth.analytics == HEALTH_WARNING ? "WARNING" : 
+                                    systemHealth.analytics == HEALTH_ERROR ? "ERROR" : "UNKNOWN") + "\n";
+    report += "Diagnostics: " + String(systemHealth.diagnostics == HEALTH_OK ? "OK" : 
+                                      systemHealth.diagnostics == HEALTH_WARNING ? "WARNING" : 
+                                      systemHealth.diagnostics == HEALTH_ERROR ? "ERROR" : "UNKNOWN") + "\n";
+    report += "Overall: " + String(systemHealth.systemHealthy ? "HEALTHY" : "UNHEALTHY") + "\n";
+    return report;
 }

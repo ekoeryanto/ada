@@ -54,6 +54,32 @@ bool WiFiManagerHandler::autoConnect() {
     }
 }
 
+bool WiFiManagerHandler::quickConnect(unsigned long timeoutMs) {
+    Serial.println("[WiFiMgr] Attempting quick WiFi connection...");
+    systemMgr.setStatus(SYSTEM_WIFI_CONNECTING);
+    
+    // Try to connect to saved credentials first
+    WiFi.mode(WIFI_STA);
+    WiFi.begin();
+    
+    unsigned long startTime = millis();
+    while (WiFi.status() != WL_CONNECTED && (millis() - startTime) < timeoutMs) {
+        delay(100);
+        systemMgr.loop();  // Keep system running
+    }
+    
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("[WiFiMgr] Quick WiFi connection successful!");
+        Serial.printf("[WiFiMgr] IP Address: %s\n", WiFi.localIP().toString().c_str());
+        systemMgr.setStatus(SYSTEM_WIFI_CONNECTED);
+        return true;
+    } else {
+        Serial.println("[WiFiMgr] Quick WiFi connection failed - will retry in background");
+        systemMgr.setStatus(SYSTEM_WIFI_CONNECTING);
+        return false;
+    }
+}
+
 bool WiFiManagerHandler::startConfigPortal() {
     // Serial.println("[WiFiMgr] Starting configuration portal...");
     

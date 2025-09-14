@@ -43,6 +43,30 @@
 
 // Timing Configuration
 #define HEARTBEAT_INTERVAL 30000    // 30 seconds
-#define STATUS_UPDATE_INTERVAL 5000 // 5 seconds
+
+// Health Monitoring Configuration
+#define SYSTEM_HEALTH_CHECK_INTERVAL 5000  // 5 seconds
+
+// Module Health Status
+enum ModuleHealth {
+    HEALTH_OK = 0,
+    HEALTH_WARNING = 1,
+    HEALTH_ERROR = 2,
+    HEALTH_UNKNOWN = 3
+};
+
+// System Health Structure
+struct SystemHealthStatus {
+    ModuleHealth wifi = HEALTH_UNKNOWN;
+    ModuleHealth modbus = HEALTH_UNKNOWN;
+    ModuleHealth webserver = HEALTH_UNKNOWN;
+    ModuleHealth sd = HEALTH_UNKNOWN;
+    ModuleHealth ntp = HEALTH_UNKNOWN;
+    ModuleHealth ota = HEALTH_UNKNOWN;
+    ModuleHealth analytics = HEALTH_UNKNOWN;
+    ModuleHealth diagnostics = HEALTH_UNKNOWN;
+    unsigned long lastHealthCheck = 0;
+    bool systemHealthy = false;
+};
 
 #endif // CONFIG_H

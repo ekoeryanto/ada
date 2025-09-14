@@ -120,6 +120,38 @@ void WebServerHandler::setupRoutes() {
         request->send(200, "application/json", response);
     });
     
+    // Health status API endpoint
+    server.on("/api/health", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        DynamicJsonDocument doc(1024);
+        
+        SystemHealthStatus health = systemMgr.getSystemHealth();
+        
+        // Convert enum values to strings for JSON
+        auto healthToString = [](ModuleHealth h) -> String {
+            switch(h) {
+                case HEALTH_OK: return "OK";
+                case HEALTH_WARNING: return "WARNING";
+                case HEALTH_ERROR: return "ERROR";
+                default: return "UNKNOWN";
+            }
+        };
+        
+        doc["wifi"] = healthToString(health.wifi);
+        doc["modbus"] = healthToString(health.modbus);
+        doc["webserver"] = healthToString(health.webserver);
+        doc["sd"] = healthToString(health.sd);
+        doc["ntp"] = healthToString(health.ntp);
+        doc["ota"] = healthToString(health.ota);
+        doc["analytics"] = healthToString(health.analytics);
+        doc["diagnostics"] = healthToString(health.diagnostics);
+        doc["overall_healthy"] = health.systemHealthy;
+        doc["last_check"] = health.lastHealthCheck;
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
     // Analog Voltage API endpoint
     server.on("/api/analog-voltage", HTTP_GET, [this](AsyncWebServerRequest *request) {
         DynamicJsonDocument doc(1024);

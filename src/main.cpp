@@ -177,6 +177,7 @@ void setup() {
     // Serial.println("[Main] Initializing SD Manager...");
     if (sdMgr.initialize()) {
         // Serial.println("[Main] SD Manager initialized successfully");
+        systemMgr.setModuleHealth("sd", HEALTH_OK);
         
         // Run SD card self-test
         // Serial.println("[Main] Running SD card self-test...");
@@ -184,9 +185,11 @@ void setup() {
             // Serial.println("[Main] SD card self-test passed!");
         } else {
             // Serial.println("[Main] SD card self-test failed - continuing without SD");
+            systemMgr.setModuleHealth("sd", HEALTH_WARNING);
         }
     } else {
         // Serial.println("[Main] SD Manager initialization failed - continuing without SD");
+        systemMgr.setModuleHealth("sd", HEALTH_ERROR);
     }
     
     // Initialize Analog Voltage Manager
@@ -364,6 +367,7 @@ void setup() {
     Serial.println("[Main] Initializing Modbus RTU Manager...");
     if (modbusManager.begin()) {
         Serial.println("[Main] Modbus RTU Manager initialized successfully");
+        systemMgr.setModuleHealth("modbus", HEALTH_OK);
         
         // Configure demo device (Energy Meter example)
         ModbusDeviceConfig energyMeterConfig;
@@ -447,71 +451,89 @@ void setup() {
         Serial.println("[Main] - Health monitoring and logging enabled");
     } else {
         Serial.println("[Main] Modbus RTU Manager initialization failed!");
+        systemMgr.setModuleHealth("modbus", HEALTH_ERROR);
     }
     
     // Initialize WiFi Manager
     if (!wifiMgr.initialize()) {
-        Serial.println("[Main] Failed to initialize WiFi Manager!");
-        systemMgr.setStatus(SYSTEM_ERROR);
-        return;
+        Serial.println("[Main] Failed to initialize WiFi Manager - continuing anyway!");
+        // Don't return, continue with other modules
     }
     
-    // Attempt WiFi connection
-    Serial.println("[Main] Attempting WiFi connection...");
-    if (wifiMgr.autoConnect()) {
+    // Attempt WiFi connection (non-blocking start)
+    Serial.println("[Main] Starting WiFi connection (non-blocking)...");
+    bool wifiConnected = false;
+    
+    // Try quick WiFi connection with short timeout
+    unsigned long wifiStartTime = millis();
+    if (wifiMgr.quickConnect(10000)) {  // 10 second timeout
         Serial.println("[Main] WiFi connected successfully!");
         systemMgr.setStatus(SYSTEM_WIFI_CONNECTED);
+        systemMgr.setModuleHealth("wifi", HEALTH_OK);
+        wifiConnected = true;
+    } else {
+        Serial.println("[Main] WiFi connection failed/timeout - will retry in background");
+        systemMgr.setStatus(SYSTEM_WIFI_CONNECTING);
+        systemMgr.setModuleHealth("wifi", HEALTH_WARNING);
+        // Continue with initialization, WiFi will retry in background
+    }
+    
+    // Initialize network-dependent services only if WiFi is connected
+    if (wifiConnected) {
         
         // Initialize NTP Manager after WiFi connection
-        // Serial.println("[Main] Initializing NTP Manager...");
+        Serial.println("[Main] Initializing NTP Manager...");
         if (ntpMgr.initialize()) {
-            // Serial.println("[Main] NTP Manager initialized successfully");
+            Serial.println("[Main] NTP Manager initialized successfully");
+            systemMgr.setModuleHealth("ntp", HEALTH_OK);
         } else {
-            // Serial.println("[Main] NTP Manager initialization deferred - will retry when WiFi is stable");
+            Serial.println("[Main] NTP Manager initialization failed - will retry later");
+            systemMgr.setModuleHealth("ntp", HEALTH_WARNING);
         }
         
         // Initialize web server
-        if (!webServer.initialize()) {
-            Serial.println("[Main] Failed to initialize web server!");
-            systemMgr.setStatus(SYSTEM_ERROR);
-            return;
+        Serial.println("[Main] Initializing Web Server...");
+        if (webServer.initialize()) {
+            webServer.begin();
+            Serial.println("[Main] Web Server started successfully");
+            systemMgr.setModuleHealth("webserver", HEALTH_OK);
+        } else {
+            Serial.println("[Main] Failed to initialize web server - continuing without web interface");
+            systemMgr.setModuleHealth("webserver", HEALTH_ERROR);
         }
-        
-        // Start web server
-        webServer.begin();
         
         // Initialize OTA handler
-        if (!otaHandler.initialize(webServer.getServer())) {  // Uses AsyncWebServer
-            Serial.println("[Main] Failed to initialize OTA handler!");
+        Serial.println("[Main] Initializing OTA Handler...");
+        if (otaHandler.initialize(webServer.getServer())) {  // Uses AsyncWebServer
+            Serial.println("[Main] OTA handler initialized successfully");
+            Serial.printf("[Main] OTA updates: http://%s:8080/update\n", WiFi.localIP().toString().c_str());
+            systemMgr.setModuleHealth("ota", HEALTH_OK);
         } else {
-            // Serial.println("[Main] OTA handler initialized successfully");
+            Serial.println("[Main] Failed to initialize OTA handler - continuing without OTA");
+            systemMgr.setModuleHealth("ota", HEALTH_ERROR);
         }
         
-        systemMgr.setStatus(SYSTEM_RUNNING);
-        Serial.println("[Main] System initialization complete!");
+        Serial.println("[Main] Network services initialized successfully!");
         Serial.printf("[Main] Web interface: http://%s\n", WiFi.localIP().toString().c_str());
-        // Serial.printf("[Main] OTA updates: %s\n", otaHandler.getUpdateURL().c_str());
         
     } else {
-        Serial.println("[Main] WiFi connection failed!");
-        systemMgr.setStatus(SYSTEM_WIFI_FAILED);
-        
-        // Start configuration portal
-        Serial.println("[Main] Starting configuration portal...");
-        if (wifiMgr.startConfigPortal()) {
-            Serial.println("[Main] Configuration completed, restarting...");
-            delay(2000);
-            systemMgr.restart();
-        } else {
-            Serial.println("[Main] Configuration portal failed or timed out");
-            systemMgr.setStatus(SYSTEM_ERROR);
-        }
+        Serial.println("[Main] WiFi not connected - running in standalone mode");
+        Serial.println("[Main] - Modbus RTU and local I/O will work normally");
+        Serial.println("[Main] - Web interface and OTA updates unavailable");
+        Serial.println("[Main] - Data logging to SD card will continue");
+        Serial.println("[Main] - WiFi will retry connection in background");
     }
+    
+    // System is now running regardless of WiFi status
+    systemMgr.setStatus(SYSTEM_RUNNING);
+    Serial.println("[Main] System initialization complete!");
+    Serial.println("[Main] All modules started - system ready for operation");
     
     // Initialize Analytics Manager
     Serial.println("[Main] Initializing Analytics Manager...");
     if (analyticsMgr.begin()) {
         Serial.println("[Main] Analytics Manager initialized successfully");
+        systemMgr.setModuleHealth("analytics", HEALTH_OK);
         
         // Configure analytics
         AnalyticsConfig analyticsConfig;
@@ -528,12 +550,14 @@ void setup() {
         Serial.println("[Main] Analytics configured: 30s analysis, 1h trends, prediction enabled");
     } else {
         Serial.println("[Main] Analytics Manager initialization failed!");
+        systemMgr.setModuleHealth("analytics", HEALTH_ERROR);
     }
     
     // Initialize Remote Diagnostics
     Serial.println("[Main] Initializing Remote Diagnostics...");
     if (remoteDiag.begin()) {
         Serial.println("[Main] Remote Diagnostics initialized successfully");
+        systemMgr.setModuleHealth("diagnostics", HEALTH_OK);
         
         // Configure diagnostics
         remoteDiag.setDiagnosticInterval(60000);  // 1 minute
@@ -542,6 +566,7 @@ void setup() {
         Serial.println("[Main] Remote diagnostics configured: 1min interval, remote commands enabled");
     } else {
         Serial.println("[Main] Remote Diagnostics initialization failed!");
+        systemMgr.setModuleHealth("diagnostics", HEALTH_ERROR);
     }
     
     // Initialize Webhook Handler
@@ -564,6 +589,9 @@ void setup() {
 void loop() {
     // System manager loop (handles LED status updates)
     systemMgr.loop();
+    
+    // Handle WiFi Manager (reconnection attempts)
+    wifiMgr.handleWiFi();
     
     // Handle SD Manager (hot-plug detection, etc.)
     sdMgr.handle();
@@ -772,7 +800,7 @@ void loop() {
     webServer.handle();
     
     // Status updates
-    if (millis() - lastStatusUpdate > STATUS_UPDATE_INTERVAL) {
+    if (millis() - lastStatusUpdate > SYSTEM_HEALTH_CHECK_INTERVAL) {
         // Update system status based on WiFi connection
         if (wifiMgr.isConnected() && systemMgr.getStatus() != SYSTEM_RUNNING && 
             systemMgr.getStatus() != SYSTEM_OTA_UPDATE) {
