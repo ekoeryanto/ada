@@ -837,8 +837,8 @@ void loop() {
         lastWiFiCheck = millis();
     }
     
-    // Handle OTA updates
-    if (systemMgr.getStatus() == SYSTEM_RUNNING || systemMgr.getStatus() == SYSTEM_WIFI_CONNECTED) {
+    // Handle OTA updates - always handle when WiFi is connected
+    if (wifiMgr.isConnected()) {
         otaHandler.handle();
     }
     

@@ -37,14 +37,21 @@ bool OTAHandler::initialize(AsyncWebServer* webServer) {
             type = "filesystem";
         }
         Serial.println("[ArduinoOTA] Start updating " + type);
+        Serial.println("[ArduinoOTA] Ready to receive firmware");
     });
     
     ArduinoOTA.onEnd([]() {
-        Serial.println("\n[ArduinoOTA] End");
+        Serial.println("\n[ArduinoOTA] Update completed successfully");
+        Serial.println("[ArduinoOTA] Restarting...");
     });
     
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-        Serial.printf("[ArduinoOTA] Progress: %u%%\r", (progress / (total / 100)));
+        static unsigned int lastPercent = 0;
+        unsigned int percent = (progress / (total / 100));
+        if (percent != lastPercent && percent % 10 == 0) {
+            Serial.printf("[ArduinoOTA] Progress: %u%%\n", percent);
+            lastPercent = percent;
+        }
     });
     
     ArduinoOTA.onError([](ota_error_t error) {
@@ -63,6 +70,10 @@ bool OTAHandler::initialize(AsyncWebServer* webServer) {
     });
     
     ArduinoOTA.begin();
+    
+    Serial.println("[ArduinoOTA] Service started successfully");
+    Serial.printf("[ArduinoOTA] Listening on port %d\n", 3232);
+    Serial.printf("[ArduinoOTA] Hostname: %s\n", HOSTNAME);
     
     otaEnabled = true;
     Serial.println("[OTA] OTA handler initialized successfully");
