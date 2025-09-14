@@ -34,21 +34,21 @@ bool WiFiManagerHandler::initialize() {
 }
 
 bool WiFiManagerHandler::autoConnect() {
-    // Serial.println("[WiFiMgr] Attempting auto-connect...");
+    Serial.println("[WiFiMgr] Attempting auto-connect...");
     systemMgr.setStatus(SYSTEM_WIFI_CONNECTING);
     
     String apName = String(HOSTNAME) + "_" + String(systemMgr.getChipId(), HEX);
     
     if (wifiManager.autoConnect(apName.c_str(), AP_PASSWORD)) {
-        // Serial.println("[WiFiMgr] WiFi connected successfully!");
-        // Serial.printf("[WiFiMgr] IP Address: %s\n", WiFi.localIP().toString().c_str());
+        Serial.println("[WiFiMgr] WiFi connected successfully!");
+        Serial.printf("[WiFiMgr] IP Address: %s\n", WiFi.localIP().toString().c_str());
         // Serial.printf("[WiFiMgr] SSID: %s\n", WiFi.SSID().c_str());
         // Serial.printf("[WiFiMgr] RSSI: %d dBm\n", WiFi.RSSI());
         
         systemMgr.setStatus(SYSTEM_WIFI_CONNECTED);
         return true;
     } else {
-        // Serial.println("[WiFiMgr] Failed to connect to WiFi");
+        Serial.println("[WiFiMgr] Failed to connect to WiFi");
         systemMgr.setStatus(SYSTEM_WIFI_FAILED);
         return false;
     }

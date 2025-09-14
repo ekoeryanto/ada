@@ -45,7 +45,7 @@ void setup() {
     systemMgr.initialize();
     systemMgr.setStatus(SYSTEM_INITIALIZING);
     
-    // Serial.println("[Main] Starting 0x3 ESP Project...");
+    Serial.println("[Main] Starting 0x3 ESP Project...");
     
     // Initialize SD Manager early
     // Serial.println("[Main] Initializing SD Manager...");
@@ -130,9 +130,9 @@ void setup() {
     }
     
     // Attempt WiFi connection
-    // Serial.println("[Main] Attempting WiFi connection...");
+    Serial.println("[Main] Attempting WiFi connection...");
     if (wifiMgr.autoConnect()) {
-        // Serial.println("[Main] WiFi connected successfully!");
+        Serial.println("[Main] WiFi connected successfully!");
         systemMgr.setStatus(SYSTEM_WIFI_CONNECTED);
         
         // Initialize NTP Manager after WiFi connection
@@ -161,8 +161,8 @@ void setup() {
         }
         
         systemMgr.setStatus(SYSTEM_RUNNING);
-        // Serial.println("[Main] System initialization complete!");
-        // Serial.printf("[Main] Web interface: http://%s\n", WiFi.localIP().toString().c_str());
+        Serial.println("[Main] System initialization complete!");
+        Serial.printf("[Main] Web interface: http://%s\n", WiFi.localIP().toString().c_str());
         // Serial.printf("[Main] OTA updates: %s\n", otaHandler.getUpdateURL().c_str());
         
     } else {
