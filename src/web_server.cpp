@@ -5,6 +5,7 @@
 #include "ntp_manager.h"
 #include "analog_voltage_manager.h"
 #include "analog_current_manager.h"
+#include "digital_io_manager.h"
 #include "analytics_manager.h"
 #include "remote_diagnostics.h"
 #include "webhook_handler.h"
@@ -435,6 +436,156 @@ void WebServerHandler::setupRoutes() {
         String response;
         serializeJson(doc, response);
         request->send(200, "application/json", response);
+    });
+    
+    // Digital I/O API endpoints
+    server.on("/api/digital-io", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern DigitalIOManager digitalIOMgr;
+        DynamicJsonDocument doc(1024);
+        
+        doc["initialized"] = digitalIOMgr.isInitialized();
+        doc["total_inputs"] = 4;
+        doc["total_outputs"] = 4;
+        
+        // Digital Inputs
+        for (int i = 0; i < 4; i++) {
+            DigitalInputReading reading = digitalIOMgr.getInputReading(i);
+            String inputKey = "input_" + String(i);
+            
+            doc["inputs"][inputKey]["name"] = digitalIOMgr.getInputName(i);
+            doc["inputs"][inputKey]["state"] = reading.currentState == DI_HIGH ? "HIGH" : "LOW";
+            doc["inputs"][inputKey]["valid"] = reading.valid;
+            doc["inputs"][inputKey]["pulse_count"] = reading.pulseCount;
+            doc["inputs"][inputKey]["total_pulses"] = reading.totalPulses;
+            doc["inputs"][inputKey]["state_time"] = reading.stateHoldTime;
+            doc["inputs"][inputKey]["last_change"] = reading.lastChangeTime;
+            doc["inputs"][inputKey]["alarm_active"] = reading.alarmActive;
+            doc["inputs"][inputKey]["timestamp"] = reading.timestamp;
+        }
+        
+        // Digital Outputs
+        for (int i = 0; i < 4; i++) {
+            DigitalOutputStatus status = digitalIOMgr.getOutputStatus(i);
+            String outputKey = "output_" + String(i);
+            
+            doc["outputs"][outputKey]["name"] = digitalIOMgr.getOutputName(i);
+            doc["outputs"][outputKey]["state"] = digitalIOMgr.getOutputState(i);
+            doc["outputs"][outputKey]["physical_state"] = status.physicalState;
+            doc["outputs"][outputKey]["duty_cycle"] = status.pwmDutyCycle;
+            doc["outputs"][outputKey]["operations"] = status.operationCount;
+            doc["outputs"][outputKey]["last_operation"] = status.lastOperationTime;
+            doc["outputs"][outputKey]["current_state"] = status.currentState;
+        }
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    server.on("/api/digital-io/inputs", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern DigitalIOManager digitalIOMgr;
+        DynamicJsonDocument doc(1024);
+        
+        doc["system"] = "Digital Inputs";
+        doc["total_inputs"] = 4;
+        
+        for (int i = 0; i < 4; i++) {
+            DigitalInputReading reading = digitalIOMgr.getInputReading(i);
+            String inputKey = "input_" + String(i);
+            
+            doc["inputs"][inputKey]["name"] = digitalIOMgr.getInputName(i);
+            doc["inputs"][inputKey]["info"] = digitalIOMgr.getInputInfo(i);
+            doc["inputs"][inputKey]["current_state"] = reading.currentState == DI_HIGH ? "HIGH" : "LOW";
+            doc["inputs"][inputKey]["last_state"] = reading.lastState == DI_HIGH ? "HIGH" : "LOW";
+            doc["inputs"][inputKey]["state_hold_time"] = reading.stateHoldTime;
+            doc["inputs"][inputKey]["pulse_count"] = reading.pulseCount;
+            doc["inputs"][inputKey]["total_pulses"] = reading.totalPulses;
+            doc["inputs"][inputKey]["transition_rate"] = 0.0f; // Method not available
+            doc["inputs"][inputKey]["health_score"] = digitalIOMgr.getInputHealth(i);
+            doc["inputs"][inputKey]["alarm_active"] = reading.alarmActive;
+            doc["inputs"][inputKey]["debounce_active"] = reading.debounceActive;
+            doc["inputs"][inputKey]["valid"] = reading.valid;
+            doc["inputs"][inputKey]["timestamp"] = reading.timestamp;
+        }
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    server.on("/api/digital-io/outputs", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern DigitalIOManager digitalIOMgr;
+        DynamicJsonDocument doc(1024);
+        
+        doc["system"] = "Digital Outputs";
+        doc["total_outputs"] = 4;
+        
+        for (int i = 0; i < 4; i++) {
+            DigitalOutputStatus status = digitalIOMgr.getOutputStatus(i);
+            String outputKey = "output_" + String(i);
+            
+            doc["outputs"][outputKey]["name"] = digitalIOMgr.getOutputName(i);
+            doc["outputs"][outputKey]["info"] = digitalIOMgr.getOutputInfo(i);
+            doc["outputs"][outputKey]["state"] = digitalIOMgr.getOutputState(i);
+            doc["outputs"][outputKey]["physical_state"] = status.physicalState;
+            doc["outputs"][outputKey]["current_state"] = status.currentState;
+            doc["outputs"][outputKey]["duty_cycle"] = status.pwmDutyCycle;
+            doc["outputs"][outputKey]["operations_count"] = status.operationCount;
+            doc["outputs"][outputKey]["health_score"] = digitalIOMgr.getOutputHealth(i);
+            doc["outputs"][outputKey]["last_operation_time"] = status.lastOperationTime;
+            doc["outputs"][outputKey]["state_hold_time"] = status.stateHoldTime;
+            doc["outputs"][outputKey]["operation_count"] = status.operationCount;
+        }
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    // Digital Output Control (simplified - using query parameters)
+    server.on("/api/digital-io/output", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        extern DigitalIOManager digitalIOMgr;
+        
+        if (!request->hasParam("output") || !request->hasParam("state")) {
+            request->send(400, "application/json", "{\"error\":\"Missing parameters: output, state\"}");
+            return;
+        }
+        
+        int outputIndex = request->getParam("output")->value().toInt();
+        String stateStr = request->getParam("state")->value();
+        stateStr.toUpperCase();
+        
+        if (outputIndex < 0 || outputIndex >= 4) {
+            request->send(400, "application/json", "{\"error\":\"Invalid output index (0-3)\"}");
+            return;
+        }
+        
+        if (stateStr == "ON" || stateStr == "1") {
+            digitalIOMgr.setOutput(outputIndex, true);
+        } else if (stateStr == "OFF" || stateStr == "0") {
+            digitalIOMgr.setOutput(outputIndex, false);
+        } else if (stateStr == "PULSE") {
+            unsigned long duration = 1000; // Default 1 second
+            if (request->hasParam("duration")) {
+                duration = request->getParam("duration")->value().toInt();
+            }
+            digitalIOMgr.pulseOutput(outputIndex, duration);
+        } else if (stateStr == "BLINK") {
+            digitalIOMgr.setOutputState(outputIndex, DO_BLINK);
+        } else {
+            request->send(400, "application/json", "{\"error\":\"Invalid state (ON/OFF/PULSE/BLINK)\"}");
+            return;
+        }
+        
+        DynamicJsonDocument response(256);
+        response["success"] = true;
+        response["output"] = outputIndex;
+        response["state"] = stateStr;
+        response["name"] = digitalIOMgr.getOutputName(outputIndex);
+        
+        String responseStr;
+        serializeJson(response, responseStr);
+        request->send(200, "application/json", responseStr);
     });
     
     server.on("/api/config", HTTP_GET, [this](AsyncWebServerRequest *request) {

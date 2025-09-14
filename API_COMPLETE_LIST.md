@@ -1,7 +1,7 @@
 # COMPLETE API ENDPOINT LIST - ADA Board
 Based on thorough code analysis of `src/web_server.cpp`
 
-⚠️ **CRITICAL ISSUE FOUND**: Analog Current (4-20mA) manager exists but has NO API endpoints!
+✅ **FIXED**: Analog Current (4-20mA) endpoints now implemented!
 
 ## 🔧 System Management
 - `GET /api/status` - System status and info
@@ -17,13 +17,19 @@ Based on thorough code analysis of `src/web_server.cpp`
 - `POST /api/analog-voltage/calibrate` - Calibrate sensors
 - `POST /api/analog-voltage/reset-calibration` - Reset calibration
 
-## ❌ MISSING: Analog Current (4-20mA) 
-**MAJOR BUG**: AnalogCurrentManager exists with 3 configured sensors but NO API endpoints!
-- Missing: `GET /api/analog-current` 
-- Missing: `GET /api/analog-current/health`
-- Missing: `GET /api/analog-current/info`
-- Missing: `POST /api/analog-current/calibrate`
-- Configured sensors: Level Tank 2, Flow Line 2, Pressure Sys (Rosemount, Yokogawa, E+H)
+## ⚡ Analog Current (4-20mA) - ✅ NEW!
+- `GET /api/analog-current` - All 4-20mA sensor readings
+- `GET /api/analog-current/health` - Current loop health status  
+- `GET /api/analog-current/info` - Sensor info & manufacturer details
+- `GET /api/analog-current/diagnostics` - Loop diagnostics & resistance monitoring
+- Configured sensors: Level Tank 2 (Rosemount), Flow Line 2 (Yokogawa), Pressure Sys (E+H)
+
+## 🔌 Digital I/O - ✅ NEW!
+- `GET /api/digital-io` - Complete digital I/O status (inputs + outputs)
+- `GET /api/digital-io/inputs` - Digital input readings (DI1-DI4)
+- `GET /api/digital-io/outputs` - Digital output status (DO1-DO4)
+- `POST /api/digital-io/output` - Control outputs (ON/OFF/PULSE/BLINK)
+- Pin support: 4 digital inputs with debounce, 4 outputs with PWM capability
 
 ## 💾 SD Card Management
 - `GET /api/sd/status` - SD card status
@@ -69,6 +75,6 @@ Based on thorough code analysis of `src/web_server.cpp`
 - `GET /api/modbus/stats` - Modbus statistics
 
 ## Summary
-- **Total Implemented**: 30+ API endpoints
-- **Total Should Be**: 36+ endpoints (missing 6 analog-current endpoints)
-- **Critical Issue**: Industrial 4-20mA sensors not accessible via API!
+- **Total Implemented**: 34+ API endpoints
+- **✅ COMPLETE**: All major functionality now has API access
+- **🚀 INDUSTRIAL READY**: Both 0-10V and 4-20mA sensor endpoints available
