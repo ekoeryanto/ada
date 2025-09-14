@@ -12,7 +12,10 @@ const { title, description, activePage = 'dashboard' } = Astro.props;
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: 'fas fa-tachometer-alt', id: 'dashboard' },
-  { name: 'Sensors', href: '/sensors', icon: 'fas fa-microchip', id: 'sensors' },
+  { name: 'Digital I/O', href: '/digital-io', icon: 'fas fa-toggle-on', id: 'digital-io' },
+  { name: '4-20mA Sensors', href: '/analog-current', icon: 'fas fa-tachometer-alt', id: 'analog-current' },
+  { name: 'Analog Voltage', href: '/analog-voltage', icon: 'fas fa-bolt', id: 'analog-voltage' },
+  { name: 'Modbus Devices', href: '/modbus', icon: 'fas fa-network-wired', id: 'modbus' },
   { name: 'Analytics', href: '/analytics', icon: 'fas fa-chart-line', id: 'analytics' },
   { name: 'Diagnostics', href: '/diagnostics', icon: 'fas fa-stethoscope', id: 'diagnostics' },
   { name: 'Alarms', href: '/alarms', icon: 'fas fa-exclamation-triangle', id: 'alarms' },

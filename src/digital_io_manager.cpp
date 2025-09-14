@@ -943,6 +943,16 @@ String DigitalIOManager::getInputsJSON() { return "{}"; }
 String DigitalIOManager::getOutputsJSON() { return "{}"; }
 String DigitalIOManager::getStatusJSON() { return "{}"; }
 
+unsigned long DigitalIOManager::getOutputOperations(int outputIndex) {
+    if (outputIndex < 0 || outputIndex >= 4) return 0;
+    return outputStatus[outputIndex].operationCount;
+}
+
+float DigitalIOManager::getOutputDutyCycle(int outputIndex) {
+    if (outputIndex < 0 || outputIndex >= 4) return 0.0;
+    return outputStatus[outputIndex].pwmDutyCycle;
+}
+
 // Callback setters
 void DigitalIOManager::setInputEventCallback(void (*callback)(int, DigitalInputEvent)) {
     inputEventCallback = callback;

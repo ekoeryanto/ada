@@ -1,0 +1,555 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="ADA Board Dashboard">
+  <main class="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+    <div class="container mx-auto px-4 py-8">
+      <!-- Header -->
+      <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+          ADA Industrial Board Dashboard
+        </h1>
+        <div id="connection-status" class="inline-flex items-center px-4 py-2 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+          <div class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+          <span class="text-sm font-medium">Connected</span>
+        </div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="grid lg:grid-cols-4 gap-6 mb-8" id="quick-stats">
+        <!-- Stats will be populated by JavaScript -->
+      </div>
+
+      <!-- System Overview -->
+      <div class="grid lg:grid-cols-3 gap-6 mb-8">
+        <!-- Digital I/O Status -->
+        <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            Digital I/O Status
+          </h2>
+          <div id="digital-io-summary" class="space-y-3">
+            <!-- Digital I/O summary will be populated -->
+          </div>
+          <div class="mt-4">
+            <a href="/digital-io" class="text-purple-400 hover:text-purple-300 text-sm font-medium">
+              View Details →
+            </a>
+          </div>
+        </div>
+
+        <!-- Analog Current (4-20mA) -->
+        <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            4-20mA Sensors
+          </h2>
+          <div id="analog-current-summary" class="space-y-3">
+            <!-- Analog current summary will be populated -->
+          </div>
+          <div class="mt-4">
+            <a href="/analog-current" class="text-cyan-400 hover:text-cyan-300 text-sm font-medium">
+              View Details →
+            </a>
+          </div>
+        </div>
+
+        <!-- System Health -->
+        <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+            </svg>
+            System Health
+          </h2>
+          <div id="system-health" class="space-y-3">
+            <!-- System health will be populated -->
+          </div>
+          <div class="mt-4">
+            <a href="/diagnostics" class="text-green-400 hover:text-green-300 text-sm font-medium">
+              View Diagnostics →
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analog Voltage & Analytics -->
+      <div class="grid lg:grid-cols-2 gap-6 mb-8">
+        <!-- Analog Voltage (0-10V) -->
+        <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            Analog Voltage (0-10V)
+          </h2>
+          <div id="analog-voltage-summary" class="space-y-3">
+            <!-- Analog voltage summary will be populated -->
+          </div>
+          <div class="mt-4">
+                        <a href="/analog-voltage" class="text-yellow-400 hover:text-yellow-300 text-sm font-medium">
+              View Sensor Details →
+            </a>
+          </div>
+        </div>
+
+        <!-- Analytics Summary -->
+        <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+            </svg>
+            Analytics Summary
+          </h2>
+          <div id="analytics-summary" class="space-y-3">
+            <!-- Analytics summary will be populated -->
+          </div>
+          <div class="mt-4">
+            <a href="/analytics" class="text-pink-400 hover:text-pink-300 text-sm font-medium">
+              View Analytics →
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Alerts & Webhooks -->
+      <div class="grid lg:grid-cols-2 gap-6 mb-8">
+        <!-- Recent Alerts -->
+        <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+            Recent Alerts
+          </h2>
+          <div id="recent-alerts" class="space-y-3">
+            <!-- Recent alerts will be populated -->
+          </div>
+          <div class="mt-4">
+            <a href="/alarms" class="text-red-400 hover:text-red-300 text-sm font-medium">
+              View All Alerts →
+            </a>
+          </div>
+        </div>
+
+        <!-- Webhook Status -->
+        <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+            </svg>
+            Webhook Status
+          </h2>
+          <div id="webhook-summary" class="space-y-3">
+            <!-- Webhook summary will be populated -->
+          </div>
+          <div class="mt-4">
+            <a href="/webhooks" class="text-blue-400 hover:text-blue-300 text-sm font-medium">
+              Manage Webhooks →
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Grid -->
+      <div class="grid lg:grid-cols-4 gap-6">
+        <a href="/digital-io" class="group bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-lg font-semibold text-white group-hover:text-purple-400 transition-colors">Digital I/O</h3>
+            <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          </div>
+          <p class="text-slate-400 text-sm">Control and monitor digital inputs/outputs</p>
+        </a>
+
+        <a href="/analog-current" class="group bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 hover:border-cyan-500/50 transition-all">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-lg font-semibold text-white group-hover:text-cyan-400 transition-colors">4-20mA Sensors</h3>
+            <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+          </div>
+          <p class="text-slate-400 text-sm">Monitor industrial current sensors</p>
+        </a>
+
+        <a href="/analog-voltage" class="group bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 hover:border-yellow-500/50 transition-all">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-lg font-semibold text-white group-hover:text-yellow-400 transition-colors">Voltage Sensors</h3>
+            <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          </div>
+          <p class="text-slate-400 text-sm">Monitor 0-10V analog sensors</p>
+        </a>
+
+        <a href="/diagnostics" class="group bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 hover:border-green-500/50 transition-all">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-lg font-semibold text-white group-hover:text-green-400 transition-colors">Diagnostics</h3>
+            <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <p class="text-slate-400 text-sm">System health and diagnostics</p>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    import { adaApi } from '../lib/api';
+
+    let updateInterval: ReturnType<typeof setInterval>;
+    let isConnected = true;
+
+    // DOM elements
+    const connectionStatus = document.getElementById('connection-status')!;
+    const quickStats = document.getElementById('quick-stats')!;
+    const digitalIOSummary = document.getElementById('digital-io-summary')!;
+    const analogCurrentSummary = document.getElementById('analog-current-summary')!;
+    const analogVoltageSummary = document.getElementById('analog-voltage-summary')!;
+    const systemHealth = document.getElementById('system-health')!;
+    const analyticsSummary = document.getElementById('analytics-summary')!;
+    const recentAlerts = document.getElementById('recent-alerts')!;
+    const webhookSummary = document.getElementById('webhook-summary')!;
+
+    // Update connection status
+    function updateConnectionStatus(connected: boolean) {
+      isConnected = connected;
+      if (connected) {
+        connectionStatus.className = 'inline-flex items-center px-4 py-2 rounded-full bg-green-500/20 text-green-400 border border-green-500/30';
+        connectionStatus.innerHTML = `
+          <div class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+          <span class="text-sm font-medium">Connected</span>
+        `;
+      } else {
+        connectionStatus.className = 'inline-flex items-center px-4 py-2 rounded-full bg-red-500/20 text-red-400 border border-red-500/30';
+        connectionStatus.innerHTML = `
+          <div class="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
+          <span class="text-sm font-medium">Disconnected</span>
+        `;
+      }
+    }
+
+    // Update quick stats
+    async function updateQuickStats() {
+      try {
+        const [status, digitalIO, analogCurrent, analogVoltage] = await Promise.all([
+          adaApi.getStatus(),
+          adaApi.safeGet('/digital-io', { inputs: [], outputs: [] }),
+          adaApi.safeGet('/analog-current', { sensors: [] }),
+          adaApi.safeGet('/analog-voltage', { sensors: [] })
+        ]);
+
+        const activeInputs = digitalIO?.inputs?.filter((input: any) => input.state).length || 0;
+        const activeOutputs = digitalIO?.outputs?.filter((output: any) => output.state).length || 0;
+        const currentSensors = analogCurrent?.sensors?.length || 0;
+        const voltageSensors = analogVoltage?.sensors?.length || 0;
+
+        quickStats.innerHTML = `
+          <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-green-500/30">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-green-400 text-sm font-medium">System Status</p>
+                <p class="text-2xl font-bold text-white">${status?.status || 'Unknown'}</p>
+              </div>
+              <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-purple-400 text-sm font-medium">Digital I/O</p>
+                <p class="text-2xl font-bold text-white">${activeInputs + activeOutputs} Active</p>
+              </div>
+              <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-cyan-500/30">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-cyan-400 text-sm font-medium">4-20mA Sensors</p>
+                <p class="text-2xl font-bold text-white">${currentSensors} Connected</p>
+              </div>
+              <div class="w-12 h-12 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-yellow-500/30">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-yellow-400 text-sm font-medium">Voltage Sensors</p>
+                <p class="text-2xl font-bold text-white">${voltageSensors} Connected</p>
+              </div>
+              <div class="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+        `;
+      } catch (error) {
+        console.error('Failed to update quick stats:', error);
+      }
+    }
+
+    // Update digital I/O summary
+    async function updateDigitalIOSummary() {
+      try {
+        const data = await adaApi.safeGet('/digital-io');
+        if (data && data.inputs && data.outputs) {
+          const activeInputs = data.inputs.filter((input: any) => input.state);
+          const activeOutputs = data.outputs.filter((output: any) => output.state);
+
+          digitalIOSummary.innerHTML = `
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">Digital Inputs:</span>
+              <span class="text-white">${activeInputs.length}/${data.inputs.length} Active</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">Digital Outputs:</span>
+              <span class="text-white">${activeOutputs.length}/${data.outputs.length} Active</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">Status:</span>
+              <span class="text-green-400">Operational</span>
+            </div>
+          `;
+        } else {
+          digitalIOSummary.innerHTML = '<div class="text-slate-400 text-sm">No digital I/O data available</div>';
+        }
+      } catch (error) {
+        digitalIOSummary.innerHTML = '<div class="text-red-400 text-sm">Failed to load digital I/O data</div>';
+      }
+    }
+
+    // Update analog current summary
+    async function updateAnalogCurrentSummary() {
+      try {
+        const data = await adaApi.safeGet('/analog-current');
+        if (data && data.sensors) {
+          const healthySensors = data.sensors.filter((sensor: any) => sensor.status === 'OK');
+          const avgCurrent = data.sensors.reduce((sum: number, sensor: any) => sum + sensor.current_ma, 0) / data.sensors.length;
+
+          analogCurrentSummary.innerHTML = `
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">Total Sensors:</span>
+              <span class="text-white">${data.sensors.length}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">Healthy:</span>
+              <span class="text-green-400">${healthySensors.length}/${data.sensors.length}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">Avg Current:</span>
+              <span class="text-white">${avgCurrent.toFixed(2)}mA</span>
+            </div>
+          `;
+        } else {
+          analogCurrentSummary.innerHTML = '<div class="text-slate-400 text-sm">No current sensor data available</div>';
+        }
+      } catch (error) {
+        analogCurrentSummary.innerHTML = '<div class="text-red-400 text-sm">Failed to load current sensor data</div>';
+      }
+    }
+
+    // Update analog voltage summary
+    async function updateAnalogVoltageSummary() {
+      try {
+        const data = await adaApi.safeGet('/analog-voltage');
+        if (data && data.sensors) {
+          const healthySensors = data.sensors.filter((sensor: any) => sensor.status === 'OK');
+          const avgVoltage = data.sensors.reduce((sum: number, sensor: any) => sum + sensor.voltage, 0) / data.sensors.length;
+
+          analogVoltageSummary.innerHTML = `
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">Total Sensors:</span>
+              <span class="text-white">${data.sensors.length}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">Healthy:</span>
+              <span class="text-green-400">${healthySensors.length}/${data.sensors.length}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">Avg Voltage:</span>
+              <span class="text-white">${avgVoltage.toFixed(2)}V</span>
+            </div>
+          `;
+        } else {
+          analogVoltageSummary.innerHTML = '<div class="text-slate-400 text-sm">No voltage sensor data available</div>';
+        }
+      } catch (error) {
+        analogVoltageSummary.innerHTML = '<div class="text-red-400 text-sm">Failed to load voltage sensor data</div>';
+      }
+    }
+
+    // Update system health
+    async function updateSystemHealth() {
+      try {
+        const [status, diagnostics] = await Promise.all([
+          adaApi.getStatus(),
+          adaApi.safeGet('/diagnostics/status')
+        ]);
+
+        const uptime = status?.uptime || 0;
+        const uptimeHours = Math.floor(uptime / 3600);
+        const uptimeMinutes = Math.floor((uptime % 3600) / 60);
+        const freeHeap = Math.round((status?.heap || 0) / 1024);
+
+        systemHealth.innerHTML = `
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-400">System Status:</span>
+            <span class="text-green-400">${status?.status || 'Unknown'}</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-400">Uptime:</span>
+            <span class="text-white">${uptimeHours}h ${uptimeMinutes}m</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-400">Free Memory:</span>
+            <span class="text-white">${freeHeap}KB</span>
+          </div>
+        `;
+      } catch (error) {
+        systemHealth.innerHTML = '<div class="text-red-400 text-sm">Failed to load system health</div>';
+      }
+    }
+
+    // Update analytics summary
+    async function updateAnalyticsSummary() {
+      try {
+        const data = await adaApi.safeGet('/analytics/summary');
+        if (data && data.summary) {
+          analyticsSummary.innerHTML = `
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">Total Readings:</span>
+              <span class="text-white">${data.summary.total_readings || 0}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">Avg Voltage:</span>
+              <span class="text-white">${(data.summary.average_voltage || 0).toFixed(2)}V</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">Data Collection:</span>
+              <span class="text-green-400">Active</span>
+            </div>
+          `;
+        } else {
+          analyticsSummary.innerHTML = '<div class="text-slate-400 text-sm">No analytics data available</div>';
+        }
+      } catch (error) {
+        analyticsSummary.innerHTML = '<div class="text-red-400 text-sm">Failed to load analytics data</div>';
+      }
+    }
+
+    // Update recent alerts
+    async function updateRecentAlerts() {
+      try {
+        const data = await adaApi.safeGet('/diagnostics/alerts');
+        if (data && data.alerts && data.alerts.length > 0) {
+          const recentAlertsList = data.alerts.slice(0, 3); // Show only 3 most recent
+          recentAlerts.innerHTML = recentAlertsList.map((alert: any) => `
+            <div class="flex items-center justify-between p-2 bg-slate-700/50 rounded-lg">
+              <div class="flex items-center">
+                <div class="w-2 h-2 rounded-full ${alert.level === 'ERROR' ? 'bg-red-400' : alert.level === 'WARNING' ? 'bg-yellow-400' : 'bg-blue-400'} mr-2"></div>
+                <span class="text-white text-sm">${alert.message}</span>
+              </div>
+              <span class="text-slate-400 text-xs">${new Date(alert.timestamp * 1000).toLocaleTimeString()}</span>
+            </div>
+          `).join('');
+        } else {
+          recentAlerts.innerHTML = '<div class="text-green-400 text-sm">No active alerts</div>';
+        }
+      } catch (error) {
+        recentAlerts.innerHTML = '<div class="text-red-400 text-sm">Failed to load alerts</div>';
+      }
+    }
+
+    // Update webhook summary
+    async function updateWebhookSummary() {
+      try {
+        const data = await adaApi.safeGet('/webhooks/statistics');
+        if (data) {
+          webhookSummary.innerHTML = `
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">Total Sent:</span>
+              <span class="text-white">${data.total_sent || 0}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">Success Rate:</span>
+              <span class="text-green-400">${((data.success_rate || 0) * 100).toFixed(1)}%</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">Queue Size:</span>
+              <span class="text-white">${data.queue_size || 0}</span>
+            </div>
+          `;
+        } else {
+          webhookSummary.innerHTML = '<div class="text-slate-400 text-sm">No webhook data available</div>';
+        }
+      } catch (error) {
+        webhookSummary.innerHTML = '<div class="text-red-400 text-sm">Failed to load webhook data</div>';
+      }
+    }
+
+    // Main update function
+    async function updateData() {
+      try {
+        updateConnectionStatus(true);
+        
+        await Promise.all([
+          updateQuickStats(),
+          updateDigitalIOSummary(),
+          updateAnalogCurrentSummary(),
+          updateAnalogVoltageSummary(),
+          updateSystemHealth(),
+          updateAnalyticsSummary(),
+          updateRecentAlerts(),
+          updateWebhookSummary()
+        ]);
+        
+      } catch (error) {
+        console.error('Failed to update dashboard data:', error);
+        updateConnectionStatus(false);
+      }
+    }
+
+    // Initialize the dashboard
+    async function init() {
+      await updateData();
+      
+      // Set up real-time updates every 5 seconds
+      updateInterval = setInterval(updateData, 5000);
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      if (updateInterval) {
+        clearInterval(updateInterval);
+      }
+    });
+
+    // Start the application
+    init();
+  </script>
+</Layout>

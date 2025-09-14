@@ -1,0 +1,630 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout 
+  title="Modbus Device Management" 
+  description="Configure and monitor Modbus RTU devices"
+  activePage="modbus"
+>
+  <!-- Connection Status -->
+  <div class="mb-6 text-center">
+    <div id="connection-status" class="inline-flex items-center px-4 py-2 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+      <div class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+      <span class="text-sm font-medium">Connected</span>
+    </div>
+  </div>
+
+  <!-- Device Management Panel -->
+  <div class="grid lg:grid-cols-2 gap-8 mb-8">
+    <!-- Device List -->
+    <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-white flex items-center">
+          <svg class="w-6 h-6 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+          </svg>
+          Modbus Devices
+        </h2>
+        <button id="scan-devices-btn" 
+                class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors">
+          Scan Devices
+        </button>
+      </div>
+      <div id="devices-list" class="space-y-4">
+        <!-- Devices will be populated by JavaScript -->
+      </div>
+    </div>
+
+    <!-- Device Configuration -->
+    <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+        <svg class="w-6 h-6 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
+        </svg>
+        Device Configuration
+      </h2>
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <input id="device-address" type="number" min="1" max="247" placeholder="Device Address" 
+                 class="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:outline-none">
+          <input id="device-name" type="text" placeholder="Device Name" 
+                 class="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:outline-none">
+        </div>
+        <select id="device-type" 
+                class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-purple-500 focus:outline-none">
+          <option value="">Select Device Type</option>
+          <option value="temperature">Temperature Sensor</option>
+          <option value="humidity">Humidity Sensor</option>
+          <option value="pressure">Pressure Sensor</option>
+          <option value="flow">Flow Meter</option>
+          <option value="generic">Generic Device</option>
+        </select>
+        <div class="grid grid-cols-2 gap-3">
+          <input id="poll-interval" type="number" min="100" placeholder="Poll Interval (ms)" 
+                 class="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:outline-none">
+          <select id="device-enabled" 
+                  class="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-purple-500 focus:outline-none">
+            <option value="true">Enabled</option>
+            <option value="false">Disabled</option>
+          </select>
+        </div>
+        <div class="flex space-x-2">
+          <button id="add-device-btn" 
+                  class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+            Add Device
+          </button>
+          <button id="test-device-btn" 
+                  class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
+            Test Connection
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Register Mapping -->
+  <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 mb-8">
+    <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+      <svg class="w-6 h-6 mr-2 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+      </svg>
+      Register Mapping
+    </h2>
+    <div class="grid lg:grid-cols-2 gap-6">
+      <div>
+        <h3 class="text-lg font-semibold text-white mb-4">Register Configuration</h3>
+        <div class="space-y-3">
+          <select id="selected-device" 
+                  class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-cyan-500 focus:outline-none">
+            <option value="">Select Device</option>
+          </select>
+          <div class="grid grid-cols-3 gap-2">
+            <input id="register-address" type="number" placeholder="Register" 
+                   class="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-cyan-500 focus:outline-none">
+            <select id="register-type" 
+                    class="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-cyan-500 focus:outline-none">
+              <option value="holding">Holding</option>
+              <option value="input">Input</option>
+              <option value="coil">Coil</option>
+              <option value="discrete">Discrete</option>
+            </select>
+            <select id="data-type" 
+                    class="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:border-cyan-500 focus:outline-none">
+              <option value="uint16">Uint16</option>
+              <option value="int16">Int16</option>
+              <option value="uint32">Uint32</option>
+              <option value="int32">Int32</option>
+              <option value="float32">Float32</option>
+            </select>
+          </div>
+          <input id="register-name" type="text" placeholder="Register Name" 
+                 class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-cyan-500 focus:outline-none">
+          <button id="add-register-btn" 
+                  class="w-full px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-medium transition-colors">
+            Add Register
+          </button>
+        </div>
+      </div>
+      
+      <div>
+        <h3 class="text-lg font-semibold text-white mb-4">Register List</h3>
+        <div id="registers-list" class="space-y-2 max-h-64 overflow-y-auto">
+          <!-- Registers will be populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-time Data -->
+  <div class="grid lg:grid-cols-2 gap-8 mb-8">
+    <!-- Current Values -->
+    <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+        <svg class="w-6 h-6 mr-2 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+        </svg>
+        Real-time Values
+      </h2>
+      <div id="realtime-values" class="space-y-4">
+        <!-- Real-time values will be populated by JavaScript -->
+      </div>
+    </div>
+
+    <!-- Communication Statistics -->
+    <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+        <svg class="w-6 h-6 mr-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+        Communication Stats
+      </h2>
+      <div id="comm-stats" class="space-y-3">
+        <!-- Communication stats will be populated by JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- System Information -->
+  <div class="grid lg:grid-cols-3 gap-6">
+    <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+      <h3 class="text-lg font-semibold text-white mb-4">RS485 Configuration</h3>
+      <div id="rs485-config" class="space-y-2">
+        <!-- RS485 config will be populated by JavaScript -->
+      </div>
+    </div>
+    
+    <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+      <h3 class="text-lg font-semibold text-white mb-4">Bus Status</h3>
+      <div id="bus-status" class="space-y-2">
+        <!-- Bus status will be populated by JavaScript -->
+      </div>
+    </div>
+
+    <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+      <h3 class="text-lg font-semibold text-white mb-4">System Status</h3>
+      <div id="system-status" class="space-y-2">
+        <!-- System status will be populated by JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { adaApi } from '../lib/api';
+
+    let updateInterval: ReturnType<typeof setInterval>;
+    let isConnected = true;
+    let devices: any[] = [];
+    let registers: any[] = [];
+
+    // DOM elements
+    const connectionStatus = document.getElementById('connection-status')!;
+    const devicesList = document.getElementById('devices-list')!;
+    const registersList = document.getElementById('registers-list')!;
+    const realtimeValues = document.getElementById('realtime-values')!;
+    const commStats = document.getElementById('comm-stats')!;
+    const rs485Config = document.getElementById('rs485-config')!;
+    const busStatus = document.getElementById('bus-status')!;
+    const systemStatus = document.getElementById('system-status')!;
+    const selectedDevice = document.getElementById('selected-device') as HTMLSelectElement;
+
+    // Button elements
+    const scanDevicesBtn = document.getElementById('scan-devices-btn') as HTMLButtonElement;
+    const addDeviceBtn = document.getElementById('add-device-btn') as HTMLButtonElement;
+    const testDeviceBtn = document.getElementById('test-device-btn') as HTMLButtonElement;
+    const addRegisterBtn = document.getElementById('add-register-btn') as HTMLButtonElement;
+
+    // Update connection status
+    function updateConnectionStatus(connected: boolean) {
+      isConnected = connected;
+      if (connected) {
+        connectionStatus.className = 'inline-flex items-center px-4 py-2 rounded-full bg-green-500/20 text-green-400 border border-green-500/30';
+        connectionStatus.innerHTML = `
+          <div class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+          <span class="text-sm font-medium">Connected</span>
+        `;
+      } else {
+        connectionStatus.className = 'inline-flex items-center px-4 py-2 rounded-full bg-red-500/20 text-red-400 border border-red-500/30';
+        connectionStatus.innerHTML = `
+          <div class="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
+          <span class="text-sm font-medium">Disconnected</span>
+        `;
+      }
+    }
+
+    // Render devices list
+    function renderDevices(devicesList: any[]) {
+      devices = devicesList;
+      const devicesContainer = document.getElementById('devices-list')!;
+      
+      if (devicesList.length === 0) {
+        devicesContainer.innerHTML = `
+          <div class="text-center py-8 text-slate-400">
+            <svg class="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+            </svg>
+            <p>No Modbus devices found</p>
+            <p class="text-sm mt-2">Click "Scan Devices" to discover devices</p>
+          </div>
+        `;
+        return;
+      }
+
+      devicesContainer.innerHTML = devicesList.map(device => {
+        const statusColor = device.status === 'online' ? 'text-green-400 bg-green-500/20 border-green-500/30' : 'text-red-400 bg-red-500/20 border-red-500/30';
+        
+        return `
+          <div class="bg-slate-700/50 rounded-lg p-4 border ${device.status === 'online' ? 'border-green-500/30' : 'border-red-500/30'}">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="font-semibold text-white">${device.name || `Device ${device.address}`}</h3>
+                <p class="text-sm text-slate-400">Address: ${device.address} | Type: ${device.type || 'Unknown'}</p>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColor} border">
+                  ${device.status || 'Unknown'}
+                </span>
+                <button onclick="removeDevice(${device.address})" class="text-red-400 hover:text-red-300">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="text-sm text-slate-400">
+              <div>Poll Rate: ${device.poll_interval || 1000}ms</div>
+              <div>Last Poll: ${device.last_poll ? new Date(device.last_poll * 1000).toLocaleTimeString() : 'Never'}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Update device selector
+      updateDeviceSelector(devicesList);
+    }
+
+    // Update device selector
+    function updateDeviceSelector(devicesList: any[]) {
+      selectedDevice.innerHTML = '<option value="">Select Device</option>' + 
+        devicesList.map(device => 
+          `<option value="${device.address}">${device.name || `Device ${device.address}`}</option>`
+        ).join('');
+    }
+
+    // Render registers list
+    function renderRegisters(registersList: any[]) {
+      registers = registersList;
+      const registersContainer = document.getElementById('registers-list')!;
+      
+      if (registersList.length === 0) {
+        registersContainer.innerHTML = `
+          <div class="text-center py-4 text-slate-400">
+            <p class="text-sm">No registers configured</p>
+          </div>
+        `;
+        return;
+      }
+
+      registersContainer.innerHTML = registersList.map(register => `
+        <div class="bg-slate-700/30 rounded-lg p-3 flex items-center justify-between">
+          <div>
+            <div class="text-white font-medium">${register.name || `Register ${register.address}`}</div>
+            <div class="text-xs text-slate-400">
+              ${register.type.toUpperCase()} ${register.address} (${register.data_type})
+            </div>
+          </div>
+          <button onclick="removeRegister(${register.address})" class="text-red-400 hover:text-red-300">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // Render real-time values
+    function renderRealtimeValues(values: any[]) {
+      if (values.length === 0) {
+        realtimeValues.innerHTML = `
+          <div class="text-center py-8 text-slate-400">
+            <p>No real-time data available</p>
+          </div>
+        `;
+        return;
+      }
+
+      realtimeValues.innerHTML = values.map(value => `
+        <div class="bg-slate-700/50 rounded-lg p-4">
+          <div class="flex justify-between items-center mb-2">
+            <h4 class="font-semibold text-white">${value.name}</h4>
+            <span class="text-sm ${value.quality === 'good' ? 'text-green-400' : 'text-yellow-400'}">
+              ${value.quality || 'unknown'}
+            </span>
+          </div>
+          <div class="text-2xl font-bold text-white mb-1">${value.value}</div>
+          <div class="text-sm text-slate-400">
+            Device ${value.device_address} | Register ${value.register_address}
+            <br>Updated: ${new Date(value.timestamp * 1000).toLocaleTimeString()}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Update communication stats
+    function updateCommStats(stats: any) {
+      commStats.innerHTML = `
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-400">Total Requests:</span>
+          <span class="text-white">${stats.total_requests || 0}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-400">Success Rate:</span>
+          <span class="text-green-400">${(stats.success_rate || 0).toFixed(1)}%</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-400">Errors:</span>
+          <span class="text-red-400">${stats.error_count || 0}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-400">Avg Response:</span>
+          <span class="text-white">${stats.avg_response_time || 0}ms</span>
+        </div>
+      `;
+    }
+
+    // Update RS485 config
+    function updateRS485Config(config: any) {
+      rs485Config.innerHTML = `
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-400">Baud Rate:</span>
+          <span class="text-white">${config.baud_rate || 9600}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-400">Data Bits:</span>
+          <span class="text-white">${config.data_bits || 8}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-400">Parity:</span>
+          <span class="text-white">${config.parity || 'None'}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-400">Stop Bits:</span>
+          <span class="text-white">${config.stop_bits || 1}</span>
+        </div>
+      `;
+    }
+
+    // Update bus status
+    function updateBusStatus(status: any) {
+      busStatus.innerHTML = `
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-400">Bus State:</span>
+          <span class="text-${status.state === 'active' ? 'green' : 'red'}-400">${status.state || 'Unknown'}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-400">Active Devices:</span>
+          <span class="text-white">${status.active_devices || 0}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-400">Bus Load:</span>
+          <span class="text-white">${status.bus_load || 0}%</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-400">Last Activity:</span>
+          <span class="text-white">${status.last_activity ? new Date(status.last_activity * 1000).toLocaleTimeString() : 'Never'}</span>
+        </div>
+      `;
+    }
+
+    // Update system status
+    async function updateSystemStatus() {
+      try {
+        const status = await adaApi.getStatus();
+        systemStatus.innerHTML = `
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-400">Uptime:</span>
+            <span class="text-white">${Math.floor((status.uptime || 0) / 3600)}h ${Math.floor(((status.uptime || 0) % 3600) / 60)}m</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-400">Free Memory:</span>
+            <span class="text-white">${Math.round((status.heap || 0) / 1024)}KB</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-400">Modbus Task:</span>
+            <span class="text-green-400">Running</span>
+          </div>
+        `;
+      } catch (error) {
+        systemStatus.innerHTML = `
+          <div class="text-sm text-red-400">Failed to load system status</div>
+        `;
+      }
+    }
+
+    // Device management functions
+    async function scanDevices() {
+      scanDevicesBtn.disabled = true;
+      scanDevicesBtn.textContent = 'Scanning...';
+      
+      try {
+        const result = await adaApi.scanModbusDevices();
+        if (result && result.devices) {
+          renderDevices(result.devices);
+        }
+      } catch (error) {
+        alert('Failed to scan devices');
+      } finally {
+        scanDevicesBtn.disabled = false;
+        scanDevicesBtn.textContent = 'Scan Devices';
+      }
+    }
+
+    async function addDevice() {
+      const address = parseInt((document.getElementById('device-address') as HTMLInputElement).value);
+      const name = (document.getElementById('device-name') as HTMLInputElement).value;
+      const type = (document.getElementById('device-type') as HTMLSelectElement).value;
+      const pollInterval = parseInt((document.getElementById('poll-interval') as HTMLInputElement).value) || 1000;
+      const enabled = (document.getElementById('device-enabled') as HTMLSelectElement).value === 'true';
+
+      if (!address || address < 1 || address > 247) {
+        alert('Please enter a valid device address (1-247)');
+        return;
+      }
+
+      try {
+        await adaApi.addModbusDevice({
+          address,
+          name: name || `Device ${address}`,
+          type: type || 'generic',
+          poll_interval: pollInterval,
+          enabled
+        });
+        
+        alert('Device added successfully');
+        await updateData();
+        
+        // Clear form
+        (document.getElementById('device-address') as HTMLInputElement).value = '';
+        (document.getElementById('device-name') as HTMLInputElement).value = '';
+        (document.getElementById('device-type') as HTMLSelectElement).value = '';
+        (document.getElementById('poll-interval') as HTMLInputElement).value = '';
+      } catch (error) {
+        alert('Failed to add device');
+      }
+    }
+
+    async function testDevice() {
+      const address = parseInt((document.getElementById('device-address') as HTMLInputElement).value);
+      
+      if (!address) {
+        alert('Please enter a device address');
+        return;
+      }
+
+      testDeviceBtn.disabled = true;
+      testDeviceBtn.textContent = 'Testing...';
+      
+      try {
+        const result = await adaApi.testModbusDevice(address);
+        alert(result.success ? `Device responded successfully` : `Device test failed: ${result.error}`);
+      } catch (error) {
+        alert('Device test failed');
+      } finally {
+        testDeviceBtn.disabled = false;
+        testDeviceBtn.textContent = 'Test Connection';
+      }
+    }
+
+    async function removeDevice(address: number) {
+      if (!confirm(`Remove device at address ${address}?`)) {
+        return;
+      }
+
+      try {
+        await adaApi.removeModbusDevice(address);
+        await updateData();
+      } catch (error) {
+        alert('Failed to remove device');
+      }
+    }
+
+    // Register management
+    async function addRegister() {
+      const deviceAddress = parseInt(selectedDevice.value);
+      const registerAddress = parseInt((document.getElementById('register-address') as HTMLInputElement).value);
+      const registerType = (document.getElementById('register-type') as HTMLSelectElement).value;
+      const dataType = (document.getElementById('data-type') as HTMLSelectElement).value;
+      const name = (document.getElementById('register-name') as HTMLInputElement).value;
+
+      if (!deviceAddress || !registerAddress || !name) {
+        alert('Please fill all required fields');
+        return;
+      }
+
+      try {
+        await adaApi.addModbusRegister({
+          device_address: deviceAddress,
+          register_address: registerAddress,
+          register_type: registerType,
+          data_type: dataType,
+          name
+        });
+        
+        alert('Register added successfully');
+        await updateData();
+        
+        // Clear form
+        (document.getElementById('register-address') as HTMLInputElement).value = '';
+        (document.getElementById('register-name') as HTMLInputElement).value = '';
+      } catch (error) {
+        alert('Failed to add register');
+      }
+    }
+
+    async function removeRegister(address: number) {
+      if (!confirm(`Remove register ${address}?`)) {
+        return;
+      }
+
+      try {
+        await adaApi.removeModbusRegister(address);
+        await updateData();
+      } catch (error) {
+        alert('Failed to remove register');
+      }
+    }
+
+    // Main update function
+    async function updateData() {
+      try {
+        const data = await adaApi.getModbusDevices();
+        updateConnectionStatus(true);
+        
+        if (data) {
+          if (data.devices) renderDevices(data.devices);
+          if (data.registers) renderRegisters(data.registers);
+          if (data.realtime_values) renderRealtimeValues(data.realtime_values);
+          if (data.stats) updateCommStats(data.stats);
+          if (data.rs485_config) updateRS485Config(data.rs485_config);
+          if (data.bus_status) updateBusStatus(data.bus_status);
+        }
+        
+      } catch (error) {
+        console.error('Failed to update Modbus data:', error);
+        updateConnectionStatus(false);
+      }
+    }
+
+    // Event listeners
+    scanDevicesBtn.addEventListener('click', scanDevices);
+    addDeviceBtn.addEventListener('click', addDevice);
+    testDeviceBtn.addEventListener('click', testDevice);
+    addRegisterBtn.addEventListener('click', addRegister);
+
+    // Make functions globally available
+    window.removeDevice = removeDevice;
+    window.removeRegister = removeRegister;
+
+    // Initialize the page
+    async function init() {
+      await updateData();
+      await updateSystemStatus();
+      
+      // Set up real-time updates every 5 seconds (Modbus is slower)
+      updateInterval = setInterval(updateData, 5000);
+      
+      // Update system status every 30 seconds
+      setInterval(updateSystemStatus, 30000);
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      if (updateInterval) {
+        clearInterval(updateInterval);
+      }
+    });
+
+    // Start the application
+    init();
+  </script>
+</DashboardLayout>

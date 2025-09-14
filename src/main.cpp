@@ -38,6 +38,7 @@
 #include "analytics_manager.h"
 #include "remote_diagnostics.h"
 #include "webhook_handler.h"
+// #include "display_manager.h"  // Temporarily disabled for testing
 
 // Global variables for timing
 unsigned long lastStatusUpdate = 0;
@@ -583,6 +584,22 @@ void setup() {
         Serial.println("[Main] Webhook Handler initialization failed!");
     }
     
+    // Initialize Display Manager (temporarily disabled)
+    /*
+    Serial.println("[Main] Initializing Display Manager...");
+    if (displayMgr.begin()) {
+        Serial.println("[Main] Display Manager initialized successfully");
+        systemMgr.setModuleHealth("display", HEALTH_OK);
+        
+        // Set initial page to status
+        displayMgr.setPage(PAGE_STATUS);
+        Serial.println("[Main] Display set to status page");
+    } else {
+        Serial.println("[Main] Display Manager initialization failed - continuing without display");
+        systemMgr.setModuleHealth("display", HEALTH_WARNING);
+    }
+    */
+
     Serial.println("[Main] Setup completed");
 }
 
@@ -622,6 +639,9 @@ void loop() {
     
     // Handle Webhook Handler (outbound data reporting)
     webhookHandler.handle();
+    
+    // Handle Display Manager (LCD/TFT display updates) - temporarily disabled
+    // displayMgr.loop();
     
     // Feed sensor data to analytics
     static unsigned long lastAnalyticsUpdate = 0;
@@ -685,6 +705,109 @@ void loop() {
         }
         lastAnalyticsUpdate = millis();
     }
+    
+    // Feed data to Display Manager (temporarily disabled)
+    /*
+    static unsigned long lastDisplayUpdate = 0;
+    if (millis() - lastDisplayUpdate > 2000) {  // Every 2 seconds
+        if (displayMgr.isInitialized()) {
+            // Create JSON objects for display data updates
+            DynamicJsonDocument doc(1024);
+            
+            // Update system status data
+            JsonObject systemData = doc.createNestedObject("system");
+            systemData["project"] = "ADA";
+            systemData["uptime"] = millis();
+            systemData["freeHeap"] = ESP.getFreeHeap();
+            
+            JsonObject wifi = systemData.createNestedObject("wifi");
+            wifi["ssid"] = WiFi.SSID();
+            wifi["ip"] = WiFi.localIP().toString();
+            wifi["rssi"] = WiFi.RSSI();
+            
+            displayMgr.updateSystemData(systemData);
+            
+            // Update analog voltage data
+            doc.clear();
+            JsonObject analogVoltageData = doc.createNestedObject("analog_voltage");
+            JsonObject voltageSensors = analogVoltageData.createNestedObject("sensors");
+            
+            for (int i = 0; i < 3; i++) {
+                if (analogVoltageMgr.isSensorEnabled(i)) {
+                    AnalogReading reading = analogVoltageMgr.getReading(i);
+                    JsonObject sensor = voltageSensors.createNestedObject("sensor_" + String(i));
+                    sensor["voltage"] = reading.voltage;
+                    sensor["status"] = reading.valid ? "OK" : "ERROR";
+                }
+            }
+            displayMgr.updateAnalogVoltageData(analogVoltageData);
+            
+            // Update analog current data
+            doc.clear();
+            JsonObject analogCurrentData = doc.createNestedObject("analog_current");
+            JsonObject currentSensors = analogCurrentData.createNestedObject("sensors");
+            
+            for (int i = 0; i < 3; i++) {
+                if (analogCurrentMgr.isSensorEnabled(i)) {
+                    CurrentReading reading = analogCurrentMgr.getReading(i);
+                    JsonObject sensor = currentSensors.createNestedObject("sensor_" + String(i));
+                    sensor["current"] = reading.current;
+                    sensor["status"] = reading.valid ? "OK" : "ERROR";
+                }
+            }
+            displayMgr.updateAnalogCurrentData(analogCurrentData);
+            
+            // Update digital I/O data
+            doc.clear();
+            JsonObject digitalIOData = doc.createNestedObject("digital_io");
+            JsonObject inputs = digitalIOData.createNestedObject("inputs");
+            JsonObject outputs = digitalIOData.createNestedObject("outputs");
+            
+            for (int i = 0; i < 4; i++) {
+                DigitalInputReading diReading = digitalIOMgr.getInputReading(i);
+                JsonObject input = inputs.createNestedObject("input_" + String(i));
+                input["state"] = (diReading.currentState == DI_HIGH) ? "HIGH" : "LOW";
+                input["name"] = digitalIOMgr.getInputName(i);
+                
+                DigitalOutputReading doReading = digitalIOMgr.getOutputReading(i);
+                JsonObject output = outputs.createNestedObject("output_" + String(i));
+                output["state"] = doReading.currentState;
+                output["name"] = digitalIOMgr.getOutputName(i);
+            }
+            displayMgr.updateDigitalIOData(digitalIOData);
+            
+            // Update alarm data (count active alarms)
+            int alarmCount = 0;
+            String lastAlarm = "";
+            
+            // Check voltage sensor alarms
+            for (int i = 0; i < 3; i++) {
+                if (analogVoltageMgr.isSensorEnabled(i)) {
+                    AnalogReading reading = analogVoltageMgr.getReading(i);
+                    if (reading.lowAlarm || reading.highAlarm) {
+                        alarmCount++;
+                        lastAlarm = "Voltage sensor " + String(i + 1) + " alarm";
+                    }
+                }
+            }
+            
+            // Check current sensor alarms
+            for (int i = 0; i < 3; i++) {
+                if (analogCurrentMgr.isSensorEnabled(i)) {
+                    CurrentReading reading = analogCurrentMgr.getReading(i);
+                    if (reading.lowAlarm || reading.highAlarm) {
+                        alarmCount++;
+                        lastAlarm = "Current sensor " + String(i + 1) + " alarm";
+                    }
+                }
+            }
+            
+            displayMgr.updateAlarmData(alarmCount, lastAlarm);
+        }
+        
+        lastDisplayUpdate = millis();
+    }
+    */
     
     // Send periodic sensor data via webhooks
     static unsigned long lastWebhookUpdate = 0;

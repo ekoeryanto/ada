@@ -1,0 +1,687 @@
+#include "display_manager.h"
+#include "config.h"
+
+// Global instance
+DisplayManager displayMgr;
+
+DisplayManager::DisplayManager() :
+    currentPage(PAGE_SPLASH),
+    lastUpdate(0),
+    lastPageChange(0),
+    initialized(false),
+    brightness(255),
+    autoRotate(true),
+    autoRotateInterval(10000) {  // 10 seconds per page
+    
+    // Initialize display data
+    data.dataValid = false;
+    data.lastUpdate = 0;
+    data.activeAlarms = 0;
+    data.modbusDevices = 0;
+    
+    // Initialize sensor names with defaults
+    for (int i = 0; i < 3; i++) {
+        data.analogVoltage[i] = 0.0;
+        data.analogCurrent[i] = 0.0;
+        data.analogVoltageStatus[i] = "UNKNOWN";
+        data.analogCurrentStatus[i] = "UNKNOWN";
+    }
+    
+    for (int i = 0; i < 4; i++) {
+        data.digitalInputs[i] = false;
+        data.digitalOutputs[i] = false;
+        data.digitalInputNames[i] = "DI" + String(i + 1);
+        data.digitalOutputNames[i] = "DO" + String(i + 1);
+    }
+}
+
+DisplayManager::~DisplayManager() {
+    // Cleanup if needed
+}
+
+bool DisplayManager::begin() {
+    Serial.println("[Display] Initializing TFT display...");
+    
+    try {
+        // Initialize TFT
+        tft.init();
+        tft.setRotation(DISPLAY_ROTATION);
+        tft.fillScreen(COLOR_BLACK);
+        
+        // Set initial brightness
+        setBrightness(brightness);
+        
+        // Show splash screen
+        drawSplashScreen();
+        
+        initialized = true;
+        Serial.println("[Display] TFT display initialized successfully");
+        
+        return true;
+    } catch (const std::exception& e) {
+        Serial.printf("[Display] Failed to initialize: %s\n", e.what());
+        return false;
+    }
+}
+
+void DisplayManager::update() {
+    if (!initialized) return;
+    
+    unsigned long currentTime = millis();
+    
+    // Handle auto-rotation
+    if (autoRotate) {
+        checkAutoRotation();
+    }
+    
+    // Update display based on current page
+    if (currentTime - lastUpdate >= DISPLAY_UPDATE_NORMAL) {
+        switch (currentPage) {
+            case PAGE_SPLASH:
+                // Splash screen - no updates needed
+                break;
+            case PAGE_STATUS:
+                drawStatusPage();
+                break;
+            case PAGE_ANALOG_VOLTAGE:
+                drawAnalogVoltagePage();
+                break;
+            case PAGE_ANALOG_CURRENT:
+                drawAnalogCurrentPage();
+                break;
+            case PAGE_DIGITAL_IO:
+                drawDigitalIOPage();
+                break;
+            case PAGE_MODBUS:
+                drawModbusPage();
+                break;
+            case PAGE_NETWORK:
+                drawNetworkPage();
+                break;
+            case PAGE_ALARMS:
+                drawAlarmsPage();
+                break;
+            case PAGE_SETTINGS:
+                drawSettingsPage();
+                break;
+        }
+        
+        lastUpdate = currentTime;
+    }
+}
+
+void DisplayManager::loop() {
+    if (!initialized) return;
+    
+    // Handle buttons (if hardware buttons exist)
+    handleButtons();
+    
+    // Update display
+    update();
+}
+
+void DisplayManager::drawSplashScreen() {
+    tft.fillScreen(COLOR_BLACK);
+    
+    // Draw ADA logo area
+    tft.fillRoundRect(50, 50, 220, 140, 10, COLOR_BLUE);
+    tft.fillCircle(160, 120, 60, COLOR_WHITE);
+    
+    // Draw "ADA" text
+    tft.setTextColor(COLOR_BLUE, COLOR_WHITE);
+    tft.setTextSize(3);
+    tft.drawString("ADA", 135, 105);
+    
+    // Draw subtitle
+    tft.setTextColor(COLOR_CYAN, COLOR_BLACK);
+    tft.setTextSize(1);
+    tft.drawString("Analog Data Acquisition", 85, 200);
+    
+    // Draw version info
+    tft.setTextColor(COLOR_GRAY, COLOR_BLACK);
+    tft.drawString("v1.0.0", 280, 220);
+    
+    delay(2000); // Show splash for 2 seconds
+}
+
+void DisplayManager::drawStatusPage() {
+    tft.fillScreen(COLOR_BLACK);
+    drawHeader("System Status");
+    
+    int y = 30;
+    int lineHeight = 25;
+    
+    // Device info
+    drawDataValue(10, y, "Device:", data.deviceName, COLOR_WHITE);
+    y += lineHeight;
+    
+    // Network status
+    uint16_t wifiColor = (data.wifiRSSI > -70) ? COLOR_GREEN : (data.wifiRSSI > -85) ? COLOR_YELLOW : COLOR_RED;
+    drawDataValue(10, y, "WiFi:", data.wifiSSID + " (" + formatRSSI(data.wifiRSSI) + ")", wifiColor);
+    y += lineHeight;
+    
+    drawDataValue(10, y, "IP:", data.ipAddress, COLOR_CYAN);
+    y += lineHeight;
+    
+    // System stats
+    drawDataValue(10, y, "Uptime:", formatUptime(data.uptime), COLOR_WHITE);
+    y += lineHeight;
+    
+    drawDataValue(10, y, "Free RAM:", formatMemory(data.freeHeap), COLOR_GREEN);
+    y += lineHeight;
+    
+    // Alarm status
+    uint16_t alarmColor = (data.activeAlarms > 0) ? COLOR_RED : COLOR_GREEN;
+    String alarmText = (data.activeAlarms > 0) ? String(data.activeAlarms) + " Active" : "No Alarms";
+    drawDataValue(10, y, "Alarms:", alarmText, alarmColor);
+    y += lineHeight;
+    
+    // Modbus status
+    drawDataValue(10, y, "Modbus:", String(data.modbusDevices) + " Devices", COLOR_CYAN);
+    
+    drawFooter();
+}
+
+void DisplayManager::drawAnalogVoltagePage() {
+    tft.fillScreen(COLOR_BLACK);
+    drawHeader("Analog Voltage (0-10V)");
+    
+    int y = 40;
+    int lineHeight = 35;
+    
+    for (int i = 0; i < 3; i++) {
+        String label = "AV" + String(i + 1) + ":";
+        String value = String(data.analogVoltage[i], 2) + "V";
+        uint16_t color = getStatusColor(data.analogVoltageStatus[i]);
+        
+        drawDataValue(10, y, label, value, color);
+        
+        // Draw status indicator
+        tft.setTextColor(color, COLOR_BLACK);
+        tft.setTextSize(1);
+        tft.drawString(data.analogVoltageStatus[i], 200, y + 5);
+        
+        // Draw progress bar for voltage (0-10V range)
+        float percentage = (data.analogVoltage[i] / 10.0) * 100.0;
+        drawProgressBar(10, y + 20, 200, 8, percentage, color);
+        
+        y += lineHeight + 15;
+    }
+    
+    drawFooter();
+}
+
+void DisplayManager::drawAnalogCurrentPage() {
+    tft.fillScreen(COLOR_BLACK);
+    drawHeader("Analog Current (4-20mA)");
+    
+    int y = 40;
+    int lineHeight = 35;
+    
+    for (int i = 0; i < 3; i++) {
+        String label = "AC" + String(i + 1) + ":";
+        String value = String(data.analogCurrent[i], 2) + "mA";
+        uint16_t color = getStatusColor(data.analogCurrentStatus[i]);
+        
+        drawDataValue(10, y, label, value, color);
+        
+        // Draw status indicator
+        tft.setTextColor(color, COLOR_BLACK);
+        tft.setTextSize(1);
+        tft.drawString(data.analogCurrentStatus[i], 200, y + 5);
+        
+        // Draw progress bar for current (4-20mA range)
+        float percentage = ((data.analogCurrent[i] - 4.0) / 16.0) * 100.0;
+        if (percentage < 0) percentage = 0;
+        if (percentage > 100) percentage = 100;
+        drawProgressBar(10, y + 20, 200, 8, percentage, color);
+        
+        y += lineHeight + 15;
+    }
+    
+    drawFooter();
+}
+
+void DisplayManager::drawDigitalIOPage() {
+    tft.fillScreen(COLOR_BLACK);
+    drawHeader("Digital I/O");
+    
+    // Digital Inputs
+    tft.setTextColor(COLOR_YELLOW, COLOR_BLACK);
+    tft.setTextSize(1);
+    tft.drawString("Inputs:", 10, 35);
+    
+    int x = 10;
+    int y = 50;
+    for (int i = 0; i < 4; i++) {
+        uint16_t color = data.digitalInputs[i] ? COLOR_GREEN : COLOR_GRAY;
+        String state = data.digitalInputs[i] ? "HIGH" : "LOW";
+        
+        drawDataValue(x, y, data.digitalInputNames[i], state, color);
+        
+        if (i == 1) {
+            x = 170;
+            y = 50;
+        } else {
+            y += 25;
+        }
+    }
+    
+    // Digital Outputs
+    tft.setTextColor(COLOR_ORANGE, COLOR_BLACK);
+    tft.setTextSize(1);
+    tft.drawString("Outputs:", 10, 130);
+    
+    x = 10;
+    y = 145;
+    for (int i = 0; i < 4; i++) {
+        uint16_t color = data.digitalOutputs[i] ? COLOR_GREEN : COLOR_GRAY;
+        String state = data.digitalOutputs[i] ? "ON" : "OFF";
+        
+        drawDataValue(x, y, data.digitalOutputNames[i], state, color);
+        
+        if (i == 1) {
+            x = 170;
+            y = 145;
+        } else {
+            y += 25;
+        }
+    }
+    
+    drawFooter();
+}
+
+void DisplayManager::drawModbusPage() {
+    tft.fillScreen(COLOR_BLACK);
+    drawHeader("Modbus/RS485");
+    
+    int y = 40;
+    
+    // Modbus status
+    uint16_t statusColor = (data.modbusStatus == "OK") ? COLOR_GREEN : COLOR_RED;
+    drawDataValue(10, y, "Status:", data.modbusStatus, statusColor);
+    y += 30;
+    
+    drawDataValue(10, y, "Devices:", String(data.modbusDevices), COLOR_CYAN);
+    y += 30;
+    
+    // Connection indicator
+    drawConnectionStatus(10, y, (data.modbusStatus == "OK"));
+    
+    drawFooter();
+}
+
+void DisplayManager::drawNetworkPage() {
+    tft.fillScreen(COLOR_BLACK);
+    drawHeader("Network Status");
+    
+    int y = 40;
+    int lineHeight = 25;
+    
+    // WiFi connection
+    bool wifiConnected = !data.wifiSSID.isEmpty();
+    drawConnectionStatus(10, y, wifiConnected);
+    tft.setTextColor(COLOR_WHITE, COLOR_BLACK);
+    tft.setTextSize(1);
+    tft.drawString("WiFi Connection", 35, y + 5);
+    y += lineHeight;
+    
+    if (wifiConnected) {
+        drawDataValue(10, y, "SSID:", data.wifiSSID, COLOR_CYAN);
+        y += lineHeight;
+        
+        drawDataValue(10, y, "IP:", data.ipAddress, COLOR_CYAN);
+        y += lineHeight;
+        
+        uint16_t signalColor = (data.wifiRSSI > -70) ? COLOR_GREEN : (data.wifiRSSI > -85) ? COLOR_YELLOW : COLOR_RED;
+        drawDataValue(10, y, "Signal:", formatRSSI(data.wifiRSSI), signalColor);
+    }
+    
+    drawFooter();
+}
+
+void DisplayManager::drawAlarmsPage() {
+    tft.fillScreen(COLOR_BLACK);
+    drawHeader("Alarms");
+    
+    int y = 40;
+    
+    // Alarm count
+    uint16_t alarmColor = (data.activeAlarms > 0) ? COLOR_RED : COLOR_GREEN;
+    String alarmCount = (data.activeAlarms > 0) ? String(data.activeAlarms) + " Active" : "No Active Alarms";
+    drawDataValue(10, y, "Status:", alarmCount, alarmColor);
+    y += 35;
+    
+    // Alarm indicator
+    drawAlarmIndicator(10, y, (data.activeAlarms > 0));
+    
+    // Last alarm message
+    if (!data.lastAlarmMessage.isEmpty() && data.activeAlarms > 0) {
+        y += 40;
+        tft.setTextColor(COLOR_RED, COLOR_BLACK);
+        tft.setTextSize(1);
+        tft.drawString("Last Alarm:", 10, y);
+        y += 15;
+        
+        // Wrap long messages
+        tft.setTextColor(COLOR_WHITE, COLOR_BLACK);
+        String message = data.lastAlarmMessage;
+        if (message.length() > 40) {
+            message = message.substring(0, 37) + "...";
+        }
+        tft.drawString(message, 10, y);
+    }
+    
+    drawFooter();
+}
+
+void DisplayManager::drawSettingsPage() {
+    tft.fillScreen(COLOR_BLACK);
+    drawHeader("Settings");
+    
+    int y = 40;
+    int lineHeight = 25;
+    
+    drawDataValue(10, y, "Brightness:", String(brightness), COLOR_WHITE);
+    y += lineHeight;
+    
+    drawDataValue(10, y, "Auto Rotate:", autoRotate ? "ON" : "OFF", autoRotate ? COLOR_GREEN : COLOR_GRAY);
+    y += lineHeight;
+    
+    drawDataValue(10, y, "Page Time:", String(autoRotateInterval / 1000) + "s", COLOR_CYAN);
+    y += lineHeight;
+    
+    drawDataValue(10, y, "Display Size:", String(DISPLAY_WIDTH) + "x" + String(DISPLAY_HEIGHT), COLOR_WHITE);
+    
+    drawFooter();
+}
+
+void DisplayManager::drawHeader(const String& title) {
+    // Draw header background
+    tft.fillRect(0, 0, DISPLAY_WIDTH, 25, COLOR_DARKGRAY);
+    
+    // Draw title
+    tft.setTextColor(COLOR_WHITE, COLOR_DARKGRAY);
+    tft.setTextSize(1);
+    tft.drawString(title, 10, 8);
+    
+    // Draw current time if available
+    String timeStr = "00:00:00"; // Would get from NTP manager
+    tft.drawString(timeStr, DISPLAY_WIDTH - 60, 8);
+}
+
+void DisplayManager::drawFooter() {
+    // Draw footer line
+    tft.drawLine(0, DISPLAY_HEIGHT - 20, DISPLAY_WIDTH, DISPLAY_HEIGHT - 20, COLOR_DARKGRAY);
+    
+    // Show page indicator
+    tft.setTextColor(COLOR_GRAY, COLOR_BLACK);
+    tft.setTextSize(1);
+    String pageInfo = String(currentPage + 1) + "/" + String(PAGE_COUNT);
+    tft.drawString(pageInfo, 10, DISPLAY_HEIGHT - 15);
+    
+    // Show data age
+    if (data.dataValid) {
+        unsigned long dataAge = (millis() - data.lastUpdate) / 1000;
+        String ageStr = "Data: " + String(dataAge) + "s ago";
+        tft.drawString(ageStr, DISPLAY_WIDTH - 80, DISPLAY_HEIGHT - 15);
+    }
+}
+
+void DisplayManager::drawDataValue(int x, int y, const String& label, const String& value, uint16_t color) {
+    tft.setTextColor(COLOR_LIGHTGRAY, COLOR_BLACK);
+    tft.setTextSize(1);
+    tft.drawString(label, x, y);
+    
+    tft.setTextColor(color, COLOR_BLACK);
+    tft.setTextSize(1);
+    tft.drawString(value, x + 80, y);
+}
+
+void DisplayManager::drawProgressBar(int x, int y, int width, int height, float percentage, uint16_t color) {
+    // Draw border
+    tft.drawRect(x, y, width, height, COLOR_GRAY);
+    
+    // Fill background
+    tft.fillRect(x + 1, y + 1, width - 2, height - 2, COLOR_BLACK);
+    
+    // Draw fill
+    int fillWidth = (int)((width - 2) * percentage / 100.0);
+    if (fillWidth > 0) {
+        tft.fillRect(x + 1, y + 1, fillWidth, height - 2, color);
+    }
+}
+
+void DisplayManager::drawAlarmIndicator(int x, int y, bool active) {
+    uint16_t color = active ? COLOR_RED : COLOR_GREEN;
+    tft.fillCircle(x + 10, y + 10, 10, color);
+    
+    tft.setTextColor(COLOR_WHITE, color);
+    tft.setTextSize(1);
+    String text = active ? "!" : "OK";
+    tft.drawString(text, x + 7, y + 6);
+}
+
+void DisplayManager::drawConnectionStatus(int x, int y, bool connected) {
+    uint16_t color = connected ? COLOR_GREEN : COLOR_RED;
+    tft.fillCircle(x + 8, y + 8, 8, color);
+}
+
+// Helper functions
+String DisplayManager::formatUptime(unsigned long uptimeMs) {
+    unsigned long seconds = uptimeMs / 1000;
+    unsigned long minutes = seconds / 60;
+    unsigned long hours = minutes / 60;
+    
+    return String(hours) + "h " + String(minutes % 60) + "m";
+}
+
+String DisplayManager::formatMemory(float bytes) {
+    if (bytes < 1024) {
+        return String((int)bytes) + "B";
+    } else if (bytes < 1024 * 1024) {
+        return String(bytes / 1024, 1) + "KB";
+    } else {
+        return String(bytes / (1024 * 1024), 1) + "MB";
+    }
+}
+
+String DisplayManager::formatRSSI(int rssi) {
+    return String(rssi) + "dBm";
+}
+
+uint16_t DisplayManager::getStatusColor(const String& status) {
+    if (status == "OK" || status == "CONNECTED" || status == "NORMAL") {
+        return COLOR_GREEN;
+    } else if (status == "WARNING" || status == "DISCONNECTED") {
+        return COLOR_YELLOW;
+    } else if (status == "ERROR" || status == "ALARM") {
+        return COLOR_RED;
+    } else {
+        return COLOR_GRAY;
+    }
+}
+
+void DisplayManager::setPage(DisplayPage page) {
+    if (page >= 0 && page < PAGE_COUNT) {
+        currentPage = page;
+        lastPageChange = millis();
+        tft.fillScreen(COLOR_BLACK); // Clear screen for new page
+    }
+}
+
+void DisplayManager::nextPage() {
+    int next = (currentPage + 1) % PAGE_COUNT;
+    setPage((DisplayPage)next);
+}
+
+void DisplayManager::previousPage() {
+    int prev = (currentPage - 1 + PAGE_COUNT) % PAGE_COUNT;
+    setPage((DisplayPage)prev);
+}
+
+void DisplayManager::checkAutoRotation() {
+    if (millis() - lastPageChange >= autoRotateInterval) {
+        nextPage();
+    }
+}
+
+void DisplayManager::updateSystemData(const JsonObject& data) {
+    if (data.containsKey("project")) {
+        this->data.deviceName = data["project"].as<String>();
+    }
+    if (data.containsKey("uptime")) {
+        // Parse uptime string to milliseconds
+        String uptimeStr = data["uptime"].as<String>();
+        // Simple parsing - would need more robust implementation
+        this->data.uptime = millis(); // Placeholder
+    }
+    if (data.containsKey("freeHeap")) {
+        this->data.freeHeap = data["freeHeap"];
+    }
+    if (data.containsKey("wifi")) {
+        JsonObject wifi = data["wifi"];
+        if (wifi.containsKey("ssid")) {
+            this->data.wifiSSID = wifi["ssid"].as<String>();
+        }
+        if (wifi.containsKey("ip")) {
+            this->data.ipAddress = wifi["ip"].as<String>();
+        }
+        if (wifi.containsKey("rssi")) {
+            this->data.wifiRSSI = wifi["rssi"];
+        }
+    }
+    
+    this->data.lastUpdate = millis();
+    this->data.dataValid = true;
+}
+
+void DisplayManager::updateAnalogVoltageData(const JsonObject& data) {
+    if (data.containsKey("sensors")) {
+        JsonObject sensors = data["sensors"];
+        
+        for (int i = 0; i < 3; i++) {
+            String sensorKey = "sensor_" + String(i);
+            if (sensors.containsKey(sensorKey)) {
+                JsonObject sensor = sensors[sensorKey];
+                if (sensor.containsKey("voltage")) {
+                    this->data.analogVoltage[i] = sensor["voltage"];
+                }
+                if (sensor.containsKey("status")) {
+                    this->data.analogVoltageStatus[i] = sensor["status"].as<String>();
+                }
+            }
+        }
+    }
+    
+    this->data.lastUpdate = millis();
+    this->data.dataValid = true;
+}
+
+void DisplayManager::updateAnalogCurrentData(const JsonObject& data) {
+    if (data.containsKey("sensors")) {
+        JsonObject sensors = data["sensors"];
+        
+        for (int i = 0; i < 3; i++) {
+            String sensorKey = "sensor_" + String(i);
+            if (sensors.containsKey(sensorKey)) {
+                JsonObject sensor = sensors[sensorKey];
+                if (sensor.containsKey("current")) {
+                    this->data.analogCurrent[i] = sensor["current"];
+                }
+                if (sensor.containsKey("status")) {
+                    this->data.analogCurrentStatus[i] = sensor["status"].as<String>();
+                }
+            }
+        }
+    }
+    
+    this->data.lastUpdate = millis();
+    this->data.dataValid = true;
+}
+
+void DisplayManager::updateDigitalIOData(const JsonObject& data) {
+    if (data.containsKey("inputs")) {
+        JsonObject inputs = data["inputs"];
+        
+        for (int i = 0; i < 4; i++) {
+            String inputKey = "input_" + String(i);
+            if (inputs.containsKey(inputKey)) {
+                JsonObject input = inputs[inputKey];
+                if (input.containsKey("state")) {
+                    String state = input["state"].as<String>();
+                    this->data.digitalInputs[i] = (state == "HIGH");
+                }
+                if (input.containsKey("name")) {
+                    this->data.digitalInputNames[i] = input["name"].as<String>();
+                }
+            }
+        }
+    }
+    
+    if (data.containsKey("outputs")) {
+        JsonObject outputs = data["outputs"];
+        
+        for (int i = 0; i < 4; i++) {
+            String outputKey = "output_" + String(i);
+            if (outputs.containsKey(outputKey)) {
+                JsonObject output = outputs[outputKey];
+                if (output.containsKey("state")) {
+                    this->data.digitalOutputs[i] = output["state"];
+                }
+                if (output.containsKey("name")) {
+                    this->data.digitalOutputNames[i] = output["name"].as<String>();
+                }
+            }
+        }
+    }
+    
+    this->data.lastUpdate = millis();
+    this->data.dataValid = true;
+}
+
+void DisplayManager::updateModbusData(const JsonObject& data) {
+    // Implementation would depend on modbus data structure
+    this->data.modbusStatus = "OK"; // Placeholder
+    this->data.modbusDevices = 1;   // Placeholder
+    
+    this->data.lastUpdate = millis();
+    this->data.dataValid = true;
+}
+
+void DisplayManager::updateAlarmData(int count, const String& message) {
+    this->data.activeAlarms = count;
+    this->data.lastAlarmMessage = message;
+    
+    this->data.lastUpdate = millis();
+    this->data.dataValid = true;
+}
+
+void DisplayManager::setBrightness(uint8_t brightness) {
+    this->brightness = brightness;
+    // TFT_eSPI doesn't have built-in brightness control
+    // Would need hardware PWM control if available
+}
+
+void DisplayManager::handleButtons() {
+    // Implementation for hardware buttons if they exist
+    // For now, this is placeholder
+}
+
+void DisplayManager::showError(const String& message) {
+    tft.fillScreen(COLOR_RED);
+    tft.setTextColor(COLOR_WHITE, COLOR_RED);
+    tft.setTextSize(2);
+    tft.drawString("ERROR", 10, 50);
+    tft.setTextSize(1);
+    tft.drawString(message, 10, 100);
+}
+
+void DisplayManager::showMessage(const String& message, uint16_t color) {
+    // Temporary message overlay
+    tft.fillRect(10, 100, 300, 40, COLOR_BLACK);
+    tft.drawRect(10, 100, 300, 40, color);
+    tft.setTextColor(color, COLOR_BLACK);
+    tft.setTextSize(1);
+    tft.drawString(message, 15, 115);
+}

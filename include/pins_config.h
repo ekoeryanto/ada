@@ -36,4 +36,15 @@
 // ADS1115 Address
 #define ADS1115_ADDR 0x48
 
+// TFT Display pins (adjust based on actual hardware)
+#define TFT_CS     -1   // Not connected (or set to appropriate pin)
+#define TFT_DC     2    // Data/Command pin
+#define TFT_RST    -1   // Reset pin (or set to appropriate pin)
+#define TFT_MOSI   23   // SPI MOSI (shared with SD card)
+#define TFT_SCLK   18   // SPI SCLK (shared with SD card)
+#define TFT_MISO   19   // SPI MISO (shared with SD card)
+
+// TFT Backlight control (if available)
+#define TFT_BL     -1   // Backlight control pin (set if available)
+
 #endif // PINS_CONFIG_H

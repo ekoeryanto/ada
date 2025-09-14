@@ -76,7 +76,7 @@ export default defineConfig({
           }
         },
         // Proxy RTU 1 (ada-1) specific API calls
-        '/ada-1/api': {
+        '/ada-1': {
           target: RTU_1_URL,
           changeOrigin: true,
           secure: false,
@@ -97,7 +97,7 @@ export default defineConfig({
           }
         },
         // Proxy RTU 2 (ada-2) specific API calls
-        '/ada-2/api': {
+        '/ada-2': {
           target: RTU_2_URL,
           changeOrigin: true,
           secure: false,
@@ -118,7 +118,7 @@ export default defineConfig({
           }
         },
         // Proxy RTU 3 (ada-3) specific API calls
-        '/ada-3/api': {
+        '/ada-3': {
           target: RTU_3_URL,
           changeOrigin: true,
           secure: false,

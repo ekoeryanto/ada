@@ -1,0 +1,445 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout 
+  title="Digital I/O Control" 
+  description="Monitor and control digital inputs and outputs"
+  activePage="digital-io"
+>
+  <!-- Connection Status -->
+  <div class="mb-6 text-center">
+    <div id="connection-status" class="inline-flex items-center px-4 py-2 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+      <div class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+      <span class="text-sm font-medium">Connected</span>
+    </div>
+  </div>
+
+  <!-- Digital Inputs Section -->
+  <div class="grid lg:grid-cols-2 gap-8 mb-8">
+    <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+        <svg class="w-6 h-6 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        Digital Inputs
+      </h2>
+      <div id="digital-inputs" class="space-y-4">
+        <!-- Digital inputs will be populated by JavaScript -->
+      </div>
+    </div>
+
+    <!-- Digital Outputs Section -->
+    <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+        <svg class="w-6 h-6 mr-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+        </svg>
+        Digital Outputs
+      </h2>
+      <div id="digital-outputs" class="space-y-4">
+        <!-- Digital outputs will be populated by JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Control Panel -->
+  <div class="grid lg:grid-cols-3 gap-8 mb-8">
+    <!-- Bulk Control -->
+    <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+        <svg class="w-6 h-6 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
+        </svg>
+        Bulk Control
+      </h2>
+      <div class="space-y-4">
+        <button id="all-on-btn" 
+                class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          Turn All ON
+        </button>
+        <button id="all-off-btn" 
+                class="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+          Turn All OFF
+        </button>
+        <button id="sequence-btn" 
+                class="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          Test Sequence
+        </button>
+      </div>
+    </div>
+
+    <!-- Pin Configuration -->
+    <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+        <svg class="w-6 h-6 mr-2 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+        </svg>
+        Pin Configuration
+      </h2>
+      <div id="pin-config" class="space-y-4">
+        <!-- Pin configuration will be populated by JavaScript -->
+      </div>
+    </div>
+
+    <!-- System Status -->
+    <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+        <svg class="w-6 h-6 mr-2 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        System Status
+      </h2>
+      <div id="system-status" class="space-y-3">
+        <!-- System status will be populated by JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-time Activity Log -->
+  <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
+    <h2 class="text-2xl font-bold text-white mb-6 flex items-center justify-between">
+      <div class="flex items-center">
+        <svg class="w-6 h-6 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+        </svg>
+        Activity Log
+      </div>
+      <button id="clear-log-btn" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors">
+        Clear Log
+      </button>
+    </h2>
+    <div id="activity-log" class="bg-slate-900/50 rounded-lg p-4 h-40 overflow-y-auto space-y-2">
+      <!-- Activity log entries will be populated by JavaScript -->
+    </div>
+  </div>
+
+  <script>
+    import { adaApi } from '../lib/api';
+
+    let updateInterval: ReturnType<typeof setInterval>;
+    let sequenceRunning = false;
+    let isConnected = true;
+
+    // DOM elements
+    const connectionStatus = document.getElementById('connection-status')!;
+    const digitalInputs = document.getElementById('digital-inputs')!;
+    const digitalOutputs = document.getElementById('digital-outputs')!;
+    const pinConfig = document.getElementById('pin-config')!;
+    const systemStatus = document.getElementById('system-status')!;
+    const activityLog = document.getElementById('activity-log')!;
+    const allOnBtn = document.getElementById('all-on-btn') as HTMLButtonElement;
+    const allOffBtn = document.getElementById('all-off-btn') as HTMLButtonElement;
+    const sequenceBtn = document.getElementById('sequence-btn') as HTMLButtonElement;
+    const clearLogBtn = document.getElementById('clear-log-btn') as HTMLButtonElement;
+
+    // Update connection status
+    function updateConnectionStatus(connected: boolean) {
+      isConnected = connected;
+      if (connected) {
+        connectionStatus.className = 'inline-flex items-center px-4 py-2 rounded-full bg-green-500/20 text-green-400 border border-green-500/30';
+        connectionStatus.innerHTML = `
+          <div class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+          <span class="text-sm font-medium">Connected</span>
+        `;
+      } else {
+        connectionStatus.className = 'inline-flex items-center px-4 py-2 rounded-full bg-red-500/20 text-red-400 border border-red-500/30';
+        connectionStatus.innerHTML = `
+          <div class="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
+          <span class="text-sm font-medium">Disconnected</span>
+        `;
+      }
+    }
+
+    // Add log entry
+    function addLogEntry(message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const colorClass = {
+        info: 'text-blue-400',
+        success: 'text-green-400',
+        warning: 'text-yellow-400',
+        error: 'text-red-400'
+      }[type];
+
+      const logEntry = document.createElement('div');
+      logEntry.className = `text-sm ${colorClass}`;
+      logEntry.innerHTML = `<span class="text-gray-500">[${timestamp}]</span> ${message}`;
+      
+      activityLog.insertBefore(logEntry, activityLog.firstChild);
+      
+      // Keep only last 50 entries
+      while (activityLog.children.length > 50) {
+        activityLog.removeChild(activityLog.lastChild!);
+      }
+    }
+
+    // Render digital inputs
+    function renderDigitalInputs(inputs: any[]) {
+      digitalInputs.innerHTML = inputs.map(input => {
+        const statusColor = input.state ? 'text-green-400 bg-green-500/20 border-green-500/30' : 'text-gray-400 bg-gray-500/20 border-gray-500/30';
+        const statusIcon = input.state ? '●' : '○';
+        
+        return `
+          <div class="bg-slate-700/50 rounded-lg p-4 border ${input.state ? 'border-green-500/30' : 'border-gray-500/30'}">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="font-semibold text-white">DI${input.id}</h3>
+              <div class="flex items-center space-x-2">
+                <span class="text-2xl ${statusColor}">${statusIcon}</span>
+                <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColor} border">
+                  ${input.state ? 'HIGH' : 'LOW'}
+                </span>
+              </div>
+            </div>
+            <div class="text-sm text-slate-400">
+              <div>Pin: GPIO${input.pin}</div>
+              <div>Pull-up: ${input.pullup ? 'Enabled' : 'Disabled'}</div>
+              <div>Last Change: ${new Date(input.last_change * 1000).toLocaleTimeString()}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render digital outputs
+    function renderDigitalOutputs(outputs: any[]) {
+      digitalOutputs.innerHTML = outputs.map(output => {
+        const statusColor = output.state ? 'text-green-400 bg-green-500/20 border-green-500/30' : 'text-gray-400 bg-gray-500/20 border-gray-500/30';
+        const statusIcon = output.state ? '●' : '○';
+        
+        return `
+          <div class="bg-slate-700/50 rounded-lg p-4 border ${output.state ? 'border-green-500/30' : 'border-gray-500/30'}">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-white">DO${output.id}</h3>
+              <div class="flex items-center space-x-2">
+                <span class="text-2xl ${statusColor}">${statusIcon}</span>
+                <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColor} border">
+                  ${output.state ? 'HIGH' : 'LOW'}
+                </span>
+              </div>
+            </div>
+            
+            <div class="space-y-2">
+              <div class="flex space-x-2">
+                <button onclick="setOutput(${output.id}, true)" 
+                        class="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors ${output.state ? 'opacity-50' : ''}" 
+                        ${output.state ? 'disabled' : ''}>
+                  ON
+                </button>
+                <button onclick="setOutput(${output.id}, false)" 
+                        class="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors ${!output.state ? 'opacity-50' : ''}" 
+                        ${!output.state ? 'disabled' : ''}>
+                  OFF
+                </button>
+              </div>
+              <div class="text-sm text-slate-400">
+                <div>Pin: GPIO${output.pin}</div>
+                <div>Last Change: ${new Date(output.last_change * 1000).toLocaleTimeString()}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Set output state
+    async function setOutput(outputId: number, state: boolean) {
+      try {
+        await adaApi.setDigitalOutput(outputId, state);
+        addLogEntry(`DO${outputId} set to ${state ? 'HIGH' : 'LOW'}`, 'success');
+        await updateData(); // Refresh data immediately
+      } catch (error) {
+        addLogEntry(`Failed to set DO${outputId}`, 'error');
+      }
+    }
+
+    // Bulk operations
+    async function setAllOutputs(state: boolean) {
+      try {
+        const data = await adaApi.getDigitalIO();
+        if (data && data.outputs) {
+          for (const output of data.outputs) {
+            await adaApi.setDigitalOutput(output.id, state);
+          }
+          addLogEntry(`All outputs set to ${state ? 'HIGH' : 'LOW'}`, 'success');
+          await updateData();
+        }
+      } catch (error) {
+        addLogEntry('Failed to set all outputs', 'error');
+      }
+    }
+
+    // Test sequence
+    async function runTestSequence() {
+      if (sequenceRunning) return;
+      
+      sequenceRunning = true;
+      sequenceBtn.disabled = true;
+      sequenceBtn.textContent = 'Running...';
+      
+      try {
+        const data = await adaApi.getDigitalIO();
+        if (data && data.outputs) {
+          addLogEntry('Starting test sequence', 'info');
+          
+          // Turn on each output sequentially
+          for (const output of data.outputs) {
+            await adaApi.setDigitalOutput(output.id, true);
+            addLogEntry(`DO${output.id} ON`, 'info');
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await updateData();
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Turn off each output sequentially
+          for (const output of data.outputs) {
+            await adaApi.setDigitalOutput(output.id, false);
+            addLogEntry(`DO${output.id} OFF`, 'info');
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await updateData();
+          }
+          
+          addLogEntry('Test sequence completed', 'success');
+        }
+      } catch (error) {
+        addLogEntry('Test sequence failed', 'error');
+      } finally {
+        sequenceRunning = false;
+        sequenceBtn.disabled = false;
+        sequenceBtn.innerHTML = `
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          Test Sequence
+        `;
+      }
+    }
+
+    // Update pin configuration display
+    function updatePinConfig(data: any) {
+      const inputs = data.inputs || [];
+      const outputs = data.outputs || [];
+      
+      pinConfig.innerHTML = `
+        <div class="space-y-3">
+          <div>
+            <h4 class="text-sm font-semibold text-white mb-2">Input Pins</h4>
+            <div class="space-y-1">
+              ${inputs.map((input: any) => `
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">DI${input.id}:</span>
+                  <span class="text-white">GPIO${input.pin}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          <div>
+            <h4 class="text-sm font-semibold text-white mb-2">Output Pins</h4>
+            <div class="space-y-1">
+              ${outputs.map((output: any) => `
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">DO${output.id}:</span>
+                  <span class="text-white">GPIO${output.pin}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Update system status
+    async function updateSystemStatus() {
+      try {
+        const status = await adaApi.getStatus();
+        systemStatus.innerHTML = `
+          <div class="space-y-2">
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">Uptime:</span>
+              <span class="text-white">${Math.floor((status.uptime || 0) / 3600)}h ${Math.floor(((status.uptime || 0) % 3600) / 60)}m</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">Free Memory:</span>
+              <span class="text-white">${Math.round((status.heap || 0) / 1024)}KB</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">CPU Usage:</span>
+              <span class="text-white">${status.cpu_usage || 0}%</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-400">WiFi Signal:</span>
+              <span class="text-white">${status.wifi_rssi || 0} dBm</span>
+            </div>
+          </div>
+        `;
+      } catch (error) {
+        systemStatus.innerHTML = `
+          <div class="text-sm text-red-400">Failed to load system status</div>
+        `;
+      }
+    }
+
+    // Main update function
+    async function updateData() {
+      try {
+        const data = await adaApi.getDigitalIO();
+        updateConnectionStatus(true);
+        
+        if (data) {
+          if (data.inputs) renderDigitalInputs(data.inputs);
+          if (data.outputs) renderDigitalOutputs(data.outputs);
+          updatePinConfig(data);
+        }
+        
+      } catch (error) {
+        console.error('Failed to update digital I/O data:', error);
+        updateConnectionStatus(false);
+        addLogEntry('Connection lost', 'error');
+      }
+    }
+
+    // Event listeners
+    allOnBtn.addEventListener('click', () => setAllOutputs(true));
+    allOffBtn.addEventListener('click', () => setAllOutputs(false));
+    sequenceBtn.addEventListener('click', runTestSequence);
+    clearLogBtn.addEventListener('click', () => {
+      activityLog.innerHTML = '';
+      addLogEntry('Log cleared', 'info');
+    });
+
+    // Make functions globally available
+    window.setOutput = setOutput;
+
+    // Initialize the page
+    async function init() {
+      addLogEntry('Digital I/O interface initialized', 'info');
+      await updateData();
+      await updateSystemStatus();
+      
+      // Set up real-time updates every 2 seconds
+      updateInterval = setInterval(updateData, 2000);
+      
+      // Update system status every 30 seconds
+      setInterval(updateSystemStatus, 30000);
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      if (updateInterval) {
+        clearInterval(updateInterval);
+      }
+    });
+
+    // Start the application
+    init();
+  </script>
+</DashboardLayout>
