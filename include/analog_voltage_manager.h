@@ -234,6 +234,10 @@ public:
     void resetErrorCounts();
     String getInfo();
     
+    // Calibration storage
+    void loadCalibrationFromStorage();
+    void saveCalibrationToStorage(int sensorIndex);
+    
     // Sensor health and diagnostics
     float getSensorHealth(int sensorIndex);
     bool isSensorStuck(int sensorIndex);

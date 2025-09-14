@@ -3,6 +3,7 @@
 #include "ntp_manager.h"
 #include "web_server.h"
 #include "webhook_handler.h"
+#include <Preferences.h>
 
 // Global instance
 AnalogVoltageManager analogVoltageMgr;
@@ -59,6 +60,9 @@ bool AnalogVoltageManager::begin() {
     
     // Set analog resolution
     analogReadResolution(12);  // 12-bit resolution (0-4095)
+    
+    // Load calibration data from storage
+    loadCalibrationFromStorage();
     
     // Initial sensor readings
     for (int i = 0; i < 3; i++) {
@@ -745,6 +749,49 @@ float AnalogVoltageManager::calculateHealthScore(int sensorIndex) {
     return max(0.0f, min(100.0f, score));
 }
 
+// Helper functions for calibration storage
+void AnalogVoltageManager::loadCalibrationFromStorage() {
+    Preferences prefs;
+    prefs.begin("av_calib", true); // read-only
+    
+    for (int i = 0; i < 3; i++) {
+        String offsetKey = "offset_" + String(i);
+        String gainKey = "gain_" + String(i);
+        String calibKey = "calib_" + String(i);
+        
+        sensors[i].offsetCorrection = prefs.getFloat(offsetKey.c_str(), 0.0);
+        sensors[i].gainCorrection = prefs.getFloat(gainKey.c_str(), 1.0);
+        sensors[i].calibrated = prefs.getBool(calibKey.c_str(), false);
+        
+        if (sensors[i].calibrated) {
+            Serial.printf("[AV] Sensor %d calibration loaded: offset=%.3f, gain=%.3f\n", 
+                         i, sensors[i].offsetCorrection, sensors[i].gainCorrection);
+        }
+    }
+    
+    prefs.end();
+}
+
+void AnalogVoltageManager::saveCalibrationToStorage(int sensorIndex) {
+    if (sensorIndex < 0 || sensorIndex >= 3) return;
+    
+    Preferences prefs;
+    prefs.begin("av_calib", false); // read-write
+    
+    String offsetKey = "offset_" + String(sensorIndex);
+    String gainKey = "gain_" + String(sensorIndex);
+    String calibKey = "calib_" + String(sensorIndex);
+    
+    prefs.putFloat(offsetKey.c_str(), sensors[sensorIndex].offsetCorrection);
+    prefs.putFloat(gainKey.c_str(), sensors[sensorIndex].gainCorrection);
+    prefs.putBool(calibKey.c_str(), sensors[sensorIndex].calibrated);
+    
+    prefs.end();
+    
+    Serial.printf("[AV] Sensor %d calibration saved: offset=%.3f, gain=%.3f\n", 
+                 sensorIndex, sensors[sensorIndex].offsetCorrection, sensors[sensorIndex].gainCorrection);
+}
+
 // Enhanced calibration functions
 void AnalogVoltageManager::setCalibration(int sensorIndex, float offset, float gain) {
     if (sensorIndex < 0 || sensorIndex >= 3) return;
@@ -752,6 +799,9 @@ void AnalogVoltageManager::setCalibration(int sensorIndex, float offset, float g
     sensors[sensorIndex].offsetCorrection = offset;
     sensors[sensorIndex].gainCorrection = gain;
     sensors[sensorIndex].calibrated = true;
+    
+    // Save to persistent storage
+    saveCalibrationToStorage(sensorIndex);
     
     if (DEBUG_ENABLED) {
         // Serial.printf("[AV] Sensor %d calibration set: offset=%.3f, gain=%.3f\n", 
@@ -765,6 +815,9 @@ void AnalogVoltageManager::resetCalibration(int sensorIndex) {
     sensors[sensorIndex].offsetCorrection = 0.0;
     sensors[sensorIndex].gainCorrection = 1.0;
     sensors[sensorIndex].calibrated = false;
+    
+    // Save to persistent storage
+    saveCalibrationToStorage(sensorIndex);
     
     if (DEBUG_ENABLED) {
         // Serial.printf("[AV] Sensor %d calibration reset\n", sensorIndex);

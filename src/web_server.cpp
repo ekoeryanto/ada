@@ -9,6 +9,128 @@
 #include "analytics_manager.h"
 #include "remote_diagnostics.h"
 #include "webhook_handler.h"
+#include <Preferences.h>
+
+// Preferences instance for persistent storage
+Preferences prefs;
+
+// Simple webhook metadata storage
+struct WebhookMetadata {
+    String id;
+    String name;
+    String url;
+    String method;
+    bool enabled;
+    unsigned long created_at;
+};
+
+static WebhookMetadata webhookMeta[5]; // Max 5 webhooks
+static int webhookMetaCount = 0;
+
+// Helper functions for settings storage
+void loadSettingsFromStorage(DynamicJsonDocument& doc) {
+    prefs.begin("settings", true); // read-only
+    
+    // Device settings
+    doc["device_name"] = prefs.getString("device_name", "ada-1");
+    doc["location"] = prefs.getString("location", "Industrial Controller");
+    doc["timezone"] = prefs.getString("timezone", "Asia/Jakarta");
+    doc["language"] = prefs.getString("language", "en");
+    doc["auto_sync_time"] = prefs.getBool("auto_sync_time", true);
+    
+    // Display settings
+    doc["theme"] = prefs.getString("theme", "light");
+    doc["chart_refresh"] = prefs.getInt("chart_refresh", 5);
+    doc["max_data_points"] = prefs.getInt("max_data_points", 100);
+    doc["show_animations"] = prefs.getBool("show_animations", true);
+    doc["sound_notifications"] = prefs.getBool("sound_notifications", false);
+    
+    // Sensor settings
+    doc["sample_rate"] = prefs.getFloat("sample_rate", 1.0);
+    doc["averaging_window"] = prefs.getInt("averaging_window", 10);
+    doc["filter_type"] = prefs.getString("filter_type", "moving_average");
+    doc["outlier_detection"] = prefs.getBool("outlier_detection", true);
+    doc["auto_calibration"] = prefs.getBool("auto_calibration", false);
+    
+    // Logging settings
+    doc["enable_logging"] = prefs.getBool("enable_logging", true);
+    doc["log_interval"] = prefs.getInt("log_interval", 60);
+    doc["max_log_size"] = prefs.getInt("max_log_size", 100);
+    doc["retention_days"] = prefs.getInt("retention_days", 30);
+    doc["compress_logs"] = prefs.getBool("compress_logs", true);
+    
+    prefs.end();
+}
+
+void saveSettingsToStorage(const JsonObject& settings) {
+    prefs.begin("settings", false); // read-write
+    
+    // Save each setting if present in the request
+    if (settings.containsKey("device_name")) prefs.putString("device_name", settings["device_name"].as<String>());
+    if (settings.containsKey("location")) prefs.putString("location", settings["location"].as<String>());
+    if (settings.containsKey("timezone")) prefs.putString("timezone", settings["timezone"].as<String>());
+    if (settings.containsKey("language")) prefs.putString("language", settings["language"].as<String>());
+    if (settings.containsKey("auto_sync_time")) prefs.putBool("auto_sync_time", settings["auto_sync_time"]);
+    
+    if (settings.containsKey("theme")) prefs.putString("theme", settings["theme"].as<String>());
+    if (settings.containsKey("chart_refresh")) prefs.putInt("chart_refresh", settings["chart_refresh"]);
+    if (settings.containsKey("max_data_points")) prefs.putInt("max_data_points", settings["max_data_points"]);
+    if (settings.containsKey("show_animations")) prefs.putBool("show_animations", settings["show_animations"]);
+    if (settings.containsKey("sound_notifications")) prefs.putBool("sound_notifications", settings["sound_notifications"]);
+    
+    if (settings.containsKey("sample_rate")) prefs.putFloat("sample_rate", settings["sample_rate"]);
+    if (settings.containsKey("averaging_window")) prefs.putInt("averaging_window", settings["averaging_window"]);
+    if (settings.containsKey("filter_type")) prefs.putString("filter_type", settings["filter_type"].as<String>());
+    if (settings.containsKey("outlier_detection")) prefs.putBool("outlier_detection", settings["outlier_detection"]);
+    if (settings.containsKey("auto_calibration")) prefs.putBool("auto_calibration", settings["auto_calibration"]);
+    
+    if (settings.containsKey("enable_logging")) prefs.putBool("enable_logging", settings["enable_logging"]);
+    if (settings.containsKey("log_interval")) prefs.putInt("log_interval", settings["log_interval"]);
+    if (settings.containsKey("max_log_size")) prefs.putInt("max_log_size", settings["max_log_size"]);
+    if (settings.containsKey("retention_days")) prefs.putInt("retention_days", settings["retention_days"]);
+    if (settings.containsKey("compress_logs")) prefs.putBool("compress_logs", settings["compress_logs"]);
+    
+    prefs.end();
+}
+
+// Helper functions for webhook metadata storage
+void loadWebhookMetaFromStorage() {
+    prefs.begin("webhooks", true); // read-only
+    
+    webhookMetaCount = prefs.getInt("count", 0);
+    
+    for (int i = 0; i < webhookMetaCount && i < 5; i++) {
+        String prefix = "wh" + String(i) + "_";
+        webhookMeta[i].id = prefs.getString((prefix + "id").c_str(), "");
+        webhookMeta[i].name = prefs.getString((prefix + "name").c_str(), "");
+        webhookMeta[i].url = prefs.getString((prefix + "url").c_str(), "");
+        webhookMeta[i].method = prefs.getString((prefix + "method").c_str(), "POST");
+        webhookMeta[i].enabled = prefs.getBool((prefix + "enabled").c_str(), true);
+        webhookMeta[i].created_at = prefs.getULong((prefix + "created").c_str(), 0);
+    }
+    
+    prefs.end();
+    Serial.printf("[WEBHOOK] Loaded %d webhooks from storage\n", webhookMetaCount);
+}
+
+void saveWebhookMetaToStorage() {
+    prefs.begin("webhooks", false); // read-write
+    
+    prefs.putInt("count", webhookMetaCount);
+    
+    for (int i = 0; i < webhookMetaCount && i < 5; i++) {
+        String prefix = "wh" + String(i) + "_";
+        prefs.putString((prefix + "id").c_str(), webhookMeta[i].id);
+        prefs.putString((prefix + "name").c_str(), webhookMeta[i].name);
+        prefs.putString((prefix + "url").c_str(), webhookMeta[i].url);
+        prefs.putString((prefix + "method").c_str(), webhookMeta[i].method);
+        prefs.putBool((prefix + "enabled").c_str(), webhookMeta[i].enabled);
+        prefs.putULong((prefix + "created").c_str(), webhookMeta[i].created_at);
+    }
+    
+    prefs.end();
+    Serial.printf("[WEBHOOK] Saved %d webhooks to storage\n", webhookMetaCount);
+}
 
 // Global instance
 WebServerHandler webServer;
@@ -21,6 +143,9 @@ WebServerHandler::WebServerHandler()
 
 bool WebServerHandler::initialize() {
     // Serial.println("[WebServer] Initializing web server...");
+    
+    // Load webhook metadata from storage
+    loadWebhookMetaFromStorage();
     
     setupRoutes();
     setupWebSocket();
@@ -705,33 +830,8 @@ void WebServerHandler::setupRoutes() {
     server.on("/api/settings", HTTP_GET, [this](AsyncWebServerRequest *request) {
         DynamicJsonDocument doc(1024);
         
-        // Basic device settings (hardcoded for now, could be stored in EEPROM/SPIFFS later)
-        doc["device_name"] = "ada-1";
-        doc["location"] = "Industrial Controller";
-        doc["timezone"] = "Asia/Jakarta";
-        doc["language"] = "en";
-        doc["auto_sync_time"] = true;
-        
-        // Display settings
-        doc["theme"] = "light";
-        doc["chart_refresh"] = 5;
-        doc["max_data_points"] = 100;
-        doc["show_animations"] = true;
-        doc["sound_notifications"] = false;
-        
-        // Sensor settings
-        doc["sample_rate"] = 1.0;
-        doc["averaging_window"] = 10;
-        doc["filter_type"] = "moving_average";
-        doc["outlier_detection"] = true;
-        doc["auto_calibration"] = false;
-        
-        // Logging settings
-        doc["enable_logging"] = true;
-        doc["log_interval"] = 60;
-        doc["max_log_size"] = 100;
-        doc["retention_days"] = 30;
-        doc["compress_logs"] = true;
+        // Load settings from persistent storage
+        loadSettingsFromStorage(doc);
         
         String response;
         serializeJson(doc, response);
@@ -739,8 +839,39 @@ void WebServerHandler::setupRoutes() {
     });
     
     server.on("/api/settings", HTTP_POST, [this](AsyncWebServerRequest *request) {
-        // For now, just acknowledge the settings save
-        // In a full implementation, these would be stored in EEPROM or SPIFFS
+        // This will be called after body is parsed
+    }, NULL, [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+        Serial.printf("Settings POST: index=%zu, len=%zu, total=%zu\n", index, len, total);
+        
+        // Check if this is the complete data
+        if (index + len != total) {
+            Serial.println("Waiting for more settings data...");
+            return; // Wait for more data
+        }
+        
+        // Null-terminate the data
+        char* jsonStr = (char*)malloc(len + 1);
+        memcpy(jsonStr, data, len);
+        jsonStr[len] = '\0';
+        
+        Serial.println("Received settings data:");
+        Serial.println(jsonStr);
+        
+        DynamicJsonDocument requestDoc(1024);
+        DeserializationError error = deserializeJson(requestDoc, jsonStr);
+        
+        free(jsonStr); // Clean up
+        
+        if (error) {
+            Serial.print("JSON Parse Error in settings: ");
+            Serial.println(error.c_str());
+            request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+            return;
+        }
+        
+        // Save settings to persistent storage
+        saveSettingsToStorage(requestDoc.as<JsonObject>());
+        
         DynamicJsonDocument doc(256);
         doc["success"] = true;
         doc["message"] = "Settings saved successfully";
@@ -1044,30 +1175,61 @@ void WebServerHandler::setupRoutes() {
         // Create response in format expected by Zod schema
         DynamicJsonDocument doc(2048);
         
-        // Create webhooks array (empty for now, will be populated by WebhookHandler)
+        // Create webhooks array from stored metadata
         JsonArray webhooks = doc.createNestedArray("webhooks");
+        
+        for (int i = 0; i < webhookMetaCount; i++) {
+            JsonObject webhook = webhooks.createNestedObject();
+            webhook["name"] = webhookMeta[i].name;
+            webhook["url"] = webhookMeta[i].url;
+            webhook["method"] = webhookMeta[i].method;
+            webhook["enabled"] = webhookMeta[i].enabled;
+            webhook["created_at"] = webhookMeta[i].created_at;
+            // Add some default values expected by client
+            webhook["timeout"] = 5000;
+            webhook["max_retries"] = 3;
+            webhook["headers"] = "{}";
+            webhook["payload_template"] = "{}";
+        }
         
         // Add statistics object
         JsonObject statistics = doc.createNestedObject("statistics");
-        statistics["total_sent"] = 0;
-        statistics["success_rate"] = 100.0;
-        statistics["queue_size"] = 0;
+        statistics["total_sent"] = webhookHandler.getTotalSent();
+        statistics["success_rate"] = webhookHandler.getSuccessRate();
+        statistics["queue_size"] = webhookHandler.getQueueSize();
         
         String json;
         serializeJson(doc, json);
+        Serial.println("GET /api/webhooks response:");
+        Serial.println(json);
         request->send(200, "application/json", json);
     });
     
-    server.on("/api/webhooks", HTTP_POST, [this](AsyncWebServerRequest *request) {}, NULL, [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+    server.on("/api/webhooks", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        // This will be called after body is parsed
+    }, NULL, [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
         extern WebhookHandler webhookHandler;
+        
+        Serial.printf("Webhook POST: index=%zu, len=%zu, total=%zu\n", index, len, total);
         
         // Check if this is the complete data
         if (index + len != total) {
+            Serial.println("Waiting for more data...");
             return; // Wait for more data
         }
         
+        // Null-terminate the data
+        char* jsonStr = (char*)malloc(len + 1);
+        memcpy(jsonStr, data, len);
+        jsonStr[len] = '\0';
+        
+        Serial.println("Received webhook data:");
+        Serial.println(jsonStr);
+        
         DynamicJsonDocument requestDoc(1024);
-        DeserializationError error = deserializeJson(requestDoc, (char*)data);
+        DeserializationError error = deserializeJson(requestDoc, jsonStr);
+        
+        free(jsonStr); // Clean up
         
         if (error) {
             Serial.print("JSON Parse Error: ");
@@ -1089,20 +1251,40 @@ void WebServerHandler::setupRoutes() {
         
         Serial.printf("Parsed: name=%s, url=%s, method=%s\n", name.c_str(), url.c_str(), method.c_str());
         
-        if (url.length() == 0) {
-            request->send(400, "application/json", "{\"error\":\"URL is required\"}");
-            return;
-        }
-        
         if (name.length() == 0) {
             request->send(400, "application/json", "{\"error\":\"Name is required\"}");
             return;
         }
         
+        if (url.length() == 0) {
+            request->send(400, "application/json", "{\"error\":\"URL is required\"}");
+            return;
+        }
+        
+        // Remove name validation for now - allow default name
+        // if (name.length() == 0) {
+        //     request->send(400, "application/json", "{\"error\":\"Name is required\"}");
+        //     return;
+        // }
+        
         // For now, use simplified webhook creation
         String webhookId = webhookHandler.addWebhook(url, "", ""); // secret and authToken empty for now
         
         if (webhookId.length() > 0) {
+            // Store metadata
+            if (webhookMetaCount < 5) {
+                webhookMeta[webhookMetaCount].id = webhookId;
+                webhookMeta[webhookMetaCount].name = name;
+                webhookMeta[webhookMetaCount].url = url;
+                webhookMeta[webhookMetaCount].method = method;
+                webhookMeta[webhookMetaCount].enabled = enabled;
+                webhookMeta[webhookMetaCount].created_at = millis();
+                webhookMetaCount++;
+                
+                // Save to persistent storage
+                saveWebhookMetaToStorage();
+            }
+            
             DynamicJsonDocument doc(512);
             doc["success"] = true;
             doc["webhook_id"] = webhookId;
@@ -1121,16 +1303,31 @@ void WebServerHandler::setupRoutes() {
         }
     });
     
-    server.on("/api/webhooks/test", HTTP_POST, [this](AsyncWebServerRequest *request) {}, NULL, [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+    server.on("/api/webhooks/test", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        // This will be called after body is parsed
+    }, NULL, [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
         extern WebhookHandler webhookHandler;
+        
+        Serial.printf("Webhook TEST: index=%zu, len=%zu, total=%zu\n", index, len, total);
         
         // Check if this is the complete data
         if (index + len != total) {
+            Serial.println("Waiting for more test data...");
             return; // Wait for more data
         }
         
+        // Null-terminate the data
+        char* jsonStr = (char*)malloc(len + 1);
+        memcpy(jsonStr, data, len);
+        jsonStr[len] = '\0';
+        
+        Serial.println("Received webhook test data:");
+        Serial.println(jsonStr);
+        
         DynamicJsonDocument requestDoc(1024);
-        DeserializationError error = deserializeJson(requestDoc, (char*)data);
+        DeserializationError error = deserializeJson(requestDoc, jsonStr);
+        
+        free(jsonStr); // Clean up
         
         if (error) {
             Serial.print("JSON Parse Error in webhook test: ");
@@ -1143,11 +1340,20 @@ void WebServerHandler::setupRoutes() {
         serializeJsonPretty(requestDoc, Serial);
         Serial.println();
         
+        String name = requestDoc["name"] | "";
+        String id = requestDoc["id"] | "";
         String url = requestDoc["url"] | "";
         String method = requestDoc["method"] | "POST";
         
-        Serial.printf("Test webhook: url=%s, method=%s\n", url.c_str(), method.c_str());
+        Serial.printf("Test webhook: name=%s, id=%s, url=%s, method=%s\n", name.c_str(), id.c_str(), url.c_str(), method.c_str());
         
+        // Check if we have either name or id (required for webhook identification)
+        if (name.length() == 0 && id.length() == 0) {
+            request->send(400, "application/json", "{\"error\":\"Either name or id is required for webhook testing\"}");
+            return;
+        }
+        
+        // Check if we have URL (required for testing)
         if (url.length() == 0) {
             request->send(400, "application/json", "{\"error\":\"URL is required for testing\"}");
             return;
@@ -1156,11 +1362,13 @@ void WebServerHandler::setupRoutes() {
         // For now, just return success since we don't have actual webhook testing implementation
         bool success = true; // webhookHandler.testWebhookUrl(url, method);
         
-        DynamicJsonDocument doc(256);
+        DynamicJsonDocument doc(384);
         doc["success"] = success;
         doc["message"] = success ? "Test webhook sent successfully" : "Failed to send test webhook";
         doc["url"] = url;
         doc["method"] = method;
+        if (name.length() > 0) doc["name"] = name;
+        if (id.length() > 0) doc["id"] = id;
         
         String json;
         serializeJson(doc, json);

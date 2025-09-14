@@ -2,11 +2,8 @@ import { ofetch } from 'ofetch';
 import { z } from 'zod';
 
 // Base API configuration
-const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
-const ESP32_IP = '192.168.111.34'; // ESP32 IP address
-
 const api = ofetch.create({
-  baseURL: isProduction ? '/api' : `http://${ESP32_IP}/api`,
+  baseURL: '/api',
   retry: 3,
   retryDelay: 500,
   timeout: 10000,
@@ -738,7 +735,7 @@ export class AdaApiClient {
     return api('/webhooks/queue/retry', { method: 'POST' });
   }
 
-  async testWebhook(data: { url: string; method?: string; headers?: any; payload?: any }) {
+  async testWebhook(data: { name?: string; id?: string; url: string; method?: string; headers?: any; payload?: any }) {
     return api('/webhooks/test', {
       method: 'POST',
       body: data,

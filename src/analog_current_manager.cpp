@@ -3,6 +3,7 @@
 #include "ntp_manager.h"
 #include "web_server.h"
 #include "webhook_handler.h"
+#include <Preferences.h>
 
 // Global instance
 AnalogCurrentManager analogCurrentMgr;
