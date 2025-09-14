@@ -1,0 +1,608 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout 
+  title="Dashboard" 
+  description="Real-time sensor monitoring and system overview"
+  activePage="dashboard"
+>
+  <!-- Status Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-microchip text-2xl text-indigo-600"></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Active Sensors</dt>
+              <dd class="text-lg font-medium text-gray-900" id="active-sensors">--</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-heartbeat text-2xl text-green-600"></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">System Status</dt>
+              <dd class="text-lg font-medium text-gray-900" id="system-status">--</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-wifi text-2xl text-blue-600"></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">WiFi Signal</dt>
+              <dd class="text-lg font-medium text-gray-900" id="wifi-signal">--</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-clock text-2xl text-purple-600"></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Uptime</dt>
+              <dd class="text-lg font-medium text-gray-900" id="system-uptime">--</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Sensor Charts (2/3 width) -->
+    <div class="lg:col-span-2 space-y-8">
+      <!-- Real-time Voltage Chart -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Voltage Readings</h3>
+            <div class="flex space-x-2">
+              <select id="chart-timerange" class="text-sm border-gray-300 rounded-md">
+                <option value="1h">Last Hour</option>
+                <option value="6h">Last 6 Hours</option>
+                <option value="24h">Last 24 Hours</option>
+                <option value="7d">Last 7 Days</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="p-6">
+          <div class="h-80">
+            <canvas id="voltage-chart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sensor Status Table -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Sensor Status</h3>
+        </div>
+        <div class="overflow-hidden">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sensor</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Voltage</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Raw</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Update</th>
+              </tr>
+            </thead>
+            <tbody id="sensor-table" class="bg-white divide-y divide-gray-200">
+              <!-- Sensor rows will be populated by JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Sidebar -->
+    <div class="space-y-8">
+      <!-- System Information -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">System Info</h3>
+        </div>
+        <div class="p-6">
+          <div id="system-info" class="space-y-3 text-sm">
+            <!-- System info will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Quick Actions</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-3">
+            <button id="calibrate-btn" class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              <i class="fas fa-crosshairs mr-2"></i>
+              Calibrate Sensors
+            </button>
+            <button id="restart-btn" class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              <i class="fas fa-redo mr-2"></i>
+              Restart System
+            </button>
+            <button id="export-btn" class="w-full flex items-center justify-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-md">
+              <i class="fas fa-download mr-2"></i>
+              Export Data
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Recent Activity</h3>
+        </div>
+        <div class="p-6">
+          <div id="recent-activity" class="space-y-3 text-sm">
+            <div class="text-gray-500 text-center py-4">Loading...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test Script -->
+  <script>
+    console.log('INLINE SCRIPT TEST');
+    
+    // Test immediate fetch
+    fetch('/api/status')
+      .then(response => response.json())
+      .then(data => {
+        console.log('FETCH SUCCESS:', data);
+        
+        // Update system info directly
+        const container = document.getElementById('system-info');
+        if (container && data) {
+          container.innerHTML = `
+            <div class="flex justify-between">
+              <span class="text-gray-600">Project:</span>
+              <span class="font-medium">${data.project || '--'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Version:</span>
+              <span class="font-medium">${data.version || '--'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Status:</span>
+              <span class="font-medium">${data.status || '--'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Uptime:</span>
+              <span class="font-medium">${data.uptime || '--'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Free Memory:</span>
+              <span class="font-medium">${Math.round(data.freeHeap / 1024)} KB</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">WiFi SSID:</span>
+              <span class="font-medium">${data.wifi?.ssid || '--'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">IP Address:</span>
+              <span class="font-medium">${data.wifi?.ip || '--'}</span>
+            </div>
+          `;
+          console.log('SYSTEM INFO UPDATED');
+        }
+      })
+      .catch(error => {
+        console.error('FETCH ERROR:', error);
+      });
+  </script>
+</DashboardLayout>
+
+<script is:inline>
+  // IMMEDIATE TEST - This should run right away
+  console.log('=== DASHBOARD SCRIPT STARTED ===');
+  alert('Dashboard script is running!');
+  
+  // Test fetch immediately
+  fetch('/api/status')
+    .then(response => {
+      console.log('IMMEDIATE FETCH RESPONSE:', response);
+      alert('Fetch response received: ' + response.status);
+      return response.json();
+    })
+    .then(data => {
+      console.log('IMMEDIATE FETCH DATA:', data);
+      alert('Data received: ' + JSON.stringify(data).substring(0, 100));
+    })
+    .catch(error => {
+      console.error('IMMEDIATE FETCH ERROR:', error);
+      alert('Fetch error: ' + error.message);
+    });
+  
+  let voltageChart = null;
+
+  // Initialize chart
+  function initChart() {
+    const canvas = document.getElementById('voltage-chart');
+    if (canvas && !voltageChart) {
+      voltageChart = SensorChart.createVoltageChart(canvas, {
+        title: 'Real-time Voltage Readings',
+        timeRange: '1h',
+        realtime: true,
+      });
+    }
+  }
+
+  // Update dashboard data
+  async function updateDashboard() {
+    // Fetch real data from backend
+    await Promise.all([
+      fetchSystemStatus(),
+      fetchSensorData()
+    ]);
+    
+    const sensors = window.adaStore?.sensor?.value;
+    const system = window.adaStore?.system?.value;
+    
+    // Update status cards
+    updateStatusCards(sensors, system);
+    
+    // Update sensor table
+    updateSensorTable(sensors);
+    
+    // Update system info
+    updateSystemInfo(system);
+    
+    // Update chart
+    updateChart(sensors);
+  }
+
+  // Fetch system status from backend
+  async function fetchSystemStatus() {
+    try {
+      console.log('=== FETCH SYSTEM STATUS START ===');
+      console.log('Fetching system status from /api/status...');
+      const response = await fetch('/api/status');
+      console.log('Response received:', response);
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      
+      if (response.ok) {
+        const status = await response.json();
+        console.log('System status data:', status);
+        
+        // Update store
+        if (window.adaStore && window.adaStore.system) {
+          window.adaStore.system.value.status = status;
+          console.log('Updated store with system status');
+        }
+        
+        // Update UI directly
+        updateSystemInfo({ status });
+        console.log('Updated UI with system status');
+        
+        return status;
+      } else {
+        console.error('Failed to fetch system status, status:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching system status:', error);
+    }
+    return null;
+  }
+
+  // Fetch sensor data from backend
+  async function fetchSensorData() {
+    try {
+      console.log('=== FETCH SENSOR DATA START ===');
+      console.log('Fetching sensor data from /api/analog-voltage...');
+      const response = await fetch('/api/analog-voltage');
+      console.log('Sensor response received:', response);
+      console.log('Sensor response status:', response.status);
+      console.log('Sensor response ok:', response.ok);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Sensor data:', data);
+        
+        // Update store
+        if (window.adaStore && window.adaStore.sensor) {
+          window.adaStore.sensor.value.voltage = data;
+          console.log('Updated store with sensor data');
+        }
+        
+        // Update UI directly 
+        updateSensorTable(data);
+        console.log('Updated UI with sensor data');
+        
+        return data;
+      } else {
+        console.error('Failed to fetch sensor data, status:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching sensor data:', error);
+    }
+    return null;
+  }
+
+  function updateStatusCards(sensors, system) {
+    // Count active sensors from analog voltage data
+    const sensorCount = sensors?.voltage?.sensors ? Object.keys(sensors.voltage.sensors).length : 0;
+    const systemStatus = system?.status?.status || 'Unknown';
+    const wifiSignal = system?.status?.wifi?.rssi || '--';
+    const uptimeString = system?.status?.uptime || '--';
+
+    document.getElementById('active-sensors').textContent = sensorCount.toString();
+    document.getElementById('system-status').textContent = systemStatus;
+    document.getElementById('wifi-signal').textContent = wifiSignal !== '--' ? `${wifiSignal} dBm` : '--';
+    document.getElementById('system-uptime').textContent = uptimeString;
+  }
+
+  function updateSensorTable(sensors) {
+    const tbody = document.getElementById('sensor-table');
+    if (!tbody || !sensors?.voltage?.sensors) return;
+
+    const sensorsData = sensors.voltage.sensors;
+    tbody.innerHTML = Object.keys(sensorsData).map(key => {
+      const sensor = sensorsData[key];
+      const sensorId = key.replace('sensor_', '');
+      
+      return `
+        <tr>
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+            ${sensor.location || `Sensor ${sensorId}`}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+            ${sensor.value?.toFixed(3) || '--'} ${sensor.unit || 'V'}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+            ${sensor.raw_adc || '--'}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(sensor.status)}">
+              ${sensor.status || 'Unknown'}
+            </span>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            ${sensor.timestamp ? new Date(sensor.timestamp).toLocaleTimeString() : '--'}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function updateSystemInfo(system) {
+    console.log('updateSystemInfo called with:', system);
+    const container = document.getElementById('system-info');
+    if (!container) {
+      console.error('system-info container not found');
+      return;
+    }
+
+    if (!system?.status) {
+      console.log('No system status data available');
+      container.innerHTML = `
+        <div class="text-center text-gray-500 p-4">
+          <p>Loading system information...</p>
+        </div>
+      `;
+      return;
+    }
+
+    const status = system.status;
+    console.log('Rendering system info with status:', status);
+    
+    container.innerHTML = `
+      <div class="flex justify-between">
+        <span class="text-gray-600">Project:</span>
+        <span class="font-medium">${status.project || '--'}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-600">Version:</span>
+        <span class="font-medium">${status.version || '--'}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-600">Author:</span>
+        <span class="font-medium">${status.author || '--'}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-600">Free Memory:</span>
+        <span class="font-medium">${formatBytes(status.freeHeap || 0)}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-600">Chip ID:</span>
+        <span class="font-medium">0x${(status.chipId || 0).toString(16).toUpperCase()}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-600">WiFi SSID:</span>
+        <span class="font-medium">${status.wifi?.ssid || '--'}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-600">IP Address:</span>
+        <span class="font-medium">${status.wifi?.ip || '--'}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-600">OTA Status:</span>
+        <span class="font-medium">${status.ota?.status || '--'}</span>
+      </div>
+    `;
+    
+    console.log('System info updated successfully');
+  }
+
+  function updateChart(sensors) {
+    if (!voltageChart || !sensors?.voltage?.sensors) return;
+
+    // Convert backend sensor data to chart format
+    const sensorsData = sensors.voltage.sensors;
+    const chartData = Object.keys(sensorsData).map(key => {
+      const sensor = sensorsData[key];
+      return {
+        x: new Date(sensor.timestamp || Date.now()),
+        y: sensor.value || 0,
+        label: sensor.location || key,
+      };
+    });
+
+    // For real-time, we add points one by one
+    // For historical data, we update all at once
+    if (chartData.length > 0 && voltageChart.updateData) {
+      voltageChart.updateData(chartData);
+    }
+  }
+
+  // Event handlers
+  function setupEventHandlers() {
+    // Chart timerange selector
+    const timerangeSelect = document.getElementById('chart-timerange');
+    timerangeSelect?.addEventListener('change', (e) => {
+      if (voltageChart) {
+        voltageChart.setTimeRange(e.target.value);
+      }
+    });
+
+    // Quick action buttons
+    document.getElementById('calibrate-btn')?.addEventListener('click', async () => {
+      try {
+        // For now, just show a notification
+        adaActions.addNotification('Sensor calibration started', 'info');
+      } catch (error) {
+        adaActions.addNotification('Failed to start calibration', 'error');
+      }
+    });
+
+    document.getElementById('restart-btn')?.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to restart the system?')) {
+        try {
+          const response = await fetch('/api/restart', { method: 'POST' });
+          if (response.ok) {
+            adaActions.addNotification('System restart initiated', 'success');
+          } else {
+            throw new Error('Failed to restart system');
+          }
+        } catch (error) {
+          adaActions.addNotification('Failed to restart system', 'error');
+        }
+      }
+    });
+
+    document.getElementById('export-btn')?.addEventListener('click', () => {
+      // Export current sensor data as JSON
+      const data = window.adaStore?.sensor?.value?.voltage;
+      if (data) {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `sensor-data-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        adaActions.addNotification('Data exported successfully', 'success');
+      }
+    });
+  }
+
+  // Utility functions
+  function formatUptime(uptimeString) {
+    if (!uptimeString || uptimeString === '--') return '--';
+    return uptimeString; // Backend already provides formatted uptime
+  }
+
+  function formatBytes(bytes) {
+    if (!bytes) return '--';
+    const kb = bytes / 1024;
+    return `${kb.toFixed(1)} KB`;
+  }
+
+  function getStatusColor(status) {
+    switch (status?.toLowerCase()) {
+      case 'ok':
+      case 'healthy':
+        return 'bg-green-100 text-green-800';
+      case 'warning':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'error':
+      case 'critical':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  }
+
+  // Initialize when DOM is ready
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('=== DASHBOARD DOM READY ===');
+    
+    // Initialize chart and event handlers first
+    initChart();
+    setupEventHandlers();
+    
+    // Function to setup data fetching
+    function setupDataFetching() {
+      console.log('=== SETUP DATA FETCHING ===');
+      fetchSystemStatus();
+      fetchSensorData();
+      
+      // Set up periodic refresh
+      setInterval(() => {
+        console.log('Dashboard: Periodic refresh');
+        fetchSystemStatus();
+        fetchSensorData();
+      }, 30000); // Refresh every 30 seconds
+    }
+    
+    // IMMEDIATE DATA FETCH - Do this right away!
+    console.log('=== IMMEDIATE DATA FETCH ===');
+    setupDataFetching();
+    
+    // Store update listener (as backup)
+    window.addEventListener('ada:store-ready', () => {
+      console.log('Dashboard: ada:store-ready event received');
+      if (window.adaStore && window.adaActions) {
+        console.log('Dashboard: Store and actions available, setting up subscriptions');
+        
+        // Subscribe to store changes
+        const unsubscribe = window.adaStore.subscribe((state) => {
+          console.log('Dashboard: Store state updated:', state);
+          const systemData = state.system;
+          updateSystemInfo(systemData);
+          updateSensorTable(state.sensors.data);
+          updateSystemStatus(state.sensors.health);
+        });
+      } else {
+        console.error('Dashboard: Store or actions not available after ada:store-ready event');
+      }
+    });
+  });
+  
+  console.log('=== DASHBOARD SCRIPT LOADED ===');
+</script>

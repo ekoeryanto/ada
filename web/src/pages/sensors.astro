@@ -1,0 +1,878 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout 
+  title="Sensor Configuration" 
+  description="Configure sensors, calibration, and monitoring settings"
+  activePage="sensors"
+>
+  <!-- Sensor Management Tabs -->
+  <div class="mb-8">
+    <div class="border-b border-gray-200">
+      <nav class="-mb-px flex space-x-8">
+        <button id="tab-sensors" class="tab-button active border-b-2 border-indigo-500 text-indigo-600 py-2 px-1 text-sm font-medium">
+          Sensors
+        </button>
+        <button id="tab-calibration" class="tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-2 px-1 text-sm font-medium">
+          Calibration
+        </button>
+        <button id="tab-health" class="tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-2 px-1 text-sm font-medium">
+          Health Monitoring
+        </button>
+        <button id="tab-simulation" class="tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-2 px-1 text-sm font-medium">
+          Simulation
+        </button>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Sensors Tab -->
+  <div id="sensors-tab" class="tab-content">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- Sensor List -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Configured Sensors</h3>
+            <button onclick="addSensor()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+              <i class="fas fa-plus mr-2"></i>Add Sensor
+            </button>
+          </div>
+        </div>
+        <div class="p-6">
+          <div id="sensor-config-list" class="space-y-4">
+            <!-- Sensor items will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Sensor Configuration Form -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Sensor Configuration</h3>
+        </div>
+        <div class="p-6">
+          <form id="sensor-config-form" class="space-y-6">
+            <input type="hidden" id="sensor-id" />
+            
+            <!-- Basic Information -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label for="sensor-name" class="block text-sm font-medium text-gray-700">Sensor Name</label>
+                <input type="text" id="sensor-name" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+              </div>
+              <div>
+                <label for="sensor-type" class="block text-sm font-medium text-gray-700">Type</label>
+                <select id="sensor-type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                  <option value="voltage">Voltage</option>
+                  <option value="current">Current</option>
+                  <option value="temperature">Temperature</option>
+                  <option value="pressure">Pressure</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Technical Specifications -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label for="sensor-manufacturer" class="block text-sm font-medium text-gray-700">Manufacturer</label>
+                <input type="text" id="sensor-manufacturer" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+              </div>
+              <div>
+                <label for="sensor-model" class="block text-sm font-medium text-gray-700">Model</label>
+                <input type="text" id="sensor-model" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label for="sensor-serial" class="block text-sm font-medium text-gray-700">Serial Number</label>
+                <input type="text" id="sensor-serial" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+              </div>
+              <div>
+                <label for="sensor-location" class="block text-sm font-medium text-gray-700">Location</label>
+                <input type="text" id="sensor-location" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+              </div>
+            </div>
+
+            <!-- Measurement Range -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label for="sensor-min-range" class="block text-sm font-medium text-gray-700">Min Range</label>
+                <input type="number" step="0.001" id="sensor-min-range" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+              </div>
+              <div>
+                <label for="sensor-max-range" class="block text-sm font-medium text-gray-700">Max Range</label>
+                <input type="number" step="0.001" id="sensor-max-range" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+              </div>
+              <div>
+                <label for="sensor-unit" class="block text-sm font-medium text-gray-700">Unit</label>
+                <input type="text" id="sensor-unit" value="V" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+              </div>
+            </div>
+
+            <!-- Sampling Configuration -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label for="sensor-sample-rate" class="block text-sm font-medium text-gray-700">Sample Rate (Hz)</label>
+                <input type="number" min="0.1" max="1000" step="0.1" id="sensor-sample-rate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+              </div>
+              <div>
+                <label for="sensor-enabled" class="block text-sm font-medium text-gray-700">Status</label>
+                <select id="sensor-enabled" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                  <option value="true">Enabled</option>
+                  <option value="false">Disabled</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex justify-end space-x-3">
+              <button type="button" onclick="resetForm()" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md text-sm font-medium">
+                Reset
+              </button>
+              <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                Save Configuration
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calibration Tab -->
+  <div id="calibration-tab" class="tab-content hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- Calibration Settings -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Calibration Settings</h3>
+        </div>
+        <div class="p-6">
+          <form id="calibration-form" class="space-y-6">
+            <div>
+              <label for="cal-sensor-select" class="block text-sm font-medium text-gray-700">Select Sensor</label>
+              <select id="cal-sensor-select" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                <!-- Options populated by JavaScript -->
+              </select>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label for="cal-offset" class="block text-sm font-medium text-gray-700">Offset</label>
+                <input type="number" step="0.001" id="cal-offset" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+              </div>
+              <div>
+                <label for="cal-gain" class="block text-sm font-medium text-gray-700">Gain</label>
+                <input type="number" step="0.001" id="cal-gain" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-3">Calibration Points</label>
+              <div id="calibration-points" class="space-y-3">
+                <!-- Calibration points will be added dynamically -->
+              </div>
+              <button type="button" onclick="addCalibrationPoint()" class="mt-3 text-indigo-600 hover:text-indigo-500 text-sm font-medium">
+                <i class="fas fa-plus mr-1"></i>Add Calibration Point
+              </button>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+              <button type="button" onclick="autoCalibrate()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                Auto Calibrate
+              </button>
+              <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                Apply Calibration
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Calibration History -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Calibration History</h3>
+        </div>
+        <div class="p-6">
+          <div id="calibration-history" class="space-y-4">
+            <!-- History items will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Health Monitoring Tab -->
+  <div id="health-tab" class="tab-content hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Health Configuration -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Health Monitoring</h3>
+        </div>
+        <div class="p-6">
+          <form id="health-form" class="space-y-6">
+            <div>
+              <label for="health-sensor-select" class="block text-sm font-medium text-gray-700">Select Sensor</label>
+              <select id="health-sensor-select" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                <!-- Options populated by JavaScript -->
+              </select>
+            </div>
+
+            <div>
+              <label class="flex items-center">
+                <input type="checkbox" id="health-stuck-detection" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" />
+                <span class="ml-2 text-sm text-gray-700">Stuck Value Detection</span>
+              </label>
+            </div>
+
+            <div>
+              <label class="flex items-center">
+                <input type="checkbox" id="health-anomaly-detection" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" />
+                <span class="ml-2 text-sm text-gray-700">Anomaly Detection</span>
+              </label>
+            </div>
+
+            <div>
+              <label for="health-response-threshold" class="block text-sm font-medium text-gray-700">Response Time Threshold (ms)</label>
+              <input type="number" id="health-response-threshold" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+            </div>
+
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+              Update Health Settings
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Health Status -->
+      <div class="lg:col-span-2">
+        <div class="bg-white shadow rounded-lg">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Sensor Health Status</h3>
+          </div>
+          <div class="p-6">
+            <div id="health-status-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Health status cards will be populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Simulation Tab -->
+  <div id="simulation-tab" class="tab-content hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- Simulation Control -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Simulation Control</h3>
+            <div class="flex items-center">
+              <span class="text-sm text-gray-500 mr-2">Simulation:</span>
+              <span id="sim-status" class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">OFF</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-6">
+          <form id="simulation-form" class="space-y-6">
+            <div>
+              <label for="sim-sensor-select" class="block text-sm font-medium text-gray-700">Select Sensor</label>
+              <select id="sim-sensor-select" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                <!-- Options populated by JavaScript -->
+              </select>
+            </div>
+
+            <div>
+              <label for="sim-pattern" class="block text-sm font-medium text-gray-700">Pattern Type</label>
+              <select id="sim-pattern" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="sine">Sine Wave</option>
+                <option value="square">Square Wave</option>
+                <option value="ramp">Ramp</option>
+                <option value="noise">Random Noise</option>
+                <option value="constant">Constant Value</option>
+              </select>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label for="sim-amplitude" class="block text-sm font-medium text-gray-700">Amplitude</label>
+                <input type="number" step="0.1" id="sim-amplitude" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+              </div>
+              <div>
+                <label for="sim-frequency" class="block text-sm font-medium text-gray-700">Frequency (Hz)</label>
+                <input type="number" step="0.01" id="sim-frequency" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label for="sim-offset" class="block text-sm font-medium text-gray-700">DC Offset</label>
+                <input type="number" step="0.1" id="sim-offset" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+              </div>
+              <div>
+                <label for="sim-noise-level" class="block text-sm font-medium text-gray-700">Noise Level</label>
+                <input type="number" step="0.01" id="sim-noise-level" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+              </div>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+              <button type="button" onclick="stopSimulation()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                Stop Simulation
+              </button>
+              <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                Start Simulation
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Simulation Preview -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Simulation Preview</h3>
+        </div>
+        <div class="p-6">
+          <canvas id="simulation-chart" width="400" height="300"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</DashboardLayout>
+
+<script is:inline>
+  let calibrationPointCount = 0;
+  let simulationChart = null;
+
+  // Tab switching
+  function initTabs() {
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const tabId = button.id.replace('tab-', '') + '-tab';
+        
+        // Update button states
+        tabButtons.forEach(btn => {
+          btn.classList.remove('active', 'border-indigo-500', 'text-indigo-600');
+          btn.classList.add('border-transparent', 'text-gray-500');
+        });
+        button.classList.add('active', 'border-indigo-500', 'text-indigo-600');
+        button.classList.remove('border-transparent', 'text-gray-500');
+        
+        // Update content visibility
+        tabContents.forEach(content => content.classList.add('hidden'));
+        document.getElementById(tabId)?.classList.remove('hidden');
+      });
+    });
+  }
+
+  // Load and display sensor configurations
+  async function loadSensorConfigs() {
+    try {
+      // Load sensor configuration from the backend via RTU client
+      const response = await fetch('/ada-1/api/analog-voltage/info');
+      const data = response.ok ? await response.json() : {};
+      const container = document.getElementById('sensor-config-list');
+      
+      if (data && data.sensors && container) {
+        // Convert backend sensor data to frontend format
+        const sensors = Object.keys(data.sensors).map((key, index) => {
+          const sensor = data.sensors[key];
+          return {
+            id: index,
+            name: sensor.location || `Sensor ${index}`,
+            type: 'Analog Voltage',
+            location: sensor.location,
+            manufacturer: sensor.manufacturer,
+            model: sensor.model,
+            enabled: sensor.enabled,
+            unit: sensor.unit,
+            description: sensor.description,
+            group: sensor.group,
+            tags: sensor.tags,
+            serialNumber: sensor.serial_number,
+            installationDate: sensor.installation_date
+          };
+        });
+        
+        container.innerHTML = sensors.map(sensor => `
+          <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer" onclick="editSensor(${sensor.id})">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="font-medium text-gray-900">${sensor.name || `Sensor ${sensor.id}`}</h4>
+                <p class="text-sm text-gray-500">${sensor.type || 'Voltage'} - ${sensor.location || 'Unknown location'}</p>
+                <p class="text-xs text-gray-400">${sensor.manufacturer || ''} ${sensor.model || ''}</p>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span class="px-2 py-1 text-xs font-medium rounded-full ${sensor.enabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                  ${sensor.enabled ? 'Enabled' : 'Disabled'}
+                </span>
+                <button onclick="event.stopPropagation(); deleteSensor(${sensor.id})" class="text-red-600 hover:text-red-800">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+        
+        // Populate sensor selects in other tabs
+        populateSensorSelects(sensors);
+      } else if (container) {
+        container.innerHTML = '<div class="text-center text-gray-500 p-4">No sensors configured</div>';
+      }
+    } catch (error) {
+      console.error('Error loading sensor configs:', error);
+      adaActions.addNotification('Failed to load sensor configuration', 'error');
+    }
+  }
+
+  // Populate sensor select dropdowns
+  function populateSensorSelects(sensors) {
+    const selects = ['cal-sensor-select', 'health-sensor-select', 'sim-sensor-select'];
+    
+    selects.forEach(selectId => {
+      const select = document.getElementById(selectId);
+      if (select) {
+        select.innerHTML = sensors.map(sensor => 
+          `<option value="${sensor.id}">${sensor.name || `Sensor ${sensor.id}`}</option>`
+        ).join('');
+      }
+    });
+  }
+
+  // Edit sensor configuration
+  async function editSensor(sensorId) {
+    // Load sensor data and populate form
+    try {
+      const response = await fetch(`/ada-1/api/sensors/${sensorId}/config`);
+      const sensor = response.ok ? await response.json() : null;
+      if (sensor) {
+        document.getElementById('sensor-id').value = sensor.id;
+        document.getElementById('sensor-name').value = sensor.name || '';
+        document.getElementById('sensor-type').value = sensor.type || 'voltage';
+        document.getElementById('sensor-manufacturer').value = sensor.manufacturer || '';
+        document.getElementById('sensor-model').value = sensor.model || '';
+        document.getElementById('sensor-serial').value = sensor.serial || '';
+        document.getElementById('sensor-location').value = sensor.location || '';
+        document.getElementById('sensor-min-range').value = sensor.minRange || 0;
+        document.getElementById('sensor-max-range').value = sensor.maxRange || 5;
+        document.getElementById('sensor-unit').value = sensor.unit || 'V';
+        document.getElementById('sensor-sample-rate').value = sensor.sampleRate || 1;
+        document.getElementById('sensor-enabled').value = sensor.enabled ? 'true' : 'false';
+      }
+    } catch (error) {
+      console.error('Failed to load sensor:', error);
+      adaActions.addNotification('Failed to load sensor configuration', 'error');
+    }
+  }
+
+  // Add new sensor
+  function addSensor() {
+    resetForm();
+    document.getElementById('sensor-id').value = '';
+  }
+
+  // Reset sensor form
+  function resetForm() {
+    document.getElementById('sensor-config-form').reset();
+    document.getElementById('sensor-id').value = '';
+  }
+
+  // Delete sensor
+  async function deleteSensor(sensorId) {
+    if (confirm('Are you sure you want to delete this sensor?')) {
+      try {
+        const response = await fetch(`/ada-1/api/sensors/${sensorId}/delete`, { method: 'POST' });
+        if (response.ok) {
+          loadSensorConfigs();
+          adaActions.addNotification('Sensor deleted successfully', 'success');
+        } else {
+          throw new Error('Failed to delete sensor');
+        }
+      } catch (error) {
+        adaActions.addNotification('Failed to delete sensor', 'error');
+      }
+    }
+  }
+
+  // Save sensor configuration
+  async function saveSensorConfig(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    const sensorData = {
+      id: document.getElementById('sensor-id').value || undefined,
+      name: document.getElementById('sensor-name').value,
+      type: document.getElementById('sensor-type').value,
+      manufacturer: document.getElementById('sensor-manufacturer').value,
+      model: document.getElementById('sensor-model').value,
+      serial: document.getElementById('sensor-serial').value,
+      location: document.getElementById('sensor-location').value,
+      minRange: parseFloat(document.getElementById('sensor-min-range').value),
+      maxRange: parseFloat(document.getElementById('sensor-max-range').value),
+      unit: document.getElementById('sensor-unit').value,
+      sampleRate: parseFloat(document.getElementById('sensor-sample-rate').value),
+      enabled: document.getElementById('sensor-enabled').value === 'true'
+    };
+    
+    try {
+      const endpoint = sensorData.id ? `/ada-1/api/sensors/${sensorData.id}/config` : '/ada-1/api/sensors/config';
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sensorData)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      loadSensorConfigs();
+      resetForm();
+      adaActions.addNotification('Sensor configuration saved', 'success');
+    } catch (error) {
+      adaActions.addNotification('Failed to save sensor configuration', 'error');
+    }
+  }
+
+  // Add calibration point
+  function addCalibrationPoint() {
+    const container = document.getElementById('calibration-points');
+    const pointDiv = document.createElement('div');
+    pointDiv.className = 'grid grid-cols-1 md:grid-cols-3 gap-2 items-end';
+    pointDiv.innerHTML = `
+      <div>
+        <label class="block text-xs font-medium text-gray-700">Reference Value</label>
+        <input type="number" step="0.001" class="cal-ref-value mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-700">Measured Value</label>
+        <input type="number" step="0.001" class="cal-measured-value mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
+      </div>
+      <div>
+        <button type="button" onclick="this.parentElement.parentElement.remove()" class="w-full bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-md text-sm">
+          Remove
+        </button>
+      </div>
+    `;
+    container?.appendChild(pointDiv);
+  }
+
+  // Auto calibration
+  async function autoCalibrate() {
+    const sensorId = document.getElementById('cal-sensor-select').value;
+    if (!sensorId) return;
+    
+    try {
+      // Use reset calibration endpoint for auto calibration
+      const response = await fetch('/ada-1/api/analog-voltage/reset-calibration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `sensor=${sensorId}`
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      adaActions.addNotification('Auto calibration (reset) completed', 'success');
+      loadCalibrationHistory();
+    } catch (error) {
+      adaActions.addNotification('Failed to start auto calibration', 'error');
+    }
+  }
+
+  // Start manual calibration
+  async function startCalibration() {
+    const form = document.getElementById('calibration-form');
+    const sensorId = form?.querySelector('#cal-sensor-select')?.value;
+    
+    if (!sensorId) {
+      adaActions.addNotification('Please select a sensor', 'warning');
+      return;
+    }
+
+    // Collect calibration points
+    const points = [];
+    const pointElements = form?.querySelectorAll('#calibration-points > div');
+    
+    pointElements?.forEach(pointDiv => {
+      const refValue = pointDiv.querySelector('.cal-ref-value')?.value;
+      const measuredValue = pointDiv.querySelector('.cal-measured-value')?.value;
+      
+      if (refValue && measuredValue) {
+        points.push({
+          reference: parseFloat(refValue),
+          measured: parseFloat(measuredValue)
+        });
+      }
+    });
+
+    if (points.length === 0) {
+      adaActions.addNotification('Please add at least one calibration point', 'warning');
+      return;
+    }
+
+    try {
+      // For now, use simple offset/gain calibration
+      // TODO: Implement point-based calibration calculation
+      let offset = 0.0;
+      let gain = 1.0;
+      
+      if (points.length > 0) {
+        // Simple linear calibration from first point
+        const point = points[0];
+        offset = point.reference - point.measured;
+        gain = 1.0; // Keep gain at 1.0 for simple offset calibration
+      }
+      
+      const response = await fetch('/ada-1/api/analog-voltage/calibrate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sensor: parseInt(sensorId),
+          offset: offset,
+          gain: gain
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      adaActions.addNotification('Manual calibration applied', 'success');
+      loadCalibrationHistory();
+    } catch (error) {
+      adaActions.addNotification('Failed to apply calibration', 'error');
+    }
+  }
+
+  // Load calibration history
+  async function loadCalibrationHistory() {
+    try {
+      // Note: The backend doesn't currently track calibration history
+      // This is a placeholder for future implementation
+      const container = document.getElementById('calibration-history');
+      
+      if (container) {
+        container.innerHTML = `
+          <div class="text-center p-8 text-gray-500">
+            <i class="fas fa-history text-3xl mb-4 block"></i>
+            <p>Calibration history tracking is not yet implemented.</p>
+            <p class="text-sm mt-2">Future versions will show historical calibration data.</p>
+          </div>
+        `;
+      }
+    } catch (error) {
+      console.error('Error in loadCalibrationHistory:', error);
+      const container = document.getElementById('calibration-history');
+      if (container) {
+        container.innerHTML = `
+          <div class="text-center p-4 text-red-500">
+            <p>Unable to load calibration history</p>
+          </div>
+        `;
+      }
+    }
+  }
+
+  // Load sensor health status
+  async function loadHealthStatus() {
+    try {
+      const response = await fetch('/ada-1/api/analog-voltage/health');
+      const health = response.ok ? await response.json() : {};
+      const container = document.getElementById('health-status-grid');
+      
+      if (health && health.sensors && container) {
+        // Convert backend sensor data structure (sensor_0, sensor_1, etc.) to array
+        const sensorsArray = Object.keys(health.sensors).map(key => {
+          const sensor = health.sensors[key];
+          const sensorId = key.replace('sensor_', '');
+          return {
+            id: sensorId,
+            name: sensor.location || `Sensor ${sensorId}`,
+            healthScore: sensor.health_score || 0,
+            location: sensor.location,
+            isDead: sensor.is_dead,
+            isStuck: sensor.is_stuck,
+            isCalibrated: sensor.is_calibrated,
+            errorCount: sensor.error_count,
+            errorRate: sensor.error_rate_percent || 0
+          };
+        });
+        
+        container.innerHTML = sensorsArray.map(sensor => `
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="font-medium text-gray-900">${sensor.name}</h4>
+              <span class="px-2 py-1 text-xs font-medium rounded-full ${
+                sensor.healthScore > 80 ? 'bg-green-100 text-green-800' :
+                sensor.healthScore > 60 ? 'bg-yellow-100 text-yellow-800' :
+                'bg-red-100 text-red-800'
+              }">
+                ${sensor.healthScore}%
+              </span>
+            </div>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between">
+                <span class="text-gray-600">Error Rate:</span>
+                <span>${sensor.errorRate.toFixed(1)}%</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Status:</span>
+                <span class="${sensor.isDead ? 'text-red-600' : sensor.isStuck ? 'text-yellow-600' : 'text-green-600'}">
+                  ${sensor.isDead ? 'Dead' : sensor.isStuck ? 'Stuck' : 'OK'}
+                </span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Calibrated:</span>
+                <span class="${sensor.isCalibrated ? 'text-green-600' : 'text-red-600'}">
+                  ${sensor.isCalibrated ? 'Yes' : 'No'}
+                </span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Error Count:</span>
+                <span>${sensor.errorCount}</span>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } else if (container) {
+        container.innerHTML = '<div class="text-center text-gray-500 p-4">No health data available</div>';
+      }
+    } catch (error) {
+      console.error('Error loading health status:', error);
+      const container = document.getElementById('health-status-grid');
+      if (container) {
+        container.innerHTML = `
+          <div class="text-center p-4 text-red-500">
+            <p>Unable to load health status</p>
+          </div>
+        `;
+      }
+    }
+  }
+
+  // Initialize simulation chart
+  function initSimulationChart() {
+    const ctx = document.getElementById('simulation-chart')?.getContext('2d');
+    if (!ctx) return;
+    
+    simulationChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Simulation Preview',
+          data: [],
+          borderColor: 'rgb(59, 130, 246)',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          tension: 0.1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            title: {
+              display: true,
+              text: 'Value'
+            }
+          }
+        },
+        animation: {
+          duration: 0
+        }
+      }
+    });
+  }
+
+  // Start simulation
+  async function startSimulation(event) {
+    event.preventDefault();
+    
+    const sensorId = document.getElementById('sim-sensor-select').value;
+    const simData = {
+      sensorId: parseInt(sensorId),
+      pattern: document.getElementById('sim-pattern').value,
+      amplitude: parseFloat(document.getElementById('sim-amplitude').value),
+      frequency: parseFloat(document.getElementById('sim-frequency').value),
+      offset: parseFloat(document.getElementById('sim-offset').value),
+      noiseLevel: parseFloat(document.getElementById('sim-noise-level').value)
+    };
+    
+    // Mock simulation start
+    document.getElementById('sim-status').textContent = 'ON';
+    document.getElementById('sim-status').className = 'px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800';
+    adaActions.addNotification('Simulation started', 'success');
+  }
+
+  // Stop simulation
+  async function stopSimulation() {
+    document.getElementById('sim-status').textContent = 'OFF';
+    document.getElementById('sim-status').className = 'px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800';
+    adaActions.addNotification('Simulation stopped', 'success');
+  }
+
+  // Setup event handlers
+  function setupEventHandlers() {
+    // Set up form handlers
+    document.getElementById('sensor-config-form')?.addEventListener('submit', saveSensorConfig);
+    document.getElementById('simulation-form')?.addEventListener('submit', startSimulation);
+    
+    // Make functions globally available for button onclick handlers
+    window.editSensor = editSensor;
+    window.deleteSensor = deleteSensor;
+    window.addCalibrationPoint = addCalibrationPoint;
+    window.startCalibration = startCalibration;
+    window.stopSimulation = stopSimulation;
+  }
+
+  // Initialize page
+  document.addEventListener('DOMContentLoaded', () => {
+    // Wait for adaStore to be ready
+    function setupStoreSubscriptions() {
+      if (typeof window.adaStore !== 'undefined') {
+        // Subscribe to store changes
+        window.adaStore.config.subscribe(() => loadSensorConfigs());
+        console.log('Sensors page: adaStore subscriptions established');
+        
+        // Now that store is ready, load initial data
+        loadSensorConfigs();
+        loadCalibrationHistory();
+        loadHealthStatus();
+      } else {
+        console.warn('Sensors page: adaStore not available');
+      }
+    }
+    
+    // Listen for store ready event
+    window.addEventListener('ada:store-ready', setupStoreSubscriptions);
+    
+    // Also try immediately in case store is already ready
+    if (typeof window.adaStore !== 'undefined') {
+      setupStoreSubscriptions();
+    }
+    
+    initTabs();
+    initSimulationChart();
+    setupEventHandlers();
+    
+    // Add initial calibration point
+    addCalibrationPoint();
+  });
+
+  // Listen for custom state change events
+  window.addEventListener('ada:state-changed', () => {
+    loadSensorConfigs();
+  });
+</script>

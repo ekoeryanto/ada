@@ -1,0 +1,178 @@
+---
+// Notification Component
+export interface Props {
+  class?: string;
+}
+
+const { class: className = '' } = Astro.props;
+---
+
+<div id="notification-container" class={`fixed top-4 right-4 z-50 space-y-4 ${className}`}>
+  <!-- Notifications will be inserted here by JavaScript -->
+</div>
+
+<script>
+  interface Notification {
+    id: string;
+    type: 'info' | 'warning' | 'error' | 'success';
+    title: string;
+    message: string;
+    duration?: number;
+  }
+
+  class NotificationManager {
+    private container: HTMLElement;
+    private notifications: Map<string, HTMLElement> = new Map();
+
+    constructor() {
+      this.container = document.getElementById('notification-container')!;
+      this.setupStyles();
+    }
+
+    private setupStyles() {
+      // Add notification styles if not already present
+      if (!document.getElementById('notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notification-styles';
+        style.textContent = `
+          .notification {
+            min-width: 320px;
+            max-width: 400px;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            transform: translateX(100%);
+            transition: all 0.3s ease-in-out;
+            opacity: 0;
+          }
+          
+          .notification.show {
+            transform: translateX(0);
+            opacity: 1;
+          }
+          
+          .notification.success {
+            background-color: #10b981;
+            color: white;
+          }
+          
+          .notification.error {
+            background-color: #ef4444;
+            color: white;
+          }
+          
+          .notification.warning {
+            background-color: #f59e0b;
+            color: white;
+          }
+          
+          .notification.info {
+            background-color: #3b82f6;
+            color: white;
+          }
+          
+          .notification .close-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: inherit;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            float: right;
+            margin-left: 12px;
+          }
+          
+          .notification .close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
+
+    show(notification: Notification) {
+      const id = notification.id || Math.random().toString(36).substr(2, 9);
+      
+      const element = document.createElement('div');
+      element.className = `notification ${notification.type}`;
+      element.innerHTML = `
+        <div style="display: flex; align-items: start;">
+          <div style="flex: 1;">
+            <div style="font-weight: 600; margin-bottom: 4px;">${notification.title}</div>
+            <div style="font-size: 14px; opacity: 0.9;">${notification.message}</div>
+          </div>
+          <button class="close-btn" data-close="${id}">✕</button>
+        </div>
+      `;
+
+      // Add close button handler
+      const closeBtn = element.querySelector(`[data-close="${id}"]`);
+      closeBtn?.addEventListener('click', () => this.hide(id));
+
+      this.container.appendChild(element);
+      this.notifications.set(id, element);
+
+      // Trigger animation
+      requestAnimationFrame(() => {
+        element.classList.add('show');
+      });
+
+      // Auto-hide after duration
+      const duration = notification.duration ?? (notification.type === 'error' ? 8000 : 5000);
+      if (duration > 0) {
+        setTimeout(() => this.hide(id), duration);
+      }
+
+      return id;
+    }
+
+    hide(id: string) {
+      const element = this.notifications.get(id);
+      if (element) {
+        element.classList.remove('show');
+        setTimeout(() => {
+          if (element.parentNode) {
+            element.parentNode.removeChild(element);
+          }
+          this.notifications.delete(id);
+        }, 300);
+      }
+    }
+
+    clear() {
+      for (const [id] of this.notifications) {
+        this.hide(id);
+      }
+    }
+  }
+
+  // Global notification manager
+  const notificationManager = new NotificationManager();
+
+  // Global functions for easy access
+    // Compatibility functions for global access  
+  window.showToast = (message: string, type: 'info' | 'warning' | 'error' | 'success' = 'info') => {
+    return addToast('ADA System', message, type, 5000);
+  };
+
+  window.hideToast = (id: string) => {
+    notificationManager.hide(id);
+  };
+
+  window.clearToasts = () => {
+    notificationManager.clear();
+  };
+
+  // Export for use in other scripts
+  window.notificationManager = notificationManager;
+</script>
+
+<style>
+  #notification-container {
+    pointer-events: none;
+  }
+
+  #notification-container > * {
+    pointer-events: auto;
+  }
+</style>

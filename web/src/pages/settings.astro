@@ -1,0 +1,1044 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout 
+  title="Settings" 
+  description="System configuration and preferences"
+  activePage="settings"
+>
+  <!-- Settings Navigation -->
+  <div class="mb-8">
+    <div class="border-b border-gray-200">
+      <nav class="-mb-px flex space-x-8">
+        <button onclick="showSettingsTab('general')" id="tab-general" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm settings-tab active">
+          <i class="fas fa-cog mr-2"></i>General
+        </button>
+        <button onclick="showSettingsTab('network')" id="tab-network" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm settings-tab">
+          <i class="fas fa-wifi mr-2"></i>Network
+        </button>
+        <button onclick="showSettingsTab('sensors')" id="tab-sensors" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm settings-tab">
+          <i class="fas fa-thermometer-half mr-2"></i>Sensors
+        </button>
+        <button onclick="showSettingsTab('logging')" id="tab-logging" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm settings-tab">
+          <i class="fas fa-file-alt mr-2"></i>Logging
+        </button>
+        <button onclick="showSettingsTab('security')" id="tab-security" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm settings-tab">
+          <i class="fas fa-shield-alt mr-2"></i>Security
+        </button>
+        <button onclick="showSettingsTab('maintenance')" id="tab-maintenance" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm settings-tab">
+          <i class="fas fa-tools mr-2"></i>Maintenance
+        </button>
+      </nav>
+    </div>
+  </div>
+
+  <!-- General Settings -->
+  <div id="settings-general" class="settings-content">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- System Information -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">System Information</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-4">
+            <div>
+              <label for="device-name" class="block text-sm font-medium text-gray-700">Device Name</label>
+              <input type="text" id="device-name" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+              <label for="device-location" class="block text-sm font-medium text-gray-700">Location</label>
+              <input type="text" id="device-location" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+              <label for="timezone" class="block text-sm font-medium text-gray-700">Timezone</label>
+              <select id="timezone" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="UTC">UTC</option>
+                <option value="America/New_York">Eastern Time</option>
+                <option value="America/Chicago">Central Time</option>
+                <option value="America/Denver">Mountain Time</option>
+                <option value="America/Los_Angeles">Pacific Time</option>
+                <option value="Europe/London">London</option>
+                <option value="Europe/Paris">Paris</option>
+                <option value="Asia/Tokyo">Tokyo</option>
+                <option value="Asia/Shanghai">Shanghai</option>
+              </select>
+            </div>
+            <div>
+              <label for="language" class="block text-sm font-medium text-gray-700">Language</label>
+              <select id="language" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+                <option value="de">Deutsch</option>
+                <option value="zh">中文</option>
+                <option value="ja">日本語</option>
+              </select>
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Auto-sync Time</label>
+              <input type="checkbox" id="auto-sync-time" class="rounded">
+            </div>
+          </div>
+          <button onclick="saveGeneralSettings()" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+            Save General Settings
+          </button>
+        </div>
+      </div>
+
+      <!-- Display Preferences -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Display Preferences</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-4">
+            <div>
+              <label for="theme" class="block text-sm font-medium text-gray-700">Theme</label>
+              <select id="theme" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="auto">Auto (System)</option>
+              </select>
+            </div>
+            <div>
+              <label for="chart-refresh" class="block text-sm font-medium text-gray-700">Chart Refresh Rate (seconds)</label>
+              <input type="number" id="chart-refresh" min="1" max="300" value="5" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+              <label for="data-points" class="block text-sm font-medium text-gray-700">Max Data Points on Chart</label>
+              <input type="number" id="data-points" min="10" max="1000" value="100" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Show Animations</label>
+              <input type="checkbox" id="show-animations" class="rounded" checked>
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Enable Sound Notifications</label>
+              <input type="checkbox" id="sound-notifications" class="rounded">
+            </div>
+          </div>
+          <button onclick="saveDisplaySettings()" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+            Save Display Settings
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Network Settings -->
+  <div id="settings-network" class="settings-content hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- WiFi Configuration -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">WiFi Configuration</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-4">
+            <div>
+              <label for="wifi-ssid" class="block text-sm font-medium text-gray-700">SSID (Network Name)</label>
+              <input type="text" id="wifi-ssid" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+              <label for="wifi-password" class="block text-sm font-medium text-gray-700">Password</label>
+              <input type="password" id="wifi-password" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Auto-reconnect</label>
+              <input type="checkbox" id="wifi-auto-reconnect" class="rounded" checked>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="connection-timeout" class="block text-sm font-medium text-gray-700">Connection Timeout (s)</label>
+                <input type="number" id="connection-timeout" min="5" max="120" value="30" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+              </div>
+              <div>
+                <label for="retry-attempts" class="block text-sm font-medium text-gray-700">Retry Attempts</label>
+                <input type="number" id="retry-attempts" min="1" max="10" value="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+              </div>
+            </div>
+          </div>
+          <div class="mt-6 flex space-x-4">
+            <button onclick="scanWiFiNetworks()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+              <i class="fas fa-search mr-2"></i>Scan Networks
+            </button>
+            <button onclick="saveWiFiSettings()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+              Save WiFi Settings
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Network Status & Settings -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Network Status</h3>
+        </div>
+        <div class="p-6">
+          <div id="network-status" class="space-y-4">
+            <!-- Network status will be populated by JavaScript -->
+          </div>
+          
+          <div class="mt-6 space-y-4">
+            <div>
+              <label for="static-ip" class="block text-sm font-medium text-gray-700">Static IP (optional)</label>
+              <input type="text" id="static-ip" placeholder="192.168.1.100" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+              <label for="gateway" class="block text-sm font-medium text-gray-700">Gateway</label>
+              <input type="text" id="gateway" placeholder="192.168.1.1" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+              <label for="dns-server" class="block text-sm font-medium text-gray-700">DNS Server</label>
+              <input type="text" id="dns-server" placeholder="8.8.8.8" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+          </div>
+          
+          <button onclick="saveNetworkSettings()" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+            Save Network Settings
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sensor Settings -->
+  <div id="settings-sensors" class="settings-content hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- Global Sensor Settings -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Global Sensor Settings</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-4">
+            <div>
+              <label for="sample-rate" class="block text-sm font-medium text-gray-700">Sample Rate (Hz)</label>
+              <input type="number" id="sample-rate" min="0.1" max="100" step="0.1" value="1.0" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+              <label for="averaging-window" class="block text-sm font-medium text-gray-700">Averaging Window (samples)</label>
+              <input type="number" id="averaging-window" min="1" max="100" value="10" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+              <label for="filter-type" class="block text-sm font-medium text-gray-700">Filter Type</label>
+              <select id="filter-type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="none">None</option>
+                <option value="moving_average">Moving Average</option>
+                <option value="exponential">Exponential Smoothing</option>
+                <option value="kalman">Kalman Filter</option>
+              </select>
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Enable Outlier Detection</label>
+              <input type="checkbox" id="outlier-detection" class="rounded" checked>
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Auto-calibration</label>
+              <input type="checkbox" id="auto-calibration" class="rounded">
+            </div>
+          </div>
+          <button onclick="saveSensorSettings()" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+            Save Sensor Settings
+          </button>
+        </div>
+      </div>
+
+      <!-- Data Logging -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Data Logging</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Enable Data Logging</label>
+              <input type="checkbox" id="enable-logging" class="rounded" checked>
+            </div>
+            <div>
+              <label for="log-interval" class="block text-sm font-medium text-gray-700">Log Interval (seconds)</label>
+              <input type="number" id="log-interval" min="1" max="3600" value="60" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+              <label for="max-log-size" class="block text-sm font-medium text-gray-700">Max Log File Size (MB)</label>
+              <input type="number" id="max-log-size" min="1" max="1000" value="100" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+              <label for="retention-days" class="block text-sm font-medium text-gray-700">Data Retention (days)</label>
+              <input type="number" id="retention-days" min="1" max="365" value="30" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Compress Old Logs</label>
+              <input type="checkbox" id="compress-logs" class="rounded" checked>
+            </div>
+          </div>
+          <div class="mt-6 flex space-x-4">
+            <button onclick="downloadLogs()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+              <i class="fas fa-download mr-2"></i>Download Logs
+            </button>
+            <button onclick="saveLoggingSettings()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+              Save Settings
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logging Settings -->
+  <div id="settings-logging" class="settings-content hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- System Logging -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">System Logging</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-4">
+            <div>
+              <label for="log-level" class="block text-sm font-medium text-gray-700">Log Level</label>
+              <select id="log-level" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="error">Error</option>
+                <option value="warn">Warning</option>
+                <option value="info">Info</option>
+                <option value="debug">Debug</option>
+                <option value="verbose">Verbose</option>
+              </select>
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Enable Console Logging</label>
+              <input type="checkbox" id="console-logging" class="rounded" checked>
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Enable File Logging</label>
+              <input type="checkbox" id="file-logging" class="rounded" checked>
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Enable Remote Logging</label>
+              <input type="checkbox" id="remote-logging" class="rounded">
+            </div>
+            <div>
+              <label for="remote-log-server" class="block text-sm font-medium text-gray-700">Remote Log Server</label>
+              <input type="url" id="remote-log-server" placeholder="https://logs.example.com" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+          </div>
+          <button onclick="saveSystemLoggingSettings()" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+            Save Logging Settings
+          </button>
+        </div>
+      </div>
+
+      <!-- Log Management -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Log Management</h3>
+        </div>
+        <div class="p-6">
+          <div id="log-files-list" class="space-y-3 mb-6">
+            <!-- Log files will be populated by JavaScript -->
+          </div>
+          
+          <div class="space-y-3">
+            <button onclick="refreshLogFiles()" class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              <i class="fas fa-sync-alt mr-2"></i>
+              Refresh Log Files
+            </button>
+            <button onclick="clearAllLogs()" class="w-full flex items-center justify-center px-4 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100">
+              <i class="fas fa-trash mr-2"></i>
+              Clear All Logs
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Security Settings -->
+  <div id="settings-security" class="settings-content hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- Authentication -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Authentication</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Enable Authentication</label>
+              <input type="checkbox" id="enable-auth" class="rounded">
+            </div>
+            <div>
+              <label for="admin-username" class="block text-sm font-medium text-gray-700">Admin Username</label>
+              <input type="text" id="admin-username" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+              <label for="admin-password" class="block text-sm font-medium text-gray-700">Admin Password</label>
+              <input type="password" id="admin-password" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+              <label for="session-timeout" class="block text-sm font-medium text-gray-700">Session Timeout (minutes)</label>
+              <input type="number" id="session-timeout" min="5" max="1440" value="60" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Require HTTPS</label>
+              <input type="checkbox" id="require-https" class="rounded">
+            </div>
+          </div>
+          <button onclick="saveSecuritySettings()" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+            Save Security Settings
+          </button>
+        </div>
+      </div>
+
+      <!-- API Security -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">API Security</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Enable API Key Authentication</label>
+              <input type="checkbox" id="enable-api-key" class="rounded">
+            </div>
+            <div>
+              <label for="api-key" class="block text-sm font-medium text-gray-700">API Key</label>
+              <div class="mt-1 flex rounded-md shadow-sm">
+                <input type="text" id="api-key" readonly class="flex-1 block w-full border-gray-300 rounded-none rounded-l-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                <button onclick="generateApiKey()" class="relative -ml-px inline-flex items-center space-x-2 px-4 py-2 border border-gray-300 text-sm font-medium rounded-r-md text-gray-700 bg-gray-50 hover:bg-gray-100">
+                  <i class="fas fa-sync-alt"></i>
+                </button>
+              </div>
+            </div>
+            <div>
+              <label for="rate-limit" class="block text-sm font-medium text-gray-700">Rate Limit (requests/minute)</label>
+              <input type="number" id="rate-limit" min="1" max="1000" value="60" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Enable CORS</label>
+              <input type="checkbox" id="enable-cors" class="rounded" checked>
+            </div>
+            <div>
+              <label for="allowed-origins" class="block text-sm font-medium text-gray-700">Allowed Origins (comma-separated)</label>
+              <input type="text" id="allowed-origins" placeholder="*" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+          </div>
+          <button onclick="saveApiSecuritySettings()" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+            Save API Settings
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Maintenance Settings -->
+  <div id="settings-maintenance" class="settings-content hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <!-- System Maintenance -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">System Maintenance</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Auto-cleanup Old Data</label>
+              <input type="checkbox" id="auto-cleanup" class="rounded" checked>
+            </div>
+            <div>
+              <label for="cleanup-interval" class="block text-sm font-medium text-gray-700">Cleanup Interval (hours)</label>
+              <input type="number" id="cleanup-interval" min="1" max="168" value="24" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+              <label for="backup-interval" class="block text-sm font-medium text-gray-700">Auto-backup Interval (days)</label>
+              <input type="number" id="backup-interval" min="1" max="30" value="7" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Enable Watchdog</label>
+              <input type="checkbox" id="enable-watchdog" class="rounded" checked>
+            </div>
+            <div>
+              <label for="watchdog-timeout" class="block text-sm font-medium text-gray-700">Watchdog Timeout (seconds)</label>
+              <input type="number" id="watchdog-timeout" min="30" max="300" value="120" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+          </div>
+          <button onclick="saveMaintenanceSettings()" class="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+            Save Maintenance Settings
+          </button>
+        </div>
+      </div>
+
+      <!-- Backup & Recovery -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Backup & Recovery</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-4">
+            <button onclick="createBackup()" class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              <i class="fas fa-download mr-2"></i>
+              Create Backup
+            </button>
+            <div>
+              <label for="backup-file" class="block text-sm font-medium text-gray-700">Restore from Backup</label>
+              <input type="file" id="backup-file" accept=".zip,.tar.gz" class="mt-1 block w-full">
+            </div>
+            <button onclick="restoreBackup()" class="w-full flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md">
+              <i class="fas fa-upload mr-2"></i>
+              Restore Backup
+            </button>
+            
+            <hr class="my-4">
+            
+            <div class="bg-red-50 border border-red-200 rounded-md p-4">
+              <h4 class="text-sm font-medium text-red-800 mb-2">Factory Reset</h4>
+              <p class="text-sm text-red-600 mb-4">This will erase all settings and data. This action cannot be undone.</p>
+              <button onclick="factoryReset()" class="w-full flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                Factory Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save All Button -->
+  <div class="mt-8 flex justify-center">
+    <button onclick="saveAllSettings()" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-md text-lg font-medium">
+      <i class="fas fa-save mr-2"></i>Save All Settings
+    </button>
+  </div>
+</DashboardLayout>
+
+<script>
+  let currentTab = 'general';
+
+  // Tab navigation
+  function showSettingsTab(tabName) {
+    // Hide all content
+    document.querySelectorAll('.settings-content').forEach(content => {
+      content.classList.add('hidden');
+    });
+    
+    // Show selected content
+    const targetContent = document.getElementById(`settings-${tabName}`);
+    if (targetContent) {
+      targetContent.classList.remove('hidden');
+    }
+    
+    // Update tab styles
+    document.querySelectorAll('.settings-tab').forEach(tab => {
+      tab.classList.remove('active', 'border-indigo-500', 'text-indigo-600');
+      tab.classList.add('border-transparent', 'text-gray-500');
+    });
+    
+    const activeTab = document.getElementById(`tab-${tabName}`);
+    if (activeTab) {
+      activeTab.classList.add('active', 'border-indigo-500', 'text-indigo-600');
+      activeTab.classList.remove('border-transparent', 'text-gray-500');
+    }
+    
+    currentTab = tabName;
+  }
+
+  // Load all settings
+  async function loadAllSettings() {
+    try {
+      console.log('Loading all settings...');
+      const response = await fetch('/api/settings');
+      
+      if (response.ok) {
+        const settings = await response.json();
+        console.log('Settings loaded:', settings);
+        
+        // General settings
+        if (settings.general) {
+          setInputValue('device-name', settings.general.deviceName);
+          setInputValue('device-location', settings.general.location);
+          setInputValue('timezone', settings.general.timezone);
+          setInputValue('language', settings.general.language);
+          setCheckboxValue('auto-sync-time', settings.general.autoSyncTime);
+        }
+        
+        // Display settings
+        if (settings.display) {
+          setInputValue('theme', settings.display.theme);
+          setInputValue('chart-refresh', settings.display.chartRefresh);
+          setInputValue('data-points', settings.display.maxDataPoints);
+          setCheckboxValue('show-animations', settings.display.showAnimations);
+          setCheckboxValue('sound-notifications', settings.display.soundNotifications);
+        }
+        
+        // Network settings
+        if (settings.network) {
+          setInputValue('wifi-ssid', settings.network.ssid);
+          setInputValue('static-ip', settings.network.staticIp);
+          setInputValue('gateway', settings.network.gateway);
+          setInputValue('dns-server', settings.network.dnsServer);
+          setCheckboxValue('wifi-auto-reconnect', settings.network.autoReconnect);
+          setInputValue('connection-timeout', settings.network.connectionTimeout);
+          setInputValue('retry-attempts', settings.network.retryAttempts);
+        }
+        
+        // Sensor settings
+        if (settings.sensors) {
+          setInputValue('sample-rate', settings.sensors.sampleRate);
+          setInputValue('averaging-window', settings.sensors.averagingWindow);
+          setInputValue('filter-type', settings.sensors.filterType);
+          setCheckboxValue('outlier-detection', settings.sensors.outlierDetection);
+          setCheckboxValue('auto-calibration', settings.sensors.autoCalibration);
+        }
+        
+        // Logging settings
+        if (settings.logging) {
+          setCheckboxValue('enable-logging', settings.logging.enabled);
+          setInputValue('log-interval', settings.logging.interval);
+          setInputValue('max-log-size', settings.logging.maxFileSize);
+          setInputValue('retention-days', settings.logging.retentionDays);
+          setCheckboxValue('compress-logs', settings.logging.compressLogs);
+          setInputValue('log-level', settings.logging.logLevel);
+          setCheckboxValue('console-logging', settings.logging.consoleLogging);
+          setCheckboxValue('file-logging', settings.logging.fileLogging);
+          setCheckboxValue('remote-logging', settings.logging.remoteLogging);
+          setInputValue('remote-log-server', settings.logging.remoteLogServer);
+        }
+        
+        // Security settings
+        if (settings.security) {
+          setCheckboxValue('enable-auth', settings.security.enableAuth);
+          setInputValue('admin-username', settings.security.adminUsername);
+          setInputValue('session-timeout', settings.security.sessionTimeout);
+          setCheckboxValue('require-https', settings.security.requireHttps);
+          setCheckboxValue('enable-api-key', settings.security.enableApiKey);
+          setInputValue('api-key', settings.security.apiKey);
+          setInputValue('rate-limit', settings.security.rateLimit);
+          setCheckboxValue('enable-cors', settings.security.enableCors);
+          setInputValue('allowed-origins', settings.security.allowedOrigins);
+        }
+        
+        // Maintenance settings
+        if (settings.maintenance) {
+          setCheckboxValue('auto-cleanup', settings.maintenance.autoCleanup);
+          setInputValue('cleanup-interval', settings.maintenance.cleanupInterval);
+          setInputValue('backup-interval', settings.maintenance.backupInterval);
+          setCheckboxValue('enable-watchdog', settings.maintenance.enableWatchdog);
+          setInputValue('watchdog-timeout', settings.maintenance.watchdogTimeout);
+        }
+      }
+      
+      // Load network status
+      await loadNetworkStatus();
+      await loadLogFiles();
+      
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+      (window as any).showToast?.('Failed to load settings', 'error');
+    }
+  }
+
+  // Save individual setting groups
+  async function saveGeneralSettings() {
+    const settings = {
+      deviceName: getInputValue('device-name'),
+      location: getInputValue('device-location'),
+      timezone: getInputValue('timezone'),
+      language: getInputValue('language'),
+      autoSyncTime: getCheckboxValue('auto-sync-time')
+    };
+    
+    await saveSetting('general', settings);
+  }
+
+  async function saveDisplaySettings() {
+    const settings = {
+      theme: getInputValue('theme'),
+      chartRefresh: parseInt(getInputValue('chart-refresh')),
+      maxDataPoints: parseInt(getInputValue('data-points')),
+      showAnimations: getCheckboxValue('show-animations'),
+      soundNotifications: getCheckboxValue('sound-notifications')
+    };
+    
+    await saveSetting('display', settings);
+  }
+
+  async function saveWiFiSettings() {
+    const settings = {
+      ssid: getInputValue('wifi-ssid'),
+      password: getInputValue('wifi-password'),
+      autoReconnect: getCheckboxValue('wifi-auto-reconnect'),
+      connectionTimeout: parseInt(getInputValue('connection-timeout')),
+      retryAttempts: parseInt(getInputValue('retry-attempts'))
+    };
+    
+    await saveSetting('wifi', settings);
+  }
+
+  async function saveNetworkSettings() {
+    const settings = {
+      staticIp: getInputValue('static-ip'),
+      gateway: getInputValue('gateway'),
+      dnsServer: getInputValue('dns-server')
+    };
+    
+    await saveSetting('network', settings);
+  }
+
+  async function saveSensorSettings() {
+    const settings = {
+      sampleRate: parseFloat(getInputValue('sample-rate')),
+      averagingWindow: parseInt(getInputValue('averaging-window')),
+      filterType: getInputValue('filter-type'),
+      outlierDetection: getCheckboxValue('outlier-detection'),
+      autoCalibration: getCheckboxValue('auto-calibration')
+    };
+    
+    await saveSetting('sensors', settings);
+  }
+
+  async function saveLoggingSettings() {
+    const settings = {
+      enabled: getCheckboxValue('enable-logging'),
+      interval: parseInt(getInputValue('log-interval')),
+      maxFileSize: parseInt(getInputValue('max-log-size')),
+      retentionDays: parseInt(getInputValue('retention-days')),
+      compressLogs: getCheckboxValue('compress-logs')
+    };
+    
+    await saveSetting('logging', settings);
+  }
+
+  async function saveSystemLoggingSettings() {
+    const settings = {
+      logLevel: getInputValue('log-level'),
+      consoleLogging: getCheckboxValue('console-logging'),
+      fileLogging: getCheckboxValue('file-logging'),
+      remoteLogging: getCheckboxValue('remote-logging'),
+      remoteLogServer: getInputValue('remote-log-server')
+    };
+    
+    await saveSetting('systemLogging', settings);
+  }
+
+  async function saveSecuritySettings() {
+    const settings = {
+      enableAuth: getCheckboxValue('enable-auth'),
+      adminUsername: getInputValue('admin-username'),
+      adminPassword: getInputValue('admin-password'),
+      sessionTimeout: parseInt(getInputValue('session-timeout')),
+      requireHttps: getCheckboxValue('require-https')
+    };
+    
+    await saveSetting('security', settings);
+  }
+
+  async function saveApiSecuritySettings() {
+    const settings = {
+      enableApiKey: getCheckboxValue('enable-api-key'),
+      rateLimit: parseInt(getInputValue('rate-limit')),
+      enableCors: getCheckboxValue('enable-cors'),
+      allowedOrigins: getInputValue('allowed-origins')
+    };
+    
+    await saveSetting('apiSecurity', settings);
+  }
+
+  async function saveMaintenanceSettings() {
+    const settings = {
+      autoCleanup: getCheckboxValue('auto-cleanup'),
+      cleanupInterval: parseInt(getInputValue('cleanup-interval')),
+      backupInterval: parseInt(getInputValue('backup-interval')),
+      enableWatchdog: getCheckboxValue('enable-watchdog'),
+      watchdogTimeout: parseInt(getInputValue('watchdog-timeout'))
+    };
+    
+    await saveSetting('maintenance', settings);
+  }
+
+  // Save all settings at once
+  async function saveAllSettings() {
+    try {
+      await saveGeneralSettings();
+      await saveDisplaySettings();
+      await saveWiFiSettings();
+      await saveNetworkSettings();
+      await saveSensorSettings();
+      await saveLoggingSettings();
+      await saveSystemLoggingSettings();
+      await saveSecuritySettings();
+      await saveApiSecuritySettings();
+      await saveMaintenanceSettings();
+      
+      (window as any).showToast?.('All settings saved successfully', 'success');
+    } catch (error) {
+      console.error('Failed to save all settings:', error);
+      (window as any).showToast?.('Failed to save some settings', 'error');
+    }
+  }
+
+  // Generic save function
+  async function saveSetting(category: string, settings: any) {
+    try {
+      const response = await fetch(`/api/settings/${category}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+      
+      if (response.ok) {
+        if (window.adaActions) {
+          window.adaActions.addNotification(`${category.charAt(0).toUpperCase() + category.slice(1)} settings saved`, 'success');
+        }
+      } else {
+        throw new Error(`Failed to save ${category} settings`);
+      }
+    } catch (error) {
+      console.error(`Failed to save ${category} settings:`, error);
+      if (window.adaActions) {
+        window.adaActions.addNotification(`Failed to save ${category} settings`, 'error');
+      }
+    }
+  }
+
+  // Load network status
+  async function loadNetworkStatus() {
+    try {
+      const status = await (window as any).ADA?.get('/api/network/status');
+      const container = document.getElementById('network-status');
+      
+      if (container && status) {
+        container.innerHTML = `
+          <div class="space-y-3">
+            <div class="flex justify-between">
+              <span class="text-gray-600">Status:</span>
+              <span class="font-medium ${status.connected ? 'text-green-600' : 'text-red-600'}">
+                ${status.connected ? 'Connected' : 'Disconnected'}
+              </span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">SSID:</span>
+              <span class="font-medium">${status.ssid || '--'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">IP Address:</span>
+              <span class="font-medium">${status.ipAddress || '--'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Signal Strength:</span>
+              <span class="font-medium">${status.signalStrength ? status.signalStrength + ' dBm' : '--'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">MAC Address:</span>
+              <span class="font-medium">${status.macAddress || '--'}</span>
+            </div>
+          </div>
+        `;
+      }
+    } catch (error) {
+      console.error('Failed to load network status:', error);
+    }
+  }
+
+  // Load log files
+  async function loadLogFiles() {
+    try {
+      const logFiles = await (window as any).ADA?.get('/api/logs/files');
+      const container = document.getElementById('log-files-list');
+      
+      if (container && logFiles) {
+        if (logFiles.length === 0) {
+          container.innerHTML = '<div class="text-center text-gray-500 py-4">No log files found</div>';
+          return;
+        }
+        
+        container.innerHTML = logFiles.map((file: any) => `
+          <div class="flex items-center justify-between p-3 border rounded-lg">
+            <div>
+              <div class="font-medium">${file.name}</div>
+              <div class="text-sm text-gray-500">${file.size} | ${(window as any).ADA?.formatTime(file.modified)}</div>
+            </div>
+            <div class="flex space-x-2">
+              <button onclick="downloadLogFile('${file.name}')" class="text-sm text-indigo-600 hover:text-indigo-800">
+                <i class="fas fa-download mr-1"></i>Download
+              </button>
+              <button onclick="deleteLogFile('${file.name}')" class="text-sm text-red-600 hover:text-red-800">
+                <i class="fas fa-trash mr-1"></i>Delete
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+    } catch (error) {
+      console.error('Failed to load log files:', error);
+    }
+  }
+
+  // Utility functions
+  function getInputValue(id: string): string {
+    const element = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+    return element ? element.value : '';
+  }
+
+  function setInputValue(id: string, value: any): void {
+    const element = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+    if (element && value !== undefined && value !== null) {
+      element.value = value.toString();
+    }
+  }
+
+  function getCheckboxValue(id: string): boolean {
+    const element = document.getElementById(id) as HTMLInputElement;
+    return element ? element.checked : false;
+  }
+
+  function setCheckboxValue(id: string, value: boolean): void {
+    const element = document.getElementById(id) as HTMLInputElement;
+    if (element && value !== undefined && value !== null) {
+      element.checked = value;
+    }
+  }
+
+  // Specific action functions
+  async function scanWiFiNetworks() {
+    try {
+      const networks = await (window as any).ADA?.get('/api/wifi/scan');
+      // Handle scan results - could show in a modal or dropdown
+      (window as any).showToast?.('WiFi scan completed', 'success');
+    } catch (error) {
+      console.error('Failed to scan WiFi networks:', error);
+      (window as any).showToast?.('Failed to scan WiFi networks', 'error');
+    }
+  }
+
+  async function generateApiKey() {
+    try {
+      const response = await (window as any).ADA?.post('/api/security/generate-api-key');
+      if (response && response.apiKey) {
+        setInputValue('api-key', response.apiKey);
+        (window as any).showToast?.('New API key generated', 'success');
+      }
+    } catch (error) {
+      console.error('Failed to generate API key:', error);
+      (window as any).showToast?.('Failed to generate API key', 'error');
+    }
+  }
+
+  async function createBackup() {
+    try {
+      const response = await (window as any).ADA?.post('/api/backup');
+      if (response && response.downloadUrl) {
+        // Trigger download
+        window.open(response.downloadUrl, '_blank');
+        (window as any).showToast?.('Backup created successfully', 'success');
+      }
+    } catch (error) {
+      console.error('Failed to create backup:', error);
+      (window as any).showToast?.('Failed to create backup', 'error');
+    }
+  }
+
+  async function restoreBackup() {
+    const fileInput = document.getElementById('backup-file') as HTMLInputElement;
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+      (window as any).showToast?.('Please select a backup file', 'error');
+      return;
+    }
+
+    if (!confirm('Restoring a backup will overwrite all current settings. Continue?')) {
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('backup', fileInput.files[0]);
+      
+      // Note: This would need special handling for file upload
+      await (window as any).ADA?.postFile('/api/restore', formData);
+      (window as any).showToast?.('Backup restored successfully. System will restart.', 'success');
+    } catch (error) {
+      console.error('Failed to restore backup:', error);
+      (window as any).showToast?.('Failed to restore backup', 'error');
+    }
+  }
+
+  async function factoryReset() {
+    if (!confirm('Are you sure you want to perform a factory reset? This will erase ALL settings and data and cannot be undone.')) {
+      return;
+    }
+
+    if (!confirm('This is your final warning. ALL DATA WILL BE LOST. Continue with factory reset?')) {
+      return;
+    }
+
+    try {
+      await (window as any).ADA?.post('/api/reset');
+      (window as any).showToast?.('Factory reset initiated. Device will restart.', 'success');
+    } catch (error) {
+      console.error('Failed to perform factory reset:', error);
+      (window as any).showToast?.('Failed to perform factory reset', 'error');
+    }
+  }
+
+  async function downloadLogs() {
+    try {
+      const response = await (window as any).ADA?.get('/api/logs/download');
+      if (response && response.downloadUrl) {
+        window.open(response.downloadUrl, '_blank');
+        (window as any).showToast?.('Log download started', 'success');
+      }
+    } catch (error) {
+      console.error('Failed to download logs:', error);
+      (window as any).showToast?.('Failed to download logs', 'error');
+    }
+  }
+
+  async function downloadLogFile(filename: string) {
+    try {
+      window.open(`/api/logs/file/${filename}`, '_blank');
+    } catch (error) {
+      console.error('Failed to download log file:', error);
+      (window as any).showToast?.('Failed to download log file', 'error');
+    }
+  }
+
+  async function deleteLogFile(filename: string) {
+    if (!confirm(`Delete log file ${filename}?`)) return;
+
+    try {
+      await (window as any).ADA?.delete(`/api/logs/file/${filename}`);
+      await loadLogFiles();
+      (window as any).showToast?.('Log file deleted', 'success');
+    } catch (error) {
+      console.error('Failed to delete log file:', error);
+      (window as any).showToast?.('Failed to delete log file', 'error');
+    }
+  }
+
+  async function clearAllLogs() {
+    if (!confirm('Delete all log files? This action cannot be undone.')) return;
+
+    try {
+      await (window as any).ADA?.delete('/api/logs/all');
+      await loadLogFiles();
+      (window as any).showToast?.('All logs cleared', 'success');
+    } catch (error) {
+      console.error('Failed to clear logs:', error);
+      (window as any).showToast?.('Failed to clear logs', 'error');
+    }
+  }
+
+  async function refreshLogFiles() {
+    await loadLogFiles();
+  }
+
+  // Initialize page
+  document.addEventListener('DOMContentLoaded', () => {
+    loadAllSettings();
+    
+    // Auto-refresh network status every 30 seconds
+    setInterval(loadNetworkStatus, 30000);
+  });
+</script>

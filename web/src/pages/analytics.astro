@@ -1,0 +1,722 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout 
+  title="Analytics" 
+  description="Data analysis, trends, and statistical insights"
+  activePage="analytics"
+>
+  <!-- Analytics Controls -->
+  <div class="mb-8 bg-white shadow rounded-lg">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h3 class="text-lg leading-6 font-medium text-gray-900">Analytics Controls</h3>
+    </div>
+    <div class="p-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label for="analytics-sensor" class="block text-sm font-medium text-gray-700">Sensor</label>
+          <select id="analytics-sensor" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            <option value="all">All Sensors</option>
+            <!-- Options populated by JavaScript -->
+          </select>
+        </div>
+        <div>
+          <label for="analytics-timerange" class="block text-sm font-medium text-gray-700">Time Range</label>
+          <select id="analytics-timerange" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            <option value="1h">Last Hour</option>
+            <option value="6h">Last 6 Hours</option>
+            <option value="24h" selected>Last 24 Hours</option>
+            <option value="7d">Last 7 Days</option>
+            <option value="30d">Last 30 Days</option>
+          </select>
+        </div>
+        <div>
+          <label for="analytics-granularity" class="block text-sm font-medium text-gray-700">Granularity</label>
+          <select id="analytics-granularity" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            <option value="1m">1 Minute</option>
+            <option value="5m">5 Minutes</option>
+            <option value="1h" selected>1 Hour</option>
+            <option value="1d">1 Day</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button onclick="updateAnalytics()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+            <i class="fas fa-chart-line mr-2"></i>Update Analytics
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-chart-bar text-2xl text-blue-600"></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Average Value</dt>
+              <dd class="text-lg font-medium text-gray-900" id="stat-average">--</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-arrow-up text-2xl text-green-600"></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Maximum Value</dt>
+              <dd class="text-lg font-medium text-gray-900" id="stat-maximum">--</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-arrow-down text-2xl text-red-600"></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Minimum Value</dt>
+              <dd class="text-lg font-medium text-gray-900" id="stat-minimum">--</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-chart-area text-2xl text-purple-600"></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Standard Deviation</dt>
+              <dd class="text-lg font-medium text-gray-900" id="stat-stddev">--</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Analytics Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Left Column - Charts -->
+    <div class="lg:col-span-2 space-y-8">
+      <!-- Trend Chart -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Trend Analysis</h3>
+            <div class="flex items-center space-x-2">
+              <button onclick="exportChart('trend')" class="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-md">
+                <i class="fas fa-download mr-1"></i> Export
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="p-6">
+          <canvas id="trend-chart" width="800" height="400"></canvas>
+        </div>
+      </div>
+
+      <!-- Distribution Chart -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Value Distribution</h3>
+        </div>
+        <div class="p-6">
+          <canvas id="distribution-chart" width="800" height="300"></canvas>
+        </div>
+      </div>
+
+      <!-- Correlation Matrix -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Sensor Correlation Matrix</h3>
+        </div>
+        <div class="p-6">
+          <div id="correlation-matrix" class="overflow-x-auto">
+            <!-- Matrix will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column - Analytics Details -->
+    <div class="space-y-8">
+      <!-- Statistical Summary -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Statistical Summary</h3>
+        </div>
+        <div class="p-6">
+          <div id="statistical-summary" class="space-y-3">
+            <!-- Summary will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Trend Analysis -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Trend Analysis</h3>
+        </div>
+        <div class="p-6">
+          <div id="trend-analysis" class="space-y-4">
+            <!-- Trend analysis will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Outlier Detection -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Outlier Detection</h3>
+        </div>
+        <div class="p-6">
+          <div id="outlier-detection" class="space-y-3">
+            <!-- Outliers will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Predictions -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Predictions</h3>
+        </div>
+        <div class="p-6">
+          <div id="predictions" class="space-y-3">
+            <!-- Predictions will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Export Options -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Export Data</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-3">
+            <button onclick="exportAnalytics('csv')" class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              <i class="fas fa-file-csv mr-2"></i>
+              Export as CSV
+            </button>
+            <button onclick="exportAnalytics('json')" class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              <i class="fas fa-file-code mr-2"></i>
+              Export as JSON
+            </button>
+            <button onclick="generateReport()" class="w-full flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+              <i class="fas fa-file-pdf mr-2"></i>
+              Generate Report
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</DashboardLayout>
+
+<script is:inline>
+  // Use Chart.js from CDN
+  // Chart and registerables are globally available
+
+  let trendChart = null;
+  let distributionChart = null;
+
+  // Initialize charts
+  function initCharts() {
+    // Trend Chart
+    const trendCanvas = document.getElementById('trend-chart');
+    if (trendCanvas && !trendChart) {
+      trendChart = new Chart(trendCanvas, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: []
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Trend Analysis'
+            },
+            legend: {
+              display: true,
+              position: 'top'
+            }
+          },
+          scales: {
+            x: {
+              type: 'linear',
+              title: {
+                display: true,
+                text: 'Time (hours ago)'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Voltage (V)'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Distribution Chart
+    const distCanvas = document.getElementById('distribution-chart');
+    if (distCanvas && !distributionChart) {
+      distributionChart = new Chart(distCanvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Frequency',
+            data: [],
+            backgroundColor: 'rgba(59, 130, 246, 0.6)',
+            borderColor: 'rgba(59, 130, 246, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Value Range'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Frequency'
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  // Load sensor list for analytics
+  function loadSensorList() {
+    const config = window.adaStore?.config?.value;
+    const select = document.getElementById('analytics-sensor');
+    
+    if (config.data?.sensors && select) {
+      const sensorOptions = config.data.sensors.map(sensor => 
+        `<option value="${sensor.id}">${sensor.name || `Sensor ${sensor.id}`}</option>`
+      ).join('');
+      
+      select.innerHTML = '<option value="all">All Sensors</option>' + sensorOptions;
+    }
+  }
+
+  // Update analytics data and charts
+  async function updateAnalytics() {
+    const sensorId = document.getElementById('analytics-sensor')?.value;
+    const timeRange = document.getElementById('analytics-timerange')?.value;
+    const granularity = document.getElementById('analytics-granularity')?.value;
+    
+    try {
+      // Fetch analytics using store action
+      await window.adaActions.fetchAnalytics({
+        sensor: sensorId || 'all',
+        timeRange: timeRange || '24h',
+        granularity: granularity || '1h'
+      });
+      
+      const analyticsData = window.adaStore?.analytics?.value?.data;
+      
+      // Update statistics cards
+      updateStatistics(analyticsData?.statistics || {});
+      
+      // Update charts
+      updateTrendChart(analyticsData?.trends || []);
+      updateDistributionChart(analyticsData?.distribution || []);
+      
+      // Update detailed analytics
+      updateStatisticalSummary(analyticsData?.summary || {});
+      updateTrendAnalysis(analyticsData?.trendAnalysis || {});
+      updateOutlierDetection(analyticsData?.outliers || []);
+      updatePredictions(analyticsData?.predictions || {});
+      updateCorrelationMatrix(analyticsData?.correlations || []);
+      
+    } catch (error) {
+      console.error('Failed to update analytics:', error);
+      window.showToast('Failed to load analytics data', 'error');
+    }
+  }
+
+  // Update statistics cards
+  function updateStatistics(stats) {
+    document.getElementById('stat-average').textContent = stats.average?.toFixed(3) || '--';
+    document.getElementById('stat-maximum').textContent = stats.maximum?.toFixed(3) || '--';
+    document.getElementById('stat-minimum').textContent = stats.minimum?.toFixed(3) || '--';
+    document.getElementById('stat-stddev').textContent = stats.standardDeviation?.toFixed(3) || '--';
+  }
+
+  // Get color for chart datasets
+  function getColorForIndex(index, alpha = 1) {
+    const colors = [
+      `rgba(59, 130, 246, ${alpha})`,  // Blue
+      `rgba(16, 185, 129, ${alpha})`,  // Green
+      `rgba(245, 158, 11, ${alpha})`,  // Yellow
+      `rgba(239, 68, 68, ${alpha})`,   // Red
+      `rgba(139, 92, 246, ${alpha})`,  // Purple
+      `rgba(236, 72, 153, ${alpha})`,  // Pink
+    ];
+    return colors[index % colors.length];
+  }
+
+  // Update trend chart
+  function updateTrendChart(trends) {
+    if (!trendChart || !trends.length) return;
+    
+    // Group trends by sensor
+    const sensorGroups = {};
+    trends.forEach(point => {
+      if (!sensorGroups[point.sensorId]) {
+        sensorGroups[point.sensorId] = [];
+      }
+      sensorGroups[point.sensorId].push({
+        x: -(Date.now() - point.timestamp * 1000) / (1000 * 60 * 60), // Hours ago
+        y: point.value
+      });
+    });
+    
+    // Update chart datasets
+    trendChart.data.datasets = Object.keys(sensorGroups).map((sensorId, index) => ({
+      label: `Sensor ${sensorId}`,
+      data: sensorGroups[sensorId],
+      borderColor: getColorForIndex(index),
+      backgroundColor: getColorForIndex(index, 0.1),
+      tension: 0.1
+    }));
+    
+    trendChart.update();
+  }
+
+  // Update distribution chart
+  function updateDistributionChart(distribution) {
+    if (!distributionChart || !distribution.length) return;
+    
+    distributionChart.data.labels = distribution.map(d => d.range);
+    distributionChart.data.datasets[0].data = distribution.map(d => d.count);
+    distributionChart.update();
+  }
+
+  // Update statistical summary
+  function updateStatisticalSummary(summary) {
+    const container = document.getElementById('statistical-summary');
+    if (!container) return;
+    
+    const stats = [
+      { label: 'Count', value: summary.count },
+      { label: 'Mean', value: summary.mean?.toFixed(3) },
+      { label: 'Median', value: summary.median?.toFixed(3) },
+      { label: 'Mode', value: summary.mode?.toFixed(3) },
+      { label: 'Variance', value: summary.variance?.toFixed(6) },
+      { label: 'Skewness', value: summary.skewness?.toFixed(3) },
+      { label: 'Kurtosis', value: summary.kurtosis?.toFixed(3) }
+    ];
+    
+    container.innerHTML = stats.map(stat => `
+      <div class="flex justify-between text-sm">
+        <span class="text-gray-600">${stat.label}:</span>
+        <span class="font-medium">${stat.value || '--'}</span>
+      </div>
+    `).join('');
+  }
+
+  // Update trend analysis
+  function updateTrendAnalysis(analysis) {
+    const container = document.getElementById('trend-analysis');
+    if (!container) return;
+    
+    container.innerHTML = `
+      <div class="space-y-3">
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <span class="text-sm font-medium">Overall Trend</span>
+          <span class="px-2 py-1 text-xs font-medium rounded-full ${
+            analysis.direction === 'increasing' ? 'bg-green-100 text-green-800' :
+            analysis.direction === 'decreasing' ? 'bg-red-100 text-red-800' :
+            'bg-gray-100 text-gray-800'
+          }">
+            ${analysis.direction || 'Stable'}
+          </span>
+        </div>
+        <div class="text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-600">Trend Strength:</span>
+            <span class="font-medium">${analysis.strength?.toFixed(2) || '--'}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">R-squared:</span>
+            <span class="font-medium">${analysis.rSquared?.toFixed(3) || '--'}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Slope:</span>
+            <span class="font-medium">${analysis.slope?.toFixed(6) || '--'}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Update outlier detection
+  function updateOutlierDetection(outliers) {
+    const container = document.getElementById('outlier-detection');
+    if (!container) return;
+    
+    if (outliers.length === 0) {
+      container.innerHTML = '<div class="text-sm text-gray-500 text-center">No outliers detected</div>';
+      return;
+    }
+    
+    container.innerHTML = outliers.slice(0, 5).map(outlier => `
+      <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+        <div>
+          <div class="text-sm font-medium">${outlier.sensorName}</div>
+          <div class="text-xs text-gray-500">${format(new Date(outlier.timestamp * 1000), 'HH:mm:ss')}</div>
+        </div>
+        <div class="text-right">
+          <div class="text-sm font-medium">${outlier.value?.toFixed(3)}</div>
+          <div class="text-xs text-gray-500">${outlier.severity} outlier</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Update predictions
+  function updatePredictions(predictions) {
+    const container = document.getElementById('predictions');
+    if (!container) return;
+    
+    container.innerHTML = `
+      <div class="space-y-3">
+        <div class="text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-600">Next Hour Prediction:</span>
+            <span class="font-medium">${predictions.nextHour?.toFixed(3) || '--'}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Confidence:</span>
+            <span class="font-medium">${predictions.confidence ? (predictions.confidence * 100).toFixed(1) + '%' : '--'}</span>
+          </div>
+        </div>
+        <div class="text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-600">Expected Range:</span>
+            <span class="font-medium">
+              ${predictions.expectedMin?.toFixed(3) || '--'} - ${predictions.expectedMax?.toFixed(3) || '--'}
+            </span>
+          </div>
+        </div>
+        <div class="text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-600">Anomaly Probability:</span>
+            <span class="font-medium ${
+              (predictions.anomalyProbability || 0) > 0.7 ? 'text-red-600' :
+              (predictions.anomalyProbability || 0) > 0.3 ? 'text-yellow-600' : 'text-green-600'
+            }">
+              ${predictions.anomalyProbability ? (predictions.anomalyProbability * 100).toFixed(1) + '%' : '--'}
+            </span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Update correlation matrix
+  function updateCorrelationMatrix(correlations) {
+    const container = document.getElementById('correlation-matrix');
+    if (!container || !correlations.length) return;
+    
+    // Create correlation matrix table
+    const sensors = [...new Set(correlations.map(c => c.sensor1))];
+    
+    let matrixHTML = '<table class="min-w-full text-sm"><thead><tr><th class="p-2"></th>';
+    sensors.forEach(sensor => {
+      matrixHTML += `<th class="p-2 text-center">${sensor}</th>`;
+    });
+    matrixHTML += '</tr></thead><tbody>';
+    
+    sensors.forEach(sensor1 => {
+      matrixHTML += `<tr><td class="p-2 font-medium">${sensor1}</td>`;
+      sensors.forEach(sensor2 => {
+        const correlation = correlations.find(c => 
+          (c.sensor1 === sensor1 && c.sensor2 === sensor2) ||
+          (c.sensor1 === sensor2 && c.sensor2 === sensor1)
+        );
+        
+        const value = correlation ? correlation.correlation : (sensor1 === sensor2 ? 1 : 0);
+        const intensity = Math.abs(value);
+        const color = value > 0 ? 'bg-blue-' : 'bg-red-';
+        const colorClass = `${color}${Math.round(intensity * 500)}`;
+        
+        matrixHTML += `<td class="p-2 text-center ${colorClass} text-white">${value.toFixed(2)}</td>`;
+      });
+      matrixHTML += '</tr>';
+    });
+    
+    matrixHTML += '</tbody></table>';
+    container.innerHTML = matrixHTML;
+  }
+
+  // Export functions
+  async function exportChart(chartType) {
+    try {
+      const chart = chartType === 'trend' ? trendChart : distributionChart;
+      const canvas = chart.canvas;
+      const url = canvas.toDataURL();
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${chartType}-chart-${new Date().toISOString().split('T')[0]}.png`;
+      a.click();
+      
+      window.showToast('Chart exported successfully', 'success');
+    } catch (error) {
+      window.showToast('Failed to export chart', 'error');
+    }
+  }
+
+  async function exportAnalytics(format) {
+    try {
+      const analyticsData = window.adaStore?.analytics?.value?.data;
+      
+      if (format === 'csv') {
+        const csv = convertToCSV(analyticsData);
+        downloadFile(csv, `analytics-${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
+      } else {
+        const json = JSON.stringify(analyticsData, null, 2);
+        downloadFile(json, `analytics-${new Date().toISOString().split('T')[0]}.json`, 'application/json');
+      }
+      
+      showToast('Export', 'Analytics data exported successfully', 'success');
+    } catch (error) {
+      showToast('Export', 'Failed to export analytics data', 'error');
+    }
+  }
+
+  async function generateReport() {
+    try {
+      // For now, just show a notification
+      window.showToast('Report generation started', 'success');
+    } catch (error) {
+      window.showToast('Failed to generate report', 'error');
+    }
+  }
+
+  // Utility functions
+  function convertToCSV(data) {
+    if (!data || !Array.isArray(data) || !data.length) return '';
+    
+    const headers = Object.keys(data[0]);
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => headers.map(header => row[header]).join(','))
+    ].join('\n');
+    
+    return csvContent;
+  }
+
+  function downloadFile(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+
+  // Event listeners
+  function setupEventHandlers() {
+    document.getElementById('analytics-sensor')?.addEventListener('change', updateAnalytics);
+    document.getElementById('analytics-timerange')?.addEventListener('change', updateAnalytics);
+    document.getElementById('analytics-granularity')?.addEventListener('change', updateAnalytics);
+
+    // Make export functions globally available
+    window.exportChart = exportChart;
+    window.exportAnalytics = exportAnalytics;
+    window.generateReport = generateReport;
+    window.updateAnalytics = updateAnalytics;
+  }
+
+  // Initialize page
+  document.addEventListener('DOMContentLoaded', () => {
+    // Wait for adaStore to be ready
+    function setupStoreSubscriptions() {
+      if (typeof window.adaStore !== 'undefined') {
+        // Subscribe to store changes
+        window.adaStore.config.subscribe(() => loadSensorList());
+        window.adaStore.analytics.subscribe(() => {
+          const analyticsData = window.adaStore.analytics.value.data;
+          if (analyticsData) {
+            updateStatistics(analyticsData.statistics || {});
+            updateTrendChart(analyticsData.trends || []);
+            updateDistributionChart(analyticsData.distribution || []);
+            updateStatisticalSummary(analyticsData.summary || {});
+            updateTrendAnalysis(analyticsData.trendAnalysis || {});
+            updateOutlierDetection(analyticsData.outliers || []);
+            updatePredictions(analyticsData.predictions || {});
+            updateCorrelationMatrix(analyticsData.correlations || []);
+          }
+        });
+        console.log('Analytics page: adaStore subscriptions established');
+        
+        // Now that store is ready, load initial data
+        loadSensorList();
+        updateAnalytics();
+        
+        // Set up periodic updates
+        setInterval(updateAnalytics, 300000);
+      } else {
+        console.warn('Analytics page: adaStore not available');
+      }
+    }
+    
+    // Listen for store ready event
+    window.addEventListener('ada:store-ready', setupStoreSubscriptions);
+    
+    // Also try immediately in case store is already ready
+    if (typeof window.adaStore !== 'undefined') {
+      setupStoreSubscriptions();
+    }
+    
+    initCharts();
+    setupEventHandlers();
+  });
+
+  // Listen for custom state change events
+  window.addEventListener('ada:state-changed', () => {
+    updateAnalytics();
+  });
+</script>

@@ -1,0 +1,832 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout 
+  title="Diagnostics" 
+  description="System health, diagnostics, and troubleshooting"
+  activePage="diagnostics"
+>
+  <!-- Diagnostics Controls -->
+  <div class="mb-8 bg-white shadow rounded-lg">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h3 class="text-lg leading-6 font-medium text-gray-900">Diagnostics Controls</h3>
+    </div>
+    <div class="p-6">
+      <div class="flex flex-wrap gap-4">
+        <button onclick="runDiagnostics('system')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+          <i class="fas fa-cogs mr-2"></i>System Check
+        </button>
+        <button onclick="runDiagnostics('network')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+          <i class="fas fa-wifi mr-2"></i>Network Check
+        </button>
+        <button onclick="runDiagnostics('storage')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+          <i class="fas fa-hdd mr-2"></i>Storage Check
+        </button>
+        <button onclick="runDiagnostics('sensors')" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+          <i class="fas fa-thermometer-half mr-2"></i>Sensor Check
+        </button>
+        <button onclick="runDiagnostics('all')" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+          <i class="fas fa-search mr-2"></i>Full Diagnostics
+        </button>
+        <button onclick="clearDiagnostics()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+          <i class="fas fa-trash mr-2"></i>Clear Results
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Health Score Overview -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-heartbeat text-2xl text-red-600"></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Overall Health</dt>
+              <dd class="text-lg font-medium text-gray-900" id="health-overall">--</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-cogs text-2xl text-blue-600"></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">System Health</dt>
+              <dd class="text-lg font-medium text-gray-900" id="health-system">--</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-wifi text-2xl text-green-600"></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Network Health</dt>
+              <dd class="text-lg font-medium text-gray-900" id="health-network">--</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-thermometer-half text-2xl text-orange-600"></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Sensor Health</dt>
+              <dd class="text-lg font-medium text-gray-900" id="health-sensors">--</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Diagnostics Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Left Column - Diagnostics Results -->
+    <div class="lg:col-span-2 space-y-8">
+      <!-- System Diagnostics -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">System Diagnostics</h3>
+            <div class="flex items-center space-x-2">
+              <span id="system-status" class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">Unknown</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-6">
+          <div id="system-diagnostics" class="space-y-4">
+            <div class="text-center text-gray-500 py-8">
+              <i class="fas fa-cogs text-4xl mb-4"></i>
+              <p>Click "System Check" to run diagnostics</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Network Diagnostics -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Network Diagnostics</h3>
+            <div class="flex items-center space-x-2">
+              <span id="network-status" class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">Unknown</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-6">
+          <div id="network-diagnostics" class="space-y-4">
+            <div class="text-center text-gray-500 py-8">
+              <i class="fas fa-wifi text-4xl mb-4"></i>
+              <p>Click "Network Check" to run diagnostics</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Storage Diagnostics -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Storage Diagnostics</h3>
+            <div class="flex items-center space-x-2">
+              <span id="storage-status" class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">Unknown</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-6">
+          <div id="storage-diagnostics" class="space-y-4">
+            <div class="text-center text-gray-500 py-8">
+              <i class="fas fa-hdd text-4xl mb-4"></i>
+              <p>Click "Storage Check" to run diagnostics</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sensor Diagnostics -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Sensor Diagnostics</h3>
+            <div class="flex items-center space-x-2">
+              <span id="sensor-status" class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">Unknown</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-6">
+          <div id="sensor-diagnostics" class="space-y-4">
+            <div class="text-center text-gray-500 py-8">
+              <i class="fas fa-thermometer-half text-4xl mb-4"></i>
+              <p>Click "Sensor Check" to run diagnostics</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column - Controls and Info -->
+    <div class="space-y-8">
+      <!-- Quick Actions -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Quick Actions</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-3">
+            <button onclick="performAction('restart')" class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              <i class="fas fa-redo mr-2"></i>
+              Restart System
+            </button>
+            <button onclick="performAction('reset-network')" class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              <i class="fas fa-wifi mr-2"></i>
+              Reset Network
+            </button>
+            <button onclick="performAction('clear-logs')" class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              <i class="fas fa-trash mr-2"></i>
+              Clear System Logs
+            </button>
+            <button onclick="performAction('factory-reset')" class="w-full flex items-center justify-center px-4 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100">
+              <i class="fas fa-exclamation-triangle mr-2"></i>
+              Factory Reset
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Info -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">System Information</h3>
+        </div>
+        <div class="p-6">
+          <div id="system-info" class="space-y-3 text-sm">
+            <!-- System info will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Error Logs -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Recent Errors</h3>
+            <button onclick="refreshErrorLogs()" class="text-sm text-indigo-600 hover:text-indigo-800">
+              <i class="fas fa-sync-alt mr-1"></i>Refresh
+            </button>
+          </div>
+        </div>
+        <div class="p-6">
+          <div id="error-logs" class="space-y-3 max-h-64 overflow-y-auto">
+            <!-- Error logs will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Remote Commands -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Remote Commands</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-4">
+            <div>
+              <label for="remote-command" class="block text-sm font-medium text-gray-700">Command</label>
+              <select id="remote-command" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="">Select Command</option>
+                <option value="reboot">Reboot System</option>
+                <option value="calibrate">Calibrate Sensors</option>
+                <option value="update-config">Update Configuration</option>
+                <option value="sync-time">Sync Time</option>
+                <option value="test-sensors">Test All Sensors</option>
+              </select>
+            </div>
+            <div>
+              <label for="command-params" class="block text-sm font-medium text-gray-700">Parameters (JSON)</label>
+              <textarea id="command-params" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder='{"timeout": 30}'></textarea>
+            </div>
+            <button onclick="executeRemoteCommand()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+              <i class="fas fa-terminal mr-2"></i>Execute Command
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Export Diagnostics -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Export Diagnostics</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-3">
+            <button onclick="exportDiagnostics('json')" class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              <i class="fas fa-file-code mr-2"></i>
+              Export as JSON
+            </button>
+            <button onclick="exportDiagnostics('report')" class="w-full flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+              <i class="fas fa-file-pdf mr-2"></i>
+              Generate Report
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</DashboardLayout>
+
+<script>
+  let diagnosticsData = {};
+  let diagnosticsInterval;
+
+  // Run specific diagnostics
+  async function runDiagnostics(type) {
+    try {
+      // Mock diagnostics for now
+      const mockResponse = {
+        system: {
+          status: 'OK',
+          uptime: '2h 15m',
+          cpu: '23%',
+          memory: '45%',
+          temperature: '65°C'
+        },
+        network: {
+          status: 'Connected',
+          rssi: '-45 dBm',
+          latency: '12ms'
+        },
+        storage: {
+          status: 'Healthy',
+          usage: '15%',
+          available: '1.2GB'
+        }
+      };
+      
+      updateDiagnosticsResults(type, mockResponse);
+      updateHealthScores({ overall: 95, system: 98, network: 92, storage: 96 });
+      window.showToast('Diagnostics completed successfully', 'success');
+    } catch (error) {
+      console.error('Failed to run diagnostics:', error);
+      window.showToast('Failed to run diagnostics', 'error');
+    }
+  }
+
+  // Update diagnostics results
+  function updateDiagnosticsResults(type, data) {
+    diagnosticsData[type] = data;
+    
+    if (type === 'system' || type === 'all') {
+      updateSystemDiagnostics(data.system || data);
+    }
+    if (type === 'network' || type === 'all') {
+      updateNetworkDiagnostics(data.network || data);
+    }
+    if (type === 'storage' || type === 'all') {
+      updateStorageDiagnostics(data.storage || data);
+    }
+    if (type === 'sensors' || type === 'all') {
+      updateSensorDiagnostics(data.sensors || data);
+    }
+  }
+
+  // Update system diagnostics
+  function updateSystemDiagnostics(data) {
+    const container = document.getElementById('system-diagnostics');
+    const status = document.getElementById('system-status');
+    
+    if (!container || !data) return;
+    
+    const checks = data.checks || [];
+    const overallStatus = data.status || 'unknown';
+    
+    // Update status
+    if (status) {
+      status.textContent = overallStatus.charAt(0).toUpperCase() + overallStatus.slice(1);
+      status.className = `px-2 py-1 text-xs font-medium rounded-full ${getStatusClass(overallStatus)}`;
+    }
+    
+    // Update checks
+    container.innerHTML = checks.map((check: any) => `
+      <div class="flex items-center justify-between p-4 border rounded-lg ${getBorderClass(check.status)}">
+        <div class="flex items-center">
+          <i class="fas ${getIconForCheck(check.name)} mr-3 ${getIconColorClass(check.status)}"></i>
+          <div>
+            <div class="font-medium">${check.name}</div>
+            <div class="text-sm text-gray-500">${check.description || ''}</div>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-sm font-medium ${getTextColorClass(check.status)}">${check.status}</div>
+          ${check.value ? `<div class="text-xs text-gray-500">${check.value}</div>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Update network diagnostics
+  function updateNetworkDiagnostics(data) {
+    const container = document.getElementById('network-diagnostics');
+    const status = document.getElementById('network-status');
+    
+    if (!container || !data) return;
+    
+    const checks = data.checks || [];
+    const overallStatus = data.status || 'unknown';
+    
+    // Update status
+    if (status) {
+      status.textContent = overallStatus.charAt(0).toUpperCase() + overallStatus.slice(1);
+      status.className = `px-2 py-1 text-xs font-medium rounded-full ${getStatusClass(overallStatus)}`;
+    }
+    
+    // Update checks
+    container.innerHTML = checks.map((check: any) => `
+      <div class="flex items-center justify-between p-4 border rounded-lg ${getBorderClass(check.status)}">
+        <div class="flex items-center">
+          <i class="fas ${getIconForCheck(check.name)} mr-3 ${getIconColorClass(check.status)}"></i>
+          <div>
+            <div class="font-medium">${check.name}</div>
+            <div class="text-sm text-gray-500">${check.description || ''}</div>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-sm font-medium ${getTextColorClass(check.status)}">${check.status}</div>
+          ${check.value ? `<div class="text-xs text-gray-500">${check.value}</div>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Update storage diagnostics
+  function updateStorageDiagnostics(data) {
+    const container = document.getElementById('storage-diagnostics');
+    const status = document.getElementById('storage-status');
+    
+    if (!container || !data) return;
+    
+    const checks = data.checks || [];
+    const overallStatus = data.status || 'unknown';
+    
+    // Update status
+    if (status) {
+      status.textContent = overallStatus.charAt(0).toUpperCase() + overallStatus.slice(1);
+      status.className = `px-2 py-1 text-xs font-medium rounded-full ${getStatusClass(overallStatus)}`;
+    }
+    
+    // Update checks
+    container.innerHTML = checks.map((check: any) => `
+      <div class="flex items-center justify-between p-4 border rounded-lg ${getBorderClass(check.status)}">
+        <div class="flex items-center">
+          <i class="fas ${getIconForCheck(check.name)} mr-3 ${getIconColorClass(check.status)}"></i>
+          <div>
+            <div class="font-medium">${check.name}</div>
+            <div class="text-sm text-gray-500">${check.description || ''}</div>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-sm font-medium ${getTextColorClass(check.status)}">${check.status}</div>
+          ${check.value ? `<div class="text-xs text-gray-500">${check.value}</div>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Update sensor diagnostics
+  function updateSensorDiagnostics(data) {
+    const container = document.getElementById('sensor-diagnostics');
+    const status = document.getElementById('sensor-status');
+    
+    if (!container || !data) return;
+    
+    const checks = data.checks || [];
+    const overallStatus = data.status || 'unknown';
+    
+    // Update status
+    if (status) {
+      status.textContent = overallStatus.charAt(0).toUpperCase() + overallStatus.slice(1);
+      status.className = `px-2 py-1 text-xs font-medium rounded-full ${getStatusClass(overallStatus)}`;
+    }
+    
+    // Update checks
+    container.innerHTML = checks.map((check: any) => `
+      <div class="flex items-center justify-between p-4 border rounded-lg ${getBorderClass(check.status)}">
+        <div class="flex items-center">
+          <i class="fas ${getIconForCheck(check.name)} mr-3 ${getIconColorClass(check.status)}"></i>
+          <div>
+            <div class="font-medium">${check.name}</div>
+            <div class="text-sm text-gray-500">${check.description || ''}</div>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-sm font-medium ${getTextColorClass(check.status)}">${check.status}</div>
+          ${check.value ? `<div class="text-xs text-gray-500">${check.value}</div>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Update health scores
+  function updateHealthScores(scores) {
+    const elements = {
+      'health-overall': scores.overall,
+      'health-system': scores.system,
+      'health-network': scores.network,
+      'health-sensors': scores.sensors
+    };
+    
+    Object.entries(elements).forEach(([id, score]) => {
+      const element = document.getElementById(id);
+      if (element && score !== undefined) {
+        element.textContent = `${score}/100`;
+        element.className = `text-lg font-medium ${getScoreColorClass(score)}`;
+      }
+    });
+  }
+
+  // Load system information
+  async function loadSystemInfo() {
+    try {
+      console.log('Loading diagnostics system info...');
+      const response = await fetch('/api/diagnostics/system-info');
+      
+      if (response.ok) {
+        const info = await response.json();
+        console.log('Diagnostics system info:', info);
+        
+        const container = document.getElementById('system-info');
+        if (container && info) {
+          container.innerHTML = `
+            <div class="flex justify-between">
+              <span class="text-gray-600">Firmware:</span>
+              <span class="font-medium">${info.firmware || '--'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Uptime:</span>
+              <span class="font-medium">${info.uptime || '--'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Free Memory:</span>
+              <span class="font-medium">${info.freeMemory || '--'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">CPU Usage:</span>
+              <span class="font-medium">${info.cpuUsage || '--'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Temperature:</span>
+              <span class="font-medium">${info.temperature || '--'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">WiFi Signal:</span>
+              <span class="font-medium">${info.wifiSignal || '--'}</span>
+            </div>
+          `;
+        }
+      } else {
+        console.error('Failed to load diagnostics system info, status:', response.status);
+      }
+    } catch (error) {
+      console.error('Failed to load system info:', error);
+      if (window.adaActions) {
+        window.adaActions.addNotification('Failed to load system info', 'error');
+      }
+    }
+  }
+
+  // Load error logs
+  async function refreshErrorLogs() {
+    try {
+      console.log('Loading error logs...');
+      const response = await fetch('/api/diagnostics/error-logs');
+      
+      if (response.ok) {
+        const logs = await response.json();
+        console.log('Error logs:', logs);
+        
+        const container = document.getElementById('error-logs');
+        if (container) {
+          if (!logs || logs.length === 0) {
+            container.innerHTML = '<div class="text-center text-gray-500 py-4">No recent errors</div>';
+            return;
+          }
+          
+          container.innerHTML = logs.slice(0, 10).map((log: any) => `
+            <div class="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div class="flex items-center justify-between">
+                <div class="text-sm font-medium text-red-800">${log.message}</div>
+                <div class="text-xs text-red-600">${window.adaActions?.formatTime ? window.adaActions.formatTime(log.timestamp) : new Date(log.timestamp).toLocaleString()}</div>
+              </div>
+              ${log.details ? `<div class="text-xs text-red-600 mt-1">${log.details}</div>` : ''}
+            </div>
+          `).join('');
+        }
+      } else {
+        console.error('Failed to load error logs, status:', response.status);
+      }
+    } catch (error) {
+      console.error('Failed to load error logs:', error);
+      if (window.adaActions) {
+        window.adaActions.addNotification('Failed to load error logs', 'error');
+      }
+    }
+  }
+
+  // Perform system actions
+  async function performAction(action) {
+    if (action === 'factory-reset') {
+      if (!confirm('Are you sure you want to perform a factory reset? This will erase all settings and data.')) {
+        return;
+      }
+    }
+    
+    try {
+      const response = await fetch('/api/diagnostics/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action })
+      });
+      
+      if (response.ok) {
+        if (window.adaActions) {
+          window.adaActions.addNotification(`${action.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())} initiated`, 'success');
+        }
+      } else {
+        throw new Error('Failed to perform action');
+      }
+    } catch (error) {
+      console.error('Failed to perform action:', error);
+      if (window.adaActions) {
+        window.adaActions.addNotification('Failed to perform action', 'error');
+      }
+    }
+  }
+
+  // Execute remote command
+  async function executeRemoteCommand() {
+    const command = (document.getElementById('remote-command') as HTMLSelectElement)?.value;
+    const paramsText = (document.getElementById('command-params') as HTMLTextAreaElement)?.value;
+    
+    if (!command) {
+      (window as any).showToast?.('Please select a command', 'error');
+      return;
+    }
+    
+    let params = {};
+    if (paramsText.trim()) {
+      try {
+        params = JSON.parse(paramsText);
+      } catch (error) {
+        (window as any).showToast?.('Invalid JSON parameters', 'error');
+        return;
+      }
+    }
+    
+    try {
+      const result = await (window as any).ADA?.post('/api/diagnostics/remote-command', {
+        command,
+        parameters: params
+      });
+      
+      (window as any).showToast?.('Command executed successfully', 'success');
+      console.log('Command result:', result);
+    } catch (error) {
+      console.error('Failed to execute command:', error);
+      (window as any).showToast?.('Failed to execute command', 'error');
+    }
+  }
+
+  // Export diagnostics data
+  async function exportDiagnostics(format) {
+    try {
+      if (format === 'json') {
+        const json = JSON.stringify(diagnosticsData, null, 2);
+        downloadFile(json, `diagnostics-${new Date().toISOString().split('T')[0]}.json`, 'application/json');
+      } else {
+        await (window as any).ADA?.post('/api/diagnostics/generate-report', diagnosticsData);
+        (window as any).showToast?.('Diagnostics report generation started', 'success');
+      }
+    } catch (error) {
+      console.error('Failed to export diagnostics:', error);
+      (window as any).showToast?.('Failed to export diagnostics', 'error');
+    }
+  }
+
+  // Clear diagnostics results
+  function clearDiagnostics() {
+    diagnosticsData = {};
+    
+    // Reset all containers
+    const containers = ['system-diagnostics', 'network-diagnostics', 'storage-diagnostics', 'sensor-diagnostics'];
+    containers.forEach(id => {
+      const container = document.getElementById(id);
+      if (container) {
+        const iconClass = id.includes('system') ? 'fa-cogs' : 
+                         id.includes('network') ? 'fa-wifi' :
+                         id.includes('storage') ? 'fa-hdd' : 'fa-thermometer-half';
+        
+        container.innerHTML = `
+          <div class="text-center text-gray-500 py-8">
+            <i class="fas ${iconClass} text-4xl mb-4"></i>
+            <p>Click "${id.split('-')[0].charAt(0).toUpperCase() + id.split('-')[0].slice(1)} Check" to run diagnostics</p>
+          </div>
+        `;
+      }
+    });
+    
+    // Reset status indicators
+    const statuses = ['system-status', 'network-status', 'storage-status', 'sensor-status'];
+    statuses.forEach(id => {
+      const status = document.getElementById(id);
+      if (status) {
+        status.textContent = 'Unknown';
+        status.className = 'px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800';
+      }
+    });
+    
+    // Reset health scores
+    const healthElements = ['health-overall', 'health-system', 'health-network', 'health-sensors'];
+    healthElements.forEach(id => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.textContent = '--';
+        element.className = 'text-lg font-medium text-gray-900';
+      }
+    });
+  }
+
+  // Utility functions
+  function getStatusClass(status: string) {
+    switch (status.toLowerCase()) {
+      case 'healthy':
+      case 'good':
+      case 'ok':
+        return 'bg-green-100 text-green-800';
+      case 'warning':
+      case 'degraded':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'error':
+      case 'critical':
+      case 'failed':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  }
+
+  function getBorderClass(status: string) {
+    switch (status.toLowerCase()) {
+      case 'healthy':
+      case 'good':
+      case 'ok':
+        return 'border-green-200';
+      case 'warning':
+      case 'degraded':
+        return 'border-yellow-200';
+      case 'error':
+      case 'critical':
+      case 'failed':
+        return 'border-red-200';
+      default:
+        return 'border-gray-200';
+    }
+  }
+
+  function getTextColorClass(status: string) {
+    switch (status.toLowerCase()) {
+      case 'healthy':
+      case 'good':
+      case 'ok':
+        return 'text-green-600';
+      case 'warning':
+      case 'degraded':
+        return 'text-yellow-600';
+      case 'error':
+      case 'critical':
+      case 'failed':
+        return 'text-red-600';
+      default:
+        return 'text-gray-600';
+    }
+  }
+
+  function getIconColorClass(status: string) {
+    switch (status.toLowerCase()) {
+      case 'healthy':
+      case 'good':
+      case 'ok':
+        return 'text-green-500';
+      case 'warning':
+      case 'degraded':
+        return 'text-yellow-500';
+      case 'error':
+      case 'critical':
+      case 'failed':
+        return 'text-red-500';
+      default:
+        return 'text-gray-500';
+    }
+  }
+
+  function getScoreColorClass(score: number) {
+    if (score >= 80) return 'text-green-600';
+    if (score >= 60) return 'text-yellow-600';
+    return 'text-red-600';
+  }
+
+  function getIconForCheck(checkName: string) {
+    const name = checkName.toLowerCase();
+    if (name.includes('memory')) return 'fa-memory';
+    if (name.includes('cpu')) return 'fa-microchip';
+    if (name.includes('temperature')) return 'fa-thermometer-half';
+    if (name.includes('wifi') || name.includes('network')) return 'fa-wifi';
+    if (name.includes('storage') || name.includes('sd')) return 'fa-hdd';
+    if (name.includes('sensor')) return 'fa-thermometer-half';
+    if (name.includes('time')) return 'fa-clock';
+    return 'fa-check-circle';
+  }
+
+  function downloadFile(content: string, filename: string, mimeType: string) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+
+  // Initialize page
+  document.addEventListener('DOMContentLoaded', () => {
+    loadSystemInfo();
+    refreshErrorLogs();
+    
+    // Auto-refresh system info and error logs every 30 seconds
+    setInterval(() => {
+      loadSystemInfo();
+      refreshErrorLogs();
+    }, 30000);
+  });
+</script>

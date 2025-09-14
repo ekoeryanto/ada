@@ -1,0 +1,858 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+---
+
+<DashboardLayout 
+  title="Alarms" 
+  description="Alarm management, configuration, and notifications"
+  activePage="alarms"
+>
+  <!-- Alarm Controls -->
+  <div class="mb-8 bg-white shadow rounded-lg">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg leading-6 font-medium text-gray-900">Alarm Management</h3>
+        <div class="flex items-center space-x-4">
+          <button onclick="createAlarm()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+            <i class="fas fa-plus mr-2"></i>Create Alarm
+          </button>
+          <button onclick="acknowledgeAll()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+            <i class="fas fa-check mr-2"></i>Acknowledge All
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="p-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label for="alarm-filter" class="block text-sm font-medium text-gray-700">Filter by Status</label>
+          <select id="alarm-filter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            <option value="all">All Alarms</option>
+            <option value="active">Active</option>
+            <option value="acknowledged">Acknowledged</option>
+            <option value="resolved">Resolved</option>
+          </select>
+        </div>
+        <div>
+          <label for="severity-filter" class="block text-sm font-medium text-gray-700">Filter by Severity</label>
+          <select id="severity-filter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            <option value="all">All Severities</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <div>
+          <label for="alarm-sensor" class="block text-sm font-medium text-gray-700">Filter by Sensor</label>
+          <select id="alarm-sensor" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            <option value="all">All Sensors</option>
+            <!-- Options populated by JavaScript -->
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button onclick="refreshAlarms()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium">
+            <i class="fas fa-sync-alt mr-2"></i>Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alarm Statistics -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-exclamation-triangle text-2xl text-red-600"></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Active Alarms</dt>
+              <dd class="text-lg font-medium text-gray-900" id="stat-active">0</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-exclamation-circle text-2xl text-orange-600"></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Critical Alarms</dt>
+              <dd class="text-lg font-medium text-gray-900" id="stat-critical">0</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-check-circle text-2xl text-green-600"></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Acknowledged</dt>
+              <dd class="text-lg font-medium text-gray-900" id="stat-acknowledged">0</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="fas fa-history text-2xl text-blue-600"></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Total Today</dt>
+              <dd class="text-lg font-medium text-gray-900" id="stat-today">0</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Left Column - Active Alarms -->
+    <div class="lg:col-span-2 space-y-8">
+      <!-- Active Alarms List -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Active Alarms</h3>
+            <div class="flex items-center space-x-2">
+              <span class="text-sm text-gray-500">Auto-refresh: </span>
+              <input type="checkbox" id="auto-refresh" checked class="rounded">
+            </div>
+          </div>
+        </div>
+        <div class="divide-y divide-gray-200">
+          <div id="active-alarms-list">
+            <!-- Active alarms will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Alarm History -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Alarm History</h3>
+        </div>
+        <div class="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+          <div id="alarm-history-list">
+            <!-- Alarm history will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column - Configuration and Settings -->
+    <div class="space-y-8">
+      <!-- Alarm Configuration -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Alarm Rules</h3>
+        </div>
+        <div class="p-6">
+          <div id="alarm-rules-list" class="space-y-4">
+            <!-- Alarm rules will be populated by JavaScript -->
+          </div>
+          <button onclick="openRuleEditor()" class="mt-4 w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            <i class="fas fa-plus mr-2"></i>
+            Add New Rule
+          </button>
+        </div>
+      </div>
+
+      <!-- Notification Settings -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Notification Settings</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Email Notifications</label>
+              <input type="checkbox" id="email-notifications" class="rounded">
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">SMS Notifications</label>
+              <input type="checkbox" id="sms-notifications" class="rounded">
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Push Notifications</label>
+              <input type="checkbox" id="push-notifications" class="rounded">
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium text-gray-700">Sound Alerts</label>
+              <input type="checkbox" id="sound-alerts" class="rounded">
+            </div>
+          </div>
+          <button onclick="saveNotificationSettings()" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+            Save Settings
+          </button>
+        </div>
+      </div>
+
+      <!-- Escalation Rules -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Escalation Rules</h3>
+        </div>
+        <div class="p-6">
+          <div id="escalation-rules-list" class="space-y-3">
+            <!-- Escalation rules will be populated by JavaScript -->
+          </div>
+          <button onclick="openEscalationEditor()" class="mt-4 w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            <i class="fas fa-plus mr-2"></i>
+            Add Escalation Rule
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Quick Actions</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-3">
+            <button onclick="testAlarmSound()" class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              <i class="fas fa-volume-up mr-2"></i>
+              Test Alarm Sound
+            </button>
+            <button onclick="testNotifications()" class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              <i class="fas fa-bell mr-2"></i>
+              Test Notifications
+            </button>
+            <button onclick="silenceAll()" class="w-full flex items-center justify-center px-4 py-2 border border-yellow-300 text-sm font-medium rounded-md text-yellow-700 bg-yellow-50 hover:bg-yellow-100">
+              <i class="fas fa-bell-slash mr-2"></i>
+              Silence All (1 Hour)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alarm Creation Modal -->
+  <div id="alarm-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg leading-6 font-medium text-gray-900">Create Alarm Rule</h3>
+      </div>
+      <div class="p-6">
+        <form id="alarm-form" class="space-y-4">
+          <div>
+            <label for="rule-name" class="block text-sm font-medium text-gray-700">Rule Name</label>
+            <input type="text" id="rule-name" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+          </div>
+          <div>
+            <label for="rule-sensor" class="block text-sm font-medium text-gray-700">Sensor</label>
+            <select id="rule-sensor" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+              <!-- Options populated by JavaScript -->
+            </select>
+          </div>
+          <div>
+            <label for="rule-condition" class="block text-sm font-medium text-gray-700">Condition</label>
+            <select id="rule-condition" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+              <option value="greater_than">Greater Than</option>
+              <option value="less_than">Less Than</option>
+              <option value="equals">Equals</option>
+              <option value="not_equals">Not Equals</option>
+              <option value="out_of_range">Out of Range</option>
+            </select>
+          </div>
+          <div>
+            <label for="rule-threshold" class="block text-sm font-medium text-gray-700">Threshold Value</label>
+            <input type="number" step="0.001" id="rule-threshold" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+          </div>
+          <div>
+            <label for="rule-severity" class="block text-sm font-medium text-gray-700">Severity</label>
+            <select id="rule-severity" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+          <div>
+            <label for="rule-description" class="block text-sm font-medium text-gray-700">Description</label>
+            <textarea id="rule-description" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-4">
+        <button onclick="closeAlarmModal()" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+          Cancel
+        </button>
+        <button onclick="saveAlarmRule()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium">
+          Save Rule
+        </button>
+      </div>
+    </div>
+  </div>
+</DashboardLayout>
+
+<script>
+  let alarms = [];
+  let alarmRules = [];
+  let escalationRules = [];
+  let alarmInterval: number;
+
+  // Load initial data
+  async function loadAlarmData() {
+    try {
+      // Load active alarms
+      console.log('Loading alarms data...');
+      const alarmsResponse = await fetch('/api/alarms/active');
+      if (alarmsResponse.ok) {
+        alarms = await alarmsResponse.json();
+        console.log('Loaded alarms:', alarms);
+        updateAlarmsList();
+        updateAlarmStats();
+      } else {
+        console.error('Failed to load alarms, status:', alarmsResponse.status);
+      }
+
+      // Load alarm rules
+      const rulesResponse = await fetch('/api/alarms/rules');
+      if (rulesResponse.ok) {
+        alarmRules = await rulesResponse.json();
+        console.log('Loaded alarm rules:', alarmRules);
+        updateAlarmRules();
+      } else {
+        console.error('Failed to load alarm rules, status:', rulesResponse.status);
+      }
+
+      // Load escalation rules
+      const escalationResponse = await fetch('/api/alarms/escalation-rules');
+      if (escalationResponse.ok) {
+        escalationRules = await escalationResponse.json();
+        console.log('Loaded escalation rules:', escalationRules);
+        updateEscalationRules();
+      } else {
+        console.error('Failed to load escalation rules, status:', escalationResponse.status);
+      }
+
+      // Load sensor list for dropdowns
+      await loadSensorList();
+
+      // Load notification settings
+      await loadNotificationSettings();
+
+      // Load alarm history
+      await loadAlarmHistory();
+
+    } catch (error) {
+      console.error('Failed to load alarm data:', error);
+      (window as any).showToast?.('Failed to load alarm data', 'error');
+    }
+  }
+
+  // Load sensor list for dropdowns
+  async function loadSensorList() {
+    try {
+      const config = await (window as any).ADA?.get('/api/sensors/config');
+      const selects = ['alarm-sensor', 'rule-sensor'];
+      
+      if (config && config.sensors) {
+        const sensorOptions = config.sensors.map((sensor: any) => 
+          `<option value="${sensor.id}">${sensor.name || `Sensor ${sensor.id}`}</option>`
+        ).join('');
+        
+        selects.forEach(selectId => {
+          const select = document.getElementById(selectId);
+          if (select) {
+            select.innerHTML = '<option value="all">All Sensors</option>' + sensorOptions;
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load sensor list:', error);
+    }
+  }
+
+  // Update alarms list
+  function updateAlarmsList() {
+    const container = document.getElementById('active-alarms-list');
+    if (!container) return;
+
+    const statusFilter = (document.getElementById('alarm-filter') as HTMLSelectElement)?.value || 'all';
+    const severityFilter = (document.getElementById('severity-filter') as HTMLSelectElement)?.value || 'all';
+    const sensorFilter = (document.getElementById('alarm-sensor') as HTMLSelectElement)?.value || 'all';
+
+    let filteredAlarms = alarms;
+
+    if (statusFilter !== 'all') {
+      filteredAlarms = filteredAlarms.filter(alarm => alarm.status === statusFilter);
+    }
+    if (severityFilter !== 'all') {
+      filteredAlarms = filteredAlarms.filter(alarm => alarm.severity === severityFilter);
+    }
+    if (sensorFilter !== 'all') {
+      filteredAlarms = filteredAlarms.filter(alarm => alarm.sensorId.toString() === sensorFilter);
+    }
+
+    if (filteredAlarms.length === 0) {
+      container.innerHTML = `
+        <div class="p-8 text-center text-gray-500">
+          <i class="fas fa-check-circle text-4xl mb-4"></i>
+          <p>No alarms match the current filters</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = filteredAlarms.map(alarm => `
+      <div class="p-6">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <div class="flex-shrink-0">
+              <i class="fas ${getSeverityIcon(alarm.severity)} text-2xl ${getSeverityColor(alarm.severity)}"></i>
+            </div>
+            <div class="flex-1">
+              <div class="flex items-center space-x-2">
+                <h4 class="text-lg font-medium text-gray-900">${alarm.title}</h4>
+                <span class="px-2 py-1 text-xs font-medium rounded-full ${getSeverityBadgeClass(alarm.severity)}">
+                  ${alarm.severity.charAt(0).toUpperCase() + alarm.severity.slice(1)}
+                </span>
+              </div>
+              <p class="text-sm text-gray-600 mt-1">${alarm.description}</p>
+              <div class="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                <span><i class="fas fa-thermometer-half mr-1"></i>${alarm.sensorName || `Sensor ${alarm.sensorId}`}</span>
+                <span><i class="fas fa-clock mr-1"></i>${(window as any).ADA?.formatTime(alarm.timestamp)}</span>
+                <span><i class="fas fa-chart-line mr-1"></i>Value: ${alarm.value?.toFixed(3)}</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2">
+            ${alarm.status === 'active' ? `
+              <button onclick="acknowledgeAlarm('${alarm.id}')" class="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded-md">
+                <i class="fas fa-check mr-1"></i>Acknowledge
+              </button>
+            ` : ''}
+            <button onclick="resolveAlarm('${alarm.id}')" class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-md">
+              <i class="fas fa-times mr-1"></i>Resolve
+            </button>
+            <button onclick="viewAlarmDetails('${alarm.id}')" class="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-md">
+              <i class="fas fa-info mr-1"></i>Details
+            </button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Update alarm statistics
+  function updateAlarmStats() {
+    const stats = {
+      active: alarms.filter(a => a.status === 'active').length,
+      critical: alarms.filter(a => a.severity === 'critical').length,
+      acknowledged: alarms.filter(a => a.status === 'acknowledged').length,
+      today: alarms.filter(a => {
+        const today = new Date();
+        const alarmDate = new Date(a.timestamp * 1000);
+        return alarmDate.toDateString() === today.toDateString();
+      }).length
+    };
+
+    Object.entries(stats).forEach(([key, value]) => {
+      const element = document.getElementById(`stat-${key}`);
+      if (element) element.textContent = value.toString();
+    });
+  }
+
+  // Update alarm rules list
+  function updateAlarmRules() {
+    const container = document.getElementById('alarm-rules-list');
+    if (!container) return;
+
+    if (alarmRules.length === 0) {
+      container.innerHTML = '<div class="text-center text-gray-500 py-4">No alarm rules configured</div>';
+      return;
+    }
+
+    container.innerHTML = alarmRules.map(rule => `
+      <div class="p-3 border rounded-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-medium">${rule.name}</div>
+            <div class="text-sm text-gray-500">${rule.description}</div>
+            <div class="text-xs text-gray-400">
+              ${rule.sensorName || `Sensor ${rule.sensorId}`} ${rule.condition} ${rule.threshold}
+            </div>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="px-2 py-1 text-xs font-medium rounded-full ${getSeverityBadgeClass(rule.severity)}">
+              ${rule.severity}
+            </span>
+            <button onclick="editRule('${rule.id}')" class="text-gray-400 hover:text-gray-600">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button onclick="deleteRule('${rule.id}')" class="text-gray-400 hover:text-red-600">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Update escalation rules
+  function updateEscalationRules() {
+    const container = document.getElementById('escalation-rules-list');
+    if (!container) return;
+
+    if (escalationRules.length === 0) {
+      container.innerHTML = '<div class="text-center text-gray-500 py-4">No escalation rules configured</div>';
+      return;
+    }
+
+    container.innerHTML = escalationRules.map(rule => `
+      <div class="p-3 border rounded-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-medium">${rule.name}</div>
+            <div class="text-sm text-gray-500">
+              After ${rule.delay} minutes → ${rule.action}
+            </div>
+          </div>
+          <button onclick="deleteEscalationRule('${rule.id}')" class="text-gray-400 hover:text-red-600">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Load alarm history
+  async function loadAlarmHistory() {
+    try {
+      const history = await (window as any).ADA?.get('/api/alarms/history?limit=20');
+      const container = document.getElementById('alarm-history-list');
+      
+      if (container && history) {
+        if (history.length === 0) {
+          container.innerHTML = '<div class="p-8 text-center text-gray-500">No alarm history</div>';
+          return;
+        }
+
+        container.innerHTML = history.map((alarm: any) => `
+          <div class="p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <i class="fas ${getSeverityIcon(alarm.severity)} ${getSeverityColor(alarm.severity)}"></i>
+                <div>
+                  <div class="font-medium">${alarm.title}</div>
+                  <div class="text-sm text-gray-500">${alarm.sensorName || `Sensor ${alarm.sensorId}`}</div>
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-medium">${(window as any).ADA?.formatTime(alarm.timestamp)}</div>
+                <div class="text-xs text-gray-500">${alarm.status}</div>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+    } catch (error) {
+      console.error('Failed to load alarm history:', error);
+    }
+  }
+
+  // Load notification settings
+  async function loadNotificationSettings() {
+    try {
+      const settings = await (window as any).ADA?.get('/api/alarms/notification-settings');
+      
+      if (settings) {
+        const checkboxes = {
+          'email-notifications': settings.email,
+          'sms-notifications': settings.sms,
+          'push-notifications': settings.push,
+          'sound-alerts': settings.sound
+        };
+
+        Object.entries(checkboxes).forEach(([id, value]) => {
+          const checkbox = document.getElementById(id) as HTMLInputElement;
+          if (checkbox) checkbox.checked = value || false;
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load notification settings:', error);
+    }
+  }
+
+  // Alarm actions
+  async function acknowledgeAlarm(alarmId: string) {
+    try {
+      const response = await fetch(`/api/alarms/${alarmId}/acknowledge`, { method: 'POST' });
+      if (response.ok) {
+        await refreshAlarms();
+        if (window.adaActions) {
+          window.adaActions.addNotification('Alarm acknowledged', 'success');
+        }
+      } else {
+        throw new Error('Failed to acknowledge alarm');
+      }
+    } catch (error) {
+      console.error('Failed to acknowledge alarm:', error);
+      if (window.adaActions) {
+        window.adaActions.addNotification('Failed to acknowledge alarm', 'error');
+      }
+    }
+  }
+
+  async function resolveAlarm(alarmId: string) {
+    try {
+      const response = await fetch(`/api/alarms/${alarmId}/resolve`, { method: 'POST' });
+      if (response.ok) {
+        await refreshAlarms();
+        if (window.adaActions) {
+          window.adaActions.addNotification('Alarm resolved', 'success');
+        }
+      } else {
+        throw new Error('Failed to resolve alarm');
+      }
+    } catch (error) {
+      console.error('Failed to resolve alarm:', error);
+      if (window.adaActions) {
+        window.adaActions.addNotification('Failed to resolve alarm', 'error');
+      }
+    }
+  }
+
+  async function acknowledgeAll() {
+    try {
+      const response = await fetch('/api/alarms/acknowledge-all', { method: 'POST' });
+      if (response.ok) {
+        await refreshAlarms();
+        if (window.adaActions) {
+          window.adaActions.addNotification('All alarms acknowledged', 'success');
+        }
+      } else {
+        throw new Error('Failed to acknowledge all alarms');
+      }
+    } catch (error) {
+      console.error('Failed to acknowledge all alarms:', error);
+      if (window.adaActions) {
+        window.adaActions.addNotification('Failed to acknowledge all alarms', 'error');
+      }
+    }
+  }
+
+  async function silenceAll() {
+    try {
+      const response = await fetch('/api/alarms/silence', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ duration: 3600 }) // 1 hour
+      });
+      if (response.ok) {
+        if (window.adaActions) {
+          window.adaActions.addNotification('All alarms silenced for 1 hour', 'success');
+        }
+      } else {
+        throw new Error('Failed to silence alarms');
+      }
+    } catch (error) {
+      console.error('Failed to silence alarms:', error);
+      if (window.adaActions) {
+        window.adaActions.addNotification('Failed to silence alarms', 'error');
+      }
+    }
+  }
+
+  // Modal functions
+  function createAlarm() {
+    document.getElementById('alarm-modal')?.classList.remove('hidden');
+    document.getElementById('alarm-modal')?.classList.add('flex');
+  }
+
+  function closeAlarmModal() {
+    document.getElementById('alarm-modal')?.classList.add('hidden');
+    document.getElementById('alarm-modal')?.classList.remove('flex');
+    
+    // Reset form
+    const form = document.getElementById('alarm-form') as HTMLFormElement;
+    if (form) form.reset();
+  }
+
+  async function saveAlarmRule() {
+    const ruleName = (document.getElementById('rule-name') as HTMLInputElement)?.value;
+    const sensorId = (document.getElementById('rule-sensor') as HTMLSelectElement)?.value;
+    const condition = (document.getElementById('rule-condition') as HTMLSelectElement)?.value;
+    const threshold = parseFloat((document.getElementById('rule-threshold') as HTMLInputElement)?.value);
+    const severity = (document.getElementById('rule-severity') as HTMLSelectElement)?.value;
+    const description = (document.getElementById('rule-description') as HTMLTextAreaElement)?.value;
+
+    if (!ruleName || !sensorId || !condition || isNaN(threshold) || !severity) {
+      if (window.adaActions) {
+        window.adaActions.addNotification('Please fill in all required fields', 'error');
+      }
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/alarms/rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: ruleName,
+          sensorId: parseInt(sensorId),
+          condition,
+          threshold,
+          severity,
+          description
+        })
+      });
+
+      if (response.ok) {
+        closeAlarmModal();
+        await loadAlarmData();
+        if (window.adaActions) {
+          window.adaActions.addNotification('Alarm rule created successfully', 'success');
+        }
+      } else {
+        throw new Error('Failed to create alarm rule');
+      }
+    } catch (error) {
+      console.error('Failed to create alarm rule:', error);
+      if (window.adaActions) {
+        window.adaActions.addNotification('Failed to create alarm rule', 'error');
+      }
+    }
+  }
+
+  async function saveNotificationSettings() {
+    const settings = {
+      email: (document.getElementById('email-notifications') as HTMLInputElement)?.checked,
+      sms: (document.getElementById('sms-notifications') as HTMLInputElement)?.checked,
+      push: (document.getElementById('push-notifications') as HTMLInputElement)?.checked,
+      sound: (document.getElementById('sound-alerts') as HTMLInputElement)?.checked
+    };
+
+    try {
+      const response = await fetch('/api/alarms/notification-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+
+      if (response.ok) {
+        if (window.adaActions) {
+          window.adaActions.addNotification('Notification settings saved', 'success');
+        }
+      } else {
+        throw new Error('Failed to save notification settings');
+      }
+    } catch (error) {
+      console.error('Failed to save notification settings:', error);
+      if (window.adaActions) {
+        window.adaActions.addNotification('Failed to save notification settings', 'error');
+      }
+    }
+  }
+
+  // Test functions
+  async function testAlarmSound() {
+    try {
+      await (window as any).ADA?.post('/api/alarms/test-sound');
+      (window as any).showToast?.('Test alarm sound played', 'success');
+    } catch (error) {
+      console.error('Failed to test alarm sound:', error);
+      (window as any).showToast?.('Failed to test alarm sound', 'error');
+    }
+  }
+
+  async function testNotifications() {
+    try {
+      await (window as any).ADA?.post('/api/alarms/test-notifications');
+      (window as any).showToast?.('Test notifications sent', 'success');
+    } catch (error) {
+      console.error('Failed to test notifications:', error);
+      (window as any).showToast?.('Failed to test notifications', 'error');
+    }
+  }
+
+  // Refresh function
+  async function refreshAlarms() {
+    await loadAlarmData();
+  }
+
+  // Utility functions
+  function getSeverityIcon(severity: string) {
+    switch (severity) {
+      case 'critical': return 'fa-exclamation-triangle';
+      case 'high': return 'fa-exclamation-circle';
+      case 'medium': return 'fa-exclamation';
+      case 'low': return 'fa-info-circle';
+      default: return 'fa-bell';
+    }
+  }
+
+  function getSeverityColor(severity: string) {
+    switch (severity) {
+      case 'critical': return 'text-red-600';
+      case 'high': return 'text-orange-600';
+      case 'medium': return 'text-yellow-600';
+      case 'low': return 'text-blue-600';
+      default: return 'text-gray-600';
+    }
+  }
+
+  function getSeverityBadgeClass(severity: string) {
+    switch (severity) {
+      case 'critical': return 'bg-red-100 text-red-800';
+      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  }
+
+  // Event listeners
+  ['alarm-filter', 'severity-filter', 'alarm-sensor'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', updateAlarmsList);
+  });
+
+  // Initialize page
+  document.addEventListener('DOMContentLoaded', () => {
+    loadAlarmData();
+    
+    // Set up auto-refresh
+    const autoRefreshCheckbox = document.getElementById('auto-refresh') as HTMLInputElement;
+    
+    function setupAutoRefresh() {
+      if (alarmInterval) clearInterval(alarmInterval);
+      
+      if (autoRefreshCheckbox?.checked) {
+        alarmInterval = setInterval(refreshAlarms, 30000); // Refresh every 30 seconds
+      }
+    }
+    
+    autoRefreshCheckbox?.addEventListener('change', setupAutoRefresh);
+    setupAutoRefresh();
+  });
+
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    if (alarmInterval) clearInterval(alarmInterval);
+  });
+</script>

@@ -1,0 +1,371 @@
+---
+// RTU Interface Dashboard Component
+---
+
+<div class="bg-white shadow rounded-lg p-6 mb-6" id="rtu-interfaces-container">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="text-lg font-medium text-gray-900">
+      <i class="fas fa-network-wired mr-2 text-blue-600"></i>
+      Modbus RTU Interfaces
+    </h3>
+    <button 
+      id="refresh-rtu-btn"
+      class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+    >
+      <i class="fas fa-sync-alt mr-1"></i>
+      Refresh
+    </button>
+  </div>
+
+  <!-- RTU Interfaces Grid -->
+  <div id="rtu-interfaces-grid" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+    <!-- RTU interfaces will be loaded here -->
+  </div>
+
+  <!-- Add New RTU Interface -->
+  <div class="mt-6 border-t pt-6">
+    <button 
+      id="add-rtu-interface-btn"
+      class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+    >
+      <i class="fas fa-plus mr-2"></i>
+      Add RTU Interface
+    </button>
+  </div>
+</div>
+
+<!-- RTU Interface Card Template -->
+<template id="rtu-interface-template">
+  <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center">
+        <div class="w-3 h-3 rounded-full mr-2 rtu-status-indicator"></div>
+        <h4 class="text-md font-medium text-gray-900 rtu-name"></h4>
+        <span class="ml-2 text-sm text-gray-500 rtu-id"></span>
+      </div>
+      <div class="flex space-x-2">
+        <button class="rtu-enable-btn text-sm px-2 py-1 rounded">
+          <i class="fas fa-power-off"></i>
+        </button>
+        <button class="rtu-scan-btn text-sm px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+          <i class="fas fa-search"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- RTU Configuration -->
+    <div class="grid grid-cols-2 gap-3 mb-3 text-sm">
+      <div>
+        <span class="text-gray-500">RX Pin:</span>
+        <span class="rtu-rx-pin font-medium"></span>
+      </div>
+      <div>
+        <span class="text-gray-500">TX Pin:</span>
+        <span class="rtu-tx-pin font-medium"></span>
+      </div>
+      <div>
+        <span class="text-gray-500">DE Pin:</span>
+        <span class="rtu-de-pin font-medium"></span>
+      </div>
+      <div>
+        <span class="text-gray-500">Baud Rate:</span>
+        <span class="rtu-baud-rate font-medium"></span>
+      </div>
+    </div>
+
+    <!-- RTU Statistics -->
+    <div class="grid grid-cols-3 gap-3 mb-3 text-sm">
+      <div class="text-center">
+        <div class="rtu-total-devices text-lg font-semibold text-blue-600"></div>
+        <div class="text-gray-500">Total Devices</div>
+      </div>
+      <div class="text-center">
+        <div class="rtu-active-devices text-lg font-semibold text-green-600"></div>
+        <div class="text-gray-500">Active</div>
+      </div>
+      <div class="text-center">
+        <div class="rtu-success-rate text-lg font-semibold text-purple-600"></div>
+        <div class="text-gray-500">Success Rate</div>
+      </div>
+    </div>
+
+    <!-- RTU Devices List -->
+    <div class="rtu-devices-container">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-sm font-medium text-gray-700">Connected Devices</span>
+        <span class="rtu-device-count text-sm text-gray-500"></span>
+      </div>
+      <div class="rtu-devices-list space-y-1 max-h-32 overflow-y-auto">
+        <!-- Devices will be loaded here -->
+      </div>
+    </div>
+  </div>
+</template>
+
+<!-- RTU Device Item Template -->
+<template id="rtu-device-template">
+  <div class="flex items-center justify-between py-1 px-2 bg-white rounded border text-sm">
+    <div class="flex items-center">
+      <div class="w-2 h-2 rounded-full mr-2 device-status-indicator"></div>
+      <span class="device-name font-medium"></span>
+      <span class="ml-2 text-gray-500 device-slave-id"></span>
+    </div>
+    <div class="flex items-center space-x-2">
+      <span class="device-last-comm text-xs text-gray-400"></span>
+      <button class="device-details-btn text-blue-600 hover:text-blue-800">
+        <i class="fas fa-info-circle"></i>
+      </button>
+    </div>
+  </div>
+</template>
+
+<script>
+import EnhancedESP32API from '../lib/enhanced-api';
+
+class RTUInterfacesDashboard {
+  constructor() {
+    this.container = document.getElementById('rtu-interfaces-grid');
+    this.refreshBtn = document.getElementById('refresh-rtu-btn');
+    this.addRTUBtn = document.getElementById('add-rtu-interface-btn');
+    this.template = document.getElementById('rtu-interface-template');
+    this.deviceTemplate = document.getElementById('rtu-device-template');
+    
+    this.init();
+  }
+
+  init() {
+    this.bindEvents();
+    this.loadRTUInterfaces();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+      this.loadRTUInterfaces();
+    }, 30000);
+  }
+
+  bindEvents() {
+    this.refreshBtn?.addEventListener('click', () => {
+      this.loadRTUInterfaces();
+    });
+
+    this.addRTUBtn?.addEventListener('click', () => {
+      this.showAddRTUDialog();
+    });
+
+    // Listen for RTU selection from RTUSelector
+    document.addEventListener('rtuSelected', (event) => {
+      const selectedRTU = event.detail.rtu;
+      console.log('RTU selected:', selectedRTU);
+      this.highlightSelectedRTU(selectedRTU.interfaceId);
+    });
+  }
+
+  async loadRTUInterfaces() {
+    try {
+      this.refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Loading...';
+      
+      const interfaces = await EnhancedESP32API.getRTUInterfaces();
+      this.renderRTUInterfaces(interfaces);
+      
+      this.refreshBtn.innerHTML = '<i class="fas fa-sync-alt mr-1"></i>Refresh';
+    } catch (error) {
+      console.error('Failed to load RTU interfaces:', error);
+      this.showError('Failed to load RTU interfaces');
+      this.refreshBtn.innerHTML = '<i class="fas fa-sync-alt mr-1"></i>Refresh';
+    }
+  }
+
+  renderRTUInterfaces(interfaces) {
+    if (!this.container) return;
+
+    this.container.innerHTML = '';
+
+    if (interfaces.length === 0) {
+      this.container.innerHTML = `
+        <div class="col-span-full text-center py-8 text-gray-500">
+          <i class="fas fa-network-wired text-4xl mb-4"></i>
+          <p>No RTU interfaces configured</p>
+        </div>
+      `;
+      return;
+    }
+
+    interfaces.forEach(rtuInterface => {
+      const card = this.createRTUCard(rtuInterface);
+      this.container.appendChild(card);
+    });
+  }
+
+  createRTUCard(rtuInterface) {
+    const cardElement = this.template.content.cloneNode(true);
+    const card = cardElement.querySelector('div');
+
+    // Add classes and data attributes for selection
+    card.classList.add('rtu-card');
+    card.setAttribute('data-rtu-id', rtuInterface.interfaceId);
+
+    // Set basic info
+    card.querySelector('.rtu-name').textContent = rtuInterface.name;
+    card.querySelector('.rtu-id').textContent = `(ID: ${rtuInterface.interfaceId})`;
+    card.querySelector('.rtu-rx-pin').textContent = rtuInterface.rxPin;
+    card.querySelector('.rtu-tx-pin').textContent = rtuInterface.txPin;
+    card.querySelector('.rtu-de-pin').textContent = rtuInterface.dePin || 'N/A';
+    card.querySelector('.rtu-baud-rate').textContent = rtuInterface.baudRate.toLocaleString();
+
+    // Set status indicator
+    const statusIndicator = card.querySelector('.rtu-status-indicator');
+    const enableBtn = card.querySelector('.rtu-enable-btn');
+    
+    if (rtuInterface.enabled && rtuInterface.initialized) {
+      statusIndicator.className += ' bg-green-500';
+      enableBtn.className += ' bg-red-100 text-red-700 hover:bg-red-200';
+      enableBtn.innerHTML = '<i class="fas fa-power-off"></i>';
+      enableBtn.title = 'Disable Interface';
+    } else {
+      statusIndicator.className += ' bg-red-500';
+      enableBtn.className += ' bg-green-100 text-green-700 hover:bg-green-200';
+      enableBtn.innerHTML = '<i class="fas fa-play"></i>';
+      enableBtn.title = 'Enable Interface';
+    }
+
+    // Set statistics
+    const stats = rtuInterface.stats || {};
+    card.querySelector('.rtu-total-devices').textContent = stats.totalDevices || 0;
+    card.querySelector('.rtu-active-devices').textContent = stats.activeDevices || 0;
+    card.querySelector('.rtu-success-rate').textContent = 
+      stats.networkSuccessRate ? `${Math.round(stats.networkSuccessRate)}%` : '--';
+
+    // Load devices
+    this.loadRTUDevices(card, rtuInterface.interfaceId);
+
+    // Bind events
+    enableBtn.addEventListener('click', () => {
+      this.toggleRTUInterface(rtuInterface.interfaceId, !rtuInterface.enabled);
+    });
+
+    card.querySelector('.rtu-scan-btn').addEventListener('click', () => {
+      this.scanRTUInterface(rtuInterface.interfaceId);
+    });
+
+    return card;
+  }
+
+  async loadRTUDevices(card, interfaceId) {
+    try {
+      const devices = await EnhancedESP32API.getDevicesOnRTU(interfaceId);
+      this.renderRTUDevices(card, devices);
+    } catch (error) {
+      console.error(`Failed to load devices for RTU ${interfaceId}:`, error);
+    }
+  }
+
+  renderRTUDevices(card, devices) {
+    const devicesList = card.querySelector('.rtu-devices-list');
+    const deviceCount = card.querySelector('.rtu-device-count');
+    
+    deviceCount.textContent = `(${devices.length})`;
+    devicesList.innerHTML = '';
+
+    if (devices.length === 0) {
+      devicesList.innerHTML = '<div class="text-sm text-gray-500 py-2">No devices found</div>';
+      return;
+    }
+
+    devices.forEach(device => {
+      const deviceElement = this.createDeviceItem(device);
+      devicesList.appendChild(deviceElement);
+    });
+  }
+
+  createDeviceItem(device) {
+    const deviceElement = this.deviceTemplate.content.cloneNode(true);
+    const item = deviceElement.querySelector('div');
+
+    item.querySelector('.device-name').textContent = device.name;
+    item.querySelector('.device-slave-id').textContent = `ID: ${device.slaveId}`;
+
+    // Status indicator
+    const statusIndicator = item.querySelector('.device-status-indicator');
+    if (device.connected) {
+      statusIndicator.className += ' bg-green-500';
+    } else {
+      statusIndicator.className += ' bg-red-500';
+    }
+
+    // Last communication
+    const lastComm = item.querySelector('.device-last-comm');
+    if (device.lastCommunication) {
+      const lastCommTime = new Date(device.lastCommunication);
+      lastComm.textContent = lastCommTime.toLocaleTimeString();
+    } else {
+      lastComm.textContent = 'Never';
+    }
+
+    // Details button
+    item.querySelector('.device-details-btn').addEventListener('click', () => {
+      this.showDeviceDetails(device);
+    });
+
+    return item;
+  }
+
+  async toggleRTUInterface(interfaceId, enabled) {
+    try {
+      await EnhancedESP32API.enableRTUInterface(interfaceId, enabled);
+      this.loadRTUInterfaces(); // Refresh
+    } catch (error) {
+      console.error('Failed to toggle RTU interface:', error);
+      this.showError('Failed to toggle RTU interface');
+    }
+  }
+
+  async scanRTUInterface(interfaceId) {
+    try {
+      const result = await EnhancedESP32API.scanRTUInterface(interfaceId);
+      this.showSuccess(`Scan completed. Found ${result.devices.length} devices.`);
+      this.loadRTUInterfaces(); // Refresh
+    } catch (error) {
+      console.error('Failed to scan RTU interface:', error);
+      this.showError('Failed to scan RTU interface');
+    }
+  }
+
+  showDeviceDetails(device) {
+    // TODO: Implement device details modal
+    console.log('Show device details:', device);
+  }
+
+  highlightSelectedRTU(interfaceId) {
+    // Remove previous highlights
+    document.querySelectorAll('.rtu-card').forEach(card => {
+      card.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50');
+    });
+
+    // Highlight selected RTU card
+    const selectedCard = document.querySelector(`[data-rtu-id="${interfaceId}"]`);
+    if (selectedCard) {
+      selectedCard.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
+    }
+  }
+
+  showAddRTUDialog() {
+    // TODO: Implement add RTU interface dialog
+    console.log('Show add RTU dialog');
+  }
+
+  showError(message) {
+    // TODO: Implement proper error notification
+    console.error(message);
+  }
+
+  showSuccess(message) {
+    // TODO: Implement proper success notification
+    console.log(message);
+  }
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+  new RTUInterfacesDashboard();
+});
+</script>

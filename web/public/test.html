@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADA System - Test Page</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-success { background-color: #28a745; color: white; }
+        pre { background-color: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>ADA System - Connection Test</h1>
+    
+    <div id="status" class="status warning">
+        Testing connection to ESP32...
+    </div>
+    
+    <div>
+        <button class="btn-primary" onclick="testConnection()">Test Connection</button>
+        <button class="btn-success" onclick="testSensors()">Test Sensors API</button>
+        <button class="btn-success" onclick="testSystem()">Test System API</button>
+    </div>
+    
+    <h3>Response:</h3>
+    <pre id="response">Click a button to test the connection...</pre>
+    
+    <h3>Instructions:</h3>
+    <ol>
+        <li>Make sure your ESP32 is connected and running</li>
+        <li>Update the ESP32 IP in <code>astro.config.mjs</code></li>
+        <li>Run <code>npm run dev</code> from the web folder</li>
+        <li>Test the connection above</li>
+    </ol>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const responseDiv = document.getElementById('response');
+        
+        function updateStatus(message, type) {
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
+        
+        function updateResponse(data) {
+            responseDiv.textContent = JSON.stringify(data, null, 2);
+        }
+        
+        async function testConnection() {
+            updateStatus('Testing connection...', 'warning');
+            
+            try {
+                const response = await fetch('/api/status'); // ESP32 endpoint
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateStatus('✅ Connection successful!', 'success');
+                    updateResponse(data);
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                updateStatus(`❌ Connection failed: ${error.message}`, 'error');
+                updateResponse({ error: error.message });
+            }
+        }
+        
+        async function testSensors() {
+            updateStatus('Testing sensors API...', 'warning');
+            
+            try {
+                const response = await fetch('/api/analog-voltage'); // ESP32 endpoint
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateStatus('✅ Sensors API working!', 'success');
+                    updateResponse(data);
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                updateStatus(`❌ Sensors API failed: ${error.message}`, 'error');
+                updateResponse({ error: error.message });
+            }
+        }
+        
+        async function testSystem() {
+            updateStatus('Testing system API...', 'warning');
+            
+            try {
+                const response = await fetch('/api/diagnostics/status'); // ESP32 endpoint
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateStatus('✅ System API working!', 'success');
+                    updateResponse(data);
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                updateStatus(`❌ System API failed: ${error.message}`, 'error');
+                updateResponse({ error: error.message });
+            }
+        }
+        
+        // Auto-test connection on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(testConnection, 1000);
+        });
+    </script>
+</body>
+</html>

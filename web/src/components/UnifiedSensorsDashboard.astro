@@ -1,0 +1,547 @@
+---
+// Unified Sensors Dashboard Component
+---
+
+<div class="bg-white shadow rounded-lg p-6 mb-6" id="unified-sensors-container">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="text-lg font-medium text-gray-900">
+      <i class="fas fa-tachometer-alt mr-2 text-green-600"></i>
+      Unified Sensor Management
+    </h3>
+    <div class="flex space-x-2">
+      <select id="sensor-type-filter" class="border-gray-300 rounded-md text-sm">
+        <option value="">All Types</option>
+        <option value="digital_input">Digital Input</option>
+        <option value="digital_output">Digital Output</option>
+        <option value="analog_voltage">Analog Voltage</option>
+        <option value="analog_current">Analog Current</option>
+        <option value="modbus_rtu">Modbus RTU</option>
+        <option value="virtual">Virtual</option>
+        <option value="system">System</option>
+      </select>
+      <select id="sensor-group-filter" class="border-gray-300 rounded-md text-sm">
+        <option value="">All Groups</option>
+      </select>
+      <button 
+        id="refresh-sensors-btn"
+        class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+      >
+        <i class="fas fa-sync-alt mr-1"></i>
+        Refresh
+      </button>
+      <button 
+        id="add-sensor-btn"
+        class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+      >
+        <i class="fas fa-plus mr-1"></i>
+        Add Sensor
+      </button>
+    </div>
+  </div>
+
+  <!-- Sensor Statistics -->
+  <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+    <div class="bg-blue-50 rounded-lg p-3 text-center">
+      <div id="total-sensors" class="text-2xl font-bold text-blue-600">--</div>
+      <div class="text-sm text-blue-800">Total Sensors</div>
+    </div>
+    <div class="bg-green-50 rounded-lg p-3 text-center">
+      <div id="active-sensors" class="text-2xl font-bold text-green-600">--</div>
+      <div class="text-sm text-green-800">Active</div>
+    </div>
+    <div class="bg-red-50 rounded-lg p-3 text-center">
+      <div id="offline-sensors" class="text-2xl font-bold text-red-600">--</div>
+      <div class="text-sm text-red-800">Offline</div>
+    </div>
+    <div class="bg-yellow-50 rounded-lg p-3 text-center">
+      <div id="warning-sensors" class="text-2xl font-bold text-yellow-600">--</div>
+      <div class="text-sm text-yellow-800">Warnings</div>
+    </div>
+    <div class="bg-purple-50 rounded-lg p-3 text-center">
+      <div id="success-rate" class="text-2xl font-bold text-purple-600">--</div>
+      <div class="text-sm text-purple-800">Success Rate</div>
+    </div>
+    <div class="bg-indigo-50 rounded-lg p-3 text-center">
+      <div id="total-readings" class="text-2xl font-bold text-indigo-600">--</div>
+      <div class="text-sm text-indigo-800">Total Readings</div>
+    </div>
+  </div>
+
+  <!-- Sensor Types Tabs -->
+  <div class="border-b border-gray-200 mb-6">
+    <nav class="-mb-px flex space-x-8" id="sensor-tabs">
+      <button class="sensor-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm" data-type="">
+        All Sensors
+      </button>
+      <button class="sensor-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm" data-type="digital_input">
+        <i class="fas fa-toggle-on mr-1"></i>Digital Input
+      </button>
+      <button class="sensor-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm" data-type="digital_output">
+        <i class="fas fa-toggle-off mr-1"></i>Digital Output
+      </button>
+      <button class="sensor-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm" data-type="analog_voltage">
+        <i class="fas fa-bolt mr-1"></i>Voltage
+      </button>
+      <button class="sensor-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm" data-type="analog_current">
+        <i class="fas fa-wave-square mr-1"></i>Current
+      </button>
+      <button class="sensor-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm" data-type="modbus_rtu">
+        <i class="fas fa-network-wired mr-1"></i>Modbus
+      </button>
+    </nav>
+  </div>
+
+  <!-- Sensors Grid -->
+  <div id="sensors-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <!-- Sensors will be loaded here -->
+  </div>
+
+  <!-- Bulk Actions -->
+  <div class="mt-6 border-t pt-6">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <span class="text-sm font-medium text-gray-700">Bulk Actions:</span>
+        <button id="enable-all-btn" class="text-sm px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">
+          Enable All
+        </button>
+        <button id="disable-all-btn" class="text-sm px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">
+          Disable All
+        </button>
+        <button id="read-all-btn" class="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+          Read All
+        </button>
+        <button id="calibrate-all-btn" class="text-sm px-3 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200">
+          Calibrate All
+        </button>
+      </div>
+      <div class="text-sm text-gray-500">
+        <span id="selected-count">0</span> sensors selected
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sensor Card Template -->
+<template id="sensor-card-template">
+  <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center">
+        <input type="checkbox" class="sensor-checkbox mr-2">
+        <div class="w-3 h-3 rounded-full mr-2 sensor-status-indicator"></div>
+        <h4 class="text-sm font-medium text-gray-900 sensor-name"></h4>
+      </div>
+      <div class="flex items-center space-x-1">
+        <span class="sensor-type-badge text-xs px-2 py-1 rounded-full"></span>
+        <button class="sensor-menu-btn text-gray-400 hover:text-gray-600">
+          <i class="fas fa-ellipsis-v"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Value Display -->
+    <div class="mb-3">
+      <div class="flex items-center justify-between">
+        <span class="sensor-value text-lg font-semibold"></span>
+        <span class="sensor-unit text-sm text-gray-500"></span>
+      </div>
+      <div class="sensor-string-value text-sm text-gray-600"></div>
+      <div class="sensor-additional-values text-xs text-gray-500 mt-1"></div>
+    </div>
+
+    <!-- Status and Quality -->
+    <div class="grid grid-cols-2 gap-2 mb-3 text-xs">
+      <div>
+        <span class="text-gray-500">Status:</span>
+        <span class="sensor-status-text font-medium"></span>
+      </div>
+      <div>
+        <span class="text-gray-500">Quality:</span>
+        <span class="sensor-quality font-medium"></span>
+      </div>
+    </div>
+
+    <!-- Source Info -->
+    <div class="text-xs text-gray-500 mb-3">
+      <div class="sensor-source-type"></div>
+      <div class="sensor-source-address"></div>
+    </div>
+
+    <!-- Metadata -->
+    <div class="flex items-center justify-between text-xs text-gray-400">
+      <div class="sensor-group"></div>
+      <div class="sensor-last-updated"></div>
+    </div>
+
+    <!-- Actions -->
+    <div class="mt-3 flex items-center justify-between border-t pt-3">
+      <div class="flex space-x-2">
+        <button class="sensor-enable-btn text-xs px-2 py-1 rounded">
+          <i class="fas fa-power-off"></i>
+        </button>
+        <button class="sensor-read-btn text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+          <i class="fas fa-sync"></i>
+        </button>
+        <button class="sensor-calibrate-btn text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200">
+          <i class="fas fa-adjust"></i>
+        </button>
+      </div>
+      <button class="sensor-details-btn text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+        Details
+      </button>
+    </div>
+  </div>
+</template>
+
+<script>
+import EnhancedESP32API from '../lib/enhanced-api';
+
+class UnifiedSensorsDashboard {
+  constructor() {
+    this.container = document.getElementById('sensors-grid');
+    this.template = document.getElementById('sensor-card-template');
+    this.refreshBtn = document.getElementById('refresh-sensors-btn');
+    this.addSensorBtn = document.getElementById('add-sensor-btn');
+    this.typeFilter = document.getElementById('sensor-type-filter');
+    this.groupFilter = document.getElementById('sensor-group-filter');
+    
+    this.sensors = [];
+    this.filteredSensors = [];
+    this.selectedSensors = new Set();
+    
+    this.init();
+  }
+
+  init() {
+    this.bindEvents();
+    this.loadSensors();
+    this.loadStatistics();
+    
+    // Auto-refresh every 10 seconds
+    setInterval(() => {
+      this.loadSensors();
+      this.loadStatistics();
+    }, 10000);
+  }
+
+  bindEvents() {
+    this.refreshBtn?.addEventListener('click', () => {
+      this.loadSensors();
+    });
+
+    this.addSensorBtn?.addEventListener('click', () => {
+      this.showAddSensorDialog();
+    });
+
+    this.typeFilter?.addEventListener('change', () => {
+      this.filterSensors();
+    });
+
+    this.groupFilter?.addEventListener('change', () => {
+      this.filterSensors();
+    });
+
+    // Tab buttons
+    document.querySelectorAll('.sensor-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.setActiveTab(btn.dataset.type);
+      });
+    });
+
+    // Bulk actions
+    document.getElementById('enable-all-btn')?.addEventListener('click', () => {
+      this.bulkEnableSensors(true);
+    });
+
+    document.getElementById('disable-all-btn')?.addEventListener('click', () => {
+      this.bulkEnableSensors(false);
+    });
+
+    document.getElementById('read-all-btn')?.addEventListener('click', () => {
+      this.bulkReadSensors();
+    });
+  }
+
+  async loadSensors() {
+    try {
+      this.refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Loading...';
+      
+      const sensors = await EnhancedESP32API.getUnifiedSensors();
+      this.sensors = sensors;
+      this.filterSensors();
+      this.updateGroupFilter();
+      
+      this.refreshBtn.innerHTML = '<i class="fas fa-sync-alt mr-1"></i>Refresh';
+    } catch (error) {
+      console.error('Failed to load sensors:', error);
+      this.showError('Failed to load sensors');
+      this.refreshBtn.innerHTML = '<i class="fas fa-sync-alt mr-1"></i>Refresh';
+    }
+  }
+
+  async loadStatistics() {
+    try {
+      const stats = await EnhancedESP32API.getUnifiedSensorStats();
+      this.updateStatistics(stats);
+    } catch (error) {
+      console.error('Failed to load statistics:', error);
+    }
+  }
+
+  updateStatistics(stats) {
+    document.getElementById('total-sensors').textContent = stats.totalSensors || 0;
+    document.getElementById('active-sensors').textContent = stats.activeSensors || 0;
+    
+    // Calculate offline sensors
+    const offlineSensors = this.sensors.filter(s => s.status === 'offline').length;
+    document.getElementById('offline-sensors').textContent = offlineSensors;
+    
+    // Calculate warning sensors
+    const warningSensors = this.sensors.filter(s => s.status === 'warning').length;
+    document.getElementById('warning-sensors').textContent = warningSensors;
+    
+    document.getElementById('success-rate').textContent = 
+      stats.successRate ? `${Math.round(stats.successRate)}%` : '--';
+    document.getElementById('total-readings').textContent = 
+      stats.totalReadings ? stats.totalReadings.toLocaleString() : '--';
+  }
+
+  filterSensors() {
+    const typeFilter = this.typeFilter?.value || '';
+    const groupFilter = this.groupFilter?.value || '';
+    
+    this.filteredSensors = this.sensors.filter(sensor => {
+      const typeMatch = !typeFilter || sensor.type === typeFilter;
+      const groupMatch = !groupFilter || sensor.group === groupFilter;
+      return typeMatch && groupMatch;
+    });
+    
+    this.renderSensors();
+  }
+
+  renderSensors() {
+    if (!this.container) return;
+
+    this.container.innerHTML = '';
+
+    if (this.filteredSensors.length === 0) {
+      this.container.innerHTML = `
+        <div class="col-span-full text-center py-8 text-gray-500">
+          <i class="fas fa-search text-4xl mb-4"></i>
+          <p>No sensors found</p>
+        </div>
+      `;
+      return;
+    }
+
+    this.filteredSensors.forEach(sensor => {
+      const card = this.createSensorCard(sensor);
+      this.container.appendChild(card);
+    });
+  }
+
+  createSensorCard(sensor) {
+    const cardElement = this.template.content.cloneNode(true);
+    const card = cardElement.querySelector('div');
+
+    // Basic info
+    card.querySelector('.sensor-name').textContent = sensor.name;
+    card.querySelector('.sensor-value').textContent = 
+      typeof sensor.value === 'number' ? sensor.value.toFixed(2) : sensor.value;
+    card.querySelector('.sensor-unit').textContent = sensor.unit || '';
+    card.querySelector('.sensor-string-value').textContent = sensor.stringValue || '';
+
+    // Additional values
+    const additionalValues = card.querySelector('.sensor-additional-values');
+    if (sensor.additionalValues && Object.keys(sensor.additionalValues).length > 0) {
+      const values = Object.entries(sensor.additionalValues)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join(', ');
+      additionalValues.textContent = values;
+    }
+
+    // Status
+    const statusIndicator = card.querySelector('.sensor-status-indicator');
+    const statusText = card.querySelector('.sensor-status-text');
+    statusText.textContent = sensor.status;
+    
+    const statusColors = {
+      'ok': 'bg-green-500',
+      'warning': 'bg-yellow-500',
+      'error': 'bg-red-500',
+      'offline': 'bg-gray-500',
+      'maintenance': 'bg-blue-500',
+      'calibrating': 'bg-purple-500'
+    };
+    statusIndicator.className += ` ${statusColors[sensor.status] || 'bg-gray-500'}`;
+
+    // Quality
+    card.querySelector('.sensor-quality').textContent = `${sensor.quality || 0}%`;
+
+    // Type badge
+    const typeBadge = card.querySelector('.sensor-type-badge');
+    typeBadge.textContent = sensor.type.replace('_', ' ').toUpperCase();
+    const typeColors = {
+      'digital_input': 'bg-blue-100 text-blue-800',
+      'digital_output': 'bg-purple-100 text-purple-800',
+      'analog_voltage': 'bg-green-100 text-green-800',
+      'analog_current': 'bg-yellow-100 text-yellow-800',
+      'modbus_rtu': 'bg-red-100 text-red-800',
+      'virtual': 'bg-gray-100 text-gray-800',
+      'system': 'bg-indigo-100 text-indigo-800'
+    };
+    typeBadge.className += ` ${typeColors[sensor.type] || 'bg-gray-100 text-gray-800'}`;
+
+    // Source info
+    card.querySelector('.sensor-source-type').textContent = `Source: ${sensor.sourceType}`;
+    card.querySelector('.sensor-source-address').textContent = `Address: ${sensor.sourceAddress}`;
+
+    // Metadata
+    card.querySelector('.sensor-group').textContent = sensor.group || 'default';
+    const lastUpdated = new Date(sensor.timestamp);
+    card.querySelector('.sensor-last-updated').textContent = lastUpdated.toLocaleTimeString();
+
+    // Enable/disable button
+    const enableBtn = card.querySelector('.sensor-enable-btn');
+    // TODO: Get actual enabled status from sensor config
+    enableBtn.className += ' bg-green-100 text-green-700 hover:bg-green-200';
+    enableBtn.title = 'Disable Sensor';
+
+    // Bind events
+    const checkbox = card.querySelector('.sensor-checkbox');
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) {
+        this.selectedSensors.add(sensor.id);
+      } else {
+        this.selectedSensors.delete(sensor.id);
+      }
+      this.updateSelectedCount();
+    });
+
+    enableBtn.addEventListener('click', () => {
+      this.toggleSensor(sensor.id);
+    });
+
+    card.querySelector('.sensor-read-btn').addEventListener('click', () => {
+      this.readSensor(sensor.id);
+    });
+
+    card.querySelector('.sensor-calibrate-btn').addEventListener('click', () => {
+      this.calibrateSensor(sensor.id);
+    });
+
+    card.querySelector('.sensor-details-btn').addEventListener('click', () => {
+      this.showSensorDetails(sensor);
+    });
+
+    return card;
+  }
+
+  updateGroupFilter() {
+    const groups = [...new Set(this.sensors.map(s => s.group).filter(Boolean))];
+    const groupFilter = this.groupFilter;
+    
+    if (groupFilter) {
+      // Keep current selection
+      const currentValue = groupFilter.value;
+      
+      groupFilter.innerHTML = '<option value="">All Groups</option>';
+      groups.forEach(group => {
+        const option = document.createElement('option');
+        option.value = group;
+        option.textContent = group;
+        if (group === currentValue) option.selected = true;
+        groupFilter.appendChild(option);
+      });
+    }
+  }
+
+  setActiveTab(type) {
+    // Update tab styling
+    document.querySelectorAll('.sensor-tab-btn').forEach(btn => {
+      if (btn.dataset.type === type) {
+        btn.className = btn.className.replace('border-transparent text-gray-500', 'border-blue-500 text-blue-600');
+      } else {
+        btn.className = btn.className.replace('border-blue-500 text-blue-600', 'border-transparent text-gray-500');
+      }
+    });
+
+    // Update filter
+    this.typeFilter.value = type;
+    this.filterSensors();
+  }
+
+  updateSelectedCount() {
+    const countElement = document.getElementById('selected-count');
+    if (countElement) {
+      countElement.textContent = this.selectedSensors.size;
+    }
+  }
+
+  async toggleSensor(sensorId) {
+    try {
+      // TODO: Get current status and toggle
+      await EnhancedESP32API.enableUnifiedSensor(sensorId, false);
+      this.loadSensors(); // Refresh
+    } catch (error) {
+      console.error('Failed to toggle sensor:', error);
+      this.showError('Failed to toggle sensor');
+    }
+  }
+
+  async readSensor(sensorId) {
+    try {
+      await EnhancedESP32API.readUnifiedSensor(sensorId);
+      this.loadSensors(); // Refresh
+    } catch (error) {
+      console.error('Failed to read sensor:', error);
+      this.showError('Failed to read sensor');
+    }
+  }
+
+  async calibrateSensor(sensorId) {
+    // TODO: Show calibration dialog
+    console.log('Calibrate sensor:', sensorId);
+  }
+
+  async bulkEnableSensors(enabled) {
+    try {
+      await EnhancedESP32API.enableAllSensors(enabled);
+      this.loadSensors(); // Refresh
+    } catch (error) {
+      console.error('Failed to bulk enable sensors:', error);
+      this.showError('Failed to bulk enable sensors');
+    }
+  }
+
+  async bulkReadSensors() {
+    try {
+      await EnhancedESP32API.readAllSensors();
+      this.loadSensors(); // Refresh
+    } catch (error) {
+      console.error('Failed to bulk read sensors:', error);
+      this.showError('Failed to bulk read sensors');
+    }
+  }
+
+  showSensorDetails(sensor) {
+    // TODO: Implement sensor details modal
+    console.log('Show sensor details:', sensor);
+  }
+
+  showAddSensorDialog() {
+    // TODO: Implement add sensor dialog
+    console.log('Show add sensor dialog');
+  }
+
+  showError(message) {
+    // TODO: Implement proper error notification
+    console.error(message);
+  }
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+  new UnifiedSensorsDashboard();
+});
+</script>

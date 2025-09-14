@@ -1,0 +1,827 @@
+---
+// Alarm Management Interface Component
+---
+
+<div class="bg-white shadow rounded-lg p-6 mb-6" id="alarm-management-container">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="text-lg font-medium text-gray-900">
+      <i class="fas fa-exclamation-triangle mr-2 text-orange-600"></i>
+      Alarm Management
+    </h3>
+    <div class="flex space-x-2">
+      <select id="alarm-severity-filter" class="border-gray-300 rounded-md text-sm">
+        <option value="">All Severities</option>
+        <option value="critical">Critical</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+        <option value="info">Info</option>
+      </select>
+      <select id="alarm-status-filter" class="border-gray-300 rounded-md text-sm">
+        <option value="">All Status</option>
+        <option value="active">Active</option>
+        <option value="acknowledged">Acknowledged</option>
+        <option value="resolved">Resolved</option>
+      </select>
+      <button 
+        id="refresh-alarms-btn"
+        class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700"
+      >
+        <i class="fas fa-sync-alt mr-1"></i>
+        Refresh
+      </button>
+      <button 
+        id="create-alarm-btn"
+        class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+      >
+        <i class="fas fa-plus mr-1"></i>
+        Create Rule
+      </button>
+    </div>
+  </div>
+
+  <!-- Alarm Statistics -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+    <div class="bg-red-50 rounded-lg p-3 text-center">
+      <div id="critical-alarms" class="text-2xl font-bold text-red-600">--</div>
+      <div class="text-sm text-red-800">Critical</div>
+    </div>
+    <div class="bg-orange-50 rounded-lg p-3 text-center">
+      <div id="high-alarms" class="text-2xl font-bold text-orange-600">--</div>
+      <div class="text-sm text-orange-800">High</div>
+    </div>
+    <div class="bg-yellow-50 rounded-lg p-3 text-center">
+      <div id="medium-alarms" class="text-2xl font-bold text-yellow-600">--</div>
+      <div class="text-sm text-yellow-800">Medium</div>
+    </div>
+    <div class="bg-blue-50 rounded-lg p-3 text-center">
+      <div id="active-alarms" class="text-2xl font-bold text-blue-600">--</div>
+      <div class="text-sm text-blue-800">Active</div>
+    </div>
+    <div class="bg-green-50 rounded-lg p-3 text-center">
+      <div id="resolved-alarms" class="text-2xl font-bold text-green-600">--</div>
+      <div class="text-sm text-green-800">Resolved (24h)</div>
+    </div>
+  </div>
+
+  <!-- Alarm Tabs -->
+  <div class="border-b border-gray-200 mb-6">
+    <nav class="-mb-px flex space-x-8" id="alarm-tabs">
+      <button class="alarm-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm active" data-tab="active">
+        <i class="fas fa-exclamation-circle mr-1"></i>Active Alarms
+      </button>
+      <button class="alarm-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm" data-tab="history">
+        <i class="fas fa-history mr-1"></i>Alarm History
+      </button>
+      <button class="alarm-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm" data-tab="rules">
+        <i class="fas fa-cogs mr-1"></i>Alarm Rules
+      </button>
+    </nav>
+  </div>
+
+  <!-- Active Alarms Tab -->
+  <div id="active-alarms-tab" class="alarm-tab-content">
+    <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+      <table class="min-w-full divide-y divide-gray-300">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <input type="checkbox" id="select-all-alarms" class="rounded">
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Severity
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Source
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Message
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Time
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Status
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody id="active-alarms-table" class="bg-white divide-y divide-gray-200">
+          <!-- Active alarms will be loaded here -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Alarm History Tab -->
+  <div id="alarm-history-tab" class="alarm-tab-content hidden">
+    <div class="mb-4 flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <label class="text-sm font-medium text-gray-700">Date Range:</label>
+        <input type="date" id="history-start-date" class="border-gray-300 rounded-md text-sm">
+        <span class="text-gray-500">to</span>
+        <input type="date" id="history-end-date" class="border-gray-300 rounded-md text-sm">
+        <button id="load-history-btn" class="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+          Load
+        </button>
+      </div>
+      <button id="export-history-btn" class="px-3 py-2 bg-green-100 text-green-700 rounded hover:bg-green-200">
+        <i class="fas fa-download mr-1"></i>Export
+      </button>
+    </div>
+    
+    <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+      <table class="min-w-full divide-y divide-gray-300">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Severity
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Source
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Message
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Start Time
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              End Time
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Duration
+            </th>
+          </tr>
+        </thead>
+        <tbody id="alarm-history-table" class="bg-white divide-y divide-gray-200">
+          <!-- Alarm history will be loaded here -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Alarm Rules Tab -->
+  <div id="alarm-rules-tab" class="alarm-tab-content hidden">
+    <div class="mb-4 flex justify-between items-center">
+      <h4 class="text-lg font-medium">Alarm Rules Configuration</h4>
+      <button id="add-rule-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+        <i class="fas fa-plus mr-1"></i>Add Rule
+      </button>
+    </div>
+    
+    <div id="alarm-rules-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <!-- Alarm rules will be loaded here -->
+    </div>
+  </div>
+
+  <!-- Bulk Actions for Active Alarms -->
+  <div class="mt-6 border-t pt-6" id="bulk-alarm-actions">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <span class="text-sm font-medium text-gray-700">Bulk Actions:</span>
+        <button id="acknowledge-all-btn" class="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+          Acknowledge All
+        </button>
+        <button id="resolve-all-btn" class="text-sm px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">
+          Resolve All
+        </button>
+        <button id="mute-all-btn" class="text-sm px-3 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200">
+          Mute All
+        </button>
+      </div>
+      <div class="text-sm text-gray-500">
+        <span id="selected-alarms-count">0</span> alarms selected
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Alarm Rule Card Template -->
+<template id="alarm-rule-template">
+  <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center">
+        <div class="w-3 h-3 rounded-full mr-2 rule-status-indicator"></div>
+        <h5 class="text-sm font-medium text-gray-900 rule-name"></h5>
+      </div>
+      <div class="flex items-center space-x-1">
+        <span class="rule-severity-badge text-xs px-2 py-1 rounded-full"></span>
+        <button class="rule-menu-btn text-gray-400 hover:text-gray-600">
+          <i class="fas fa-ellipsis-v"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <div class="text-sm text-gray-600 rule-description"></div>
+      <div class="text-xs text-gray-500 mt-1">
+        <span class="rule-sensor-type"></span> | <span class="rule-condition"></span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2 mb-3 text-xs">
+      <div>
+        <span class="text-gray-500">Threshold:</span>
+        <span class="rule-threshold font-medium"></span>
+      </div>
+      <div>
+        <span class="text-gray-500">Triggers:</span>
+        <span class="rule-trigger-count font-medium"></span>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between mt-3 pt-3 border-t">
+      <div class="flex space-x-2">
+        <button class="rule-enable-btn text-xs px-2 py-1 rounded">
+          <i class="fas fa-power-off"></i>
+        </button>
+        <button class="rule-test-btn text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200">
+          Test
+        </button>
+      </div>
+      <button class="rule-edit-btn text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+        Edit
+      </button>
+    </div>
+  </div>
+</template>
+
+<script>
+import EnhancedESP32API from '../lib/enhanced-api';
+
+class AlarmManagement {
+  constructor() {
+    this.activeTab = 'active';
+    this.alarms = [];
+    this.alarmHistory = [];
+    this.alarmRules = [];
+    this.selectedAlarms = new Set();
+    
+    this.init();
+  }
+
+  init() {
+    this.bindEvents();
+    this.loadAlarms();
+    this.loadAlarmStatistics();
+    this.loadAlarmRules();
+    
+    // Auto-refresh every 5 seconds for active alarms
+    setInterval(() => {
+      if (this.activeTab === 'active') {
+        this.loadAlarms();
+        this.loadAlarmStatistics();
+      }
+    }, 5000);
+  }
+
+  bindEvents() {
+    // Tab switching
+    document.querySelectorAll('.alarm-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.switchTab(btn.dataset.tab);
+      });
+    });
+
+    // Refresh button
+    document.getElementById('refresh-alarms-btn')?.addEventListener('click', () => {
+      this.loadAlarms();
+    });
+
+    // Filters
+    document.getElementById('alarm-severity-filter')?.addEventListener('change', () => {
+      this.filterAlarms();
+    });
+
+    document.getElementById('alarm-status-filter')?.addEventListener('change', () => {
+      this.filterAlarms();
+    });
+
+    // Bulk actions
+    document.getElementById('acknowledge-all-btn')?.addEventListener('click', () => {
+      this.bulkAcknowledgeAlarms();
+    });
+
+    document.getElementById('resolve-all-btn')?.addEventListener('click', () => {
+      this.bulkResolveAlarms();
+    });
+
+    document.getElementById('mute-all-btn')?.addEventListener('click', () => {
+      this.bulkMuteAlarms();
+    });
+
+    // Select all checkbox
+    document.getElementById('select-all-alarms')?.addEventListener('change', (e) => {
+      this.selectAllAlarms(e.target.checked);
+    });
+
+    // Create alarm rule button
+    document.getElementById('create-alarm-btn')?.addEventListener('click', () => {
+      this.showCreateAlarmDialog();
+    });
+
+    // Add rule button
+    document.getElementById('add-rule-btn')?.addEventListener('click', () => {
+      this.showAddRuleDialog();
+    });
+
+    // History controls
+    document.getElementById('load-history-btn')?.addEventListener('click', () => {
+      this.loadAlarmHistory();
+    });
+
+    document.getElementById('export-history-btn')?.addEventListener('click', () => {
+      this.exportAlarmHistory();
+    });
+  }
+
+  async loadAlarms() {
+    try {
+      const refreshBtn = document.getElementById('refresh-alarms-btn');
+      refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Loading...';
+      
+      const alarms = await EnhancedESP32API.getAlarms();
+      this.alarms = alarms;
+      this.renderActiveAlarms();
+      
+      refreshBtn.innerHTML = '<i class="fas fa-sync-alt mr-1"></i>Refresh';
+    } catch (error) {
+      console.error('Failed to load alarms:', error);
+      this.showError('Failed to load alarms');
+    }
+  }
+
+  async loadAlarmStatistics() {
+    try {
+      const stats = await EnhancedESP32API.getAlarmStatistics();
+      this.updateAlarmStatistics(stats);
+    } catch (error) {
+      console.error('Failed to load alarm statistics:', error);
+    }
+  }
+
+  async loadAlarmRules() {
+    try {
+      const rules = await EnhancedESP32API.getAlarmRules();
+      this.alarmRules = rules;
+      this.renderAlarmRules();
+    } catch (error) {
+      console.error('Failed to load alarm rules:', error);
+    }
+  }
+
+  async loadAlarmHistory() {
+    try {
+      const startDate = document.getElementById('history-start-date')?.value;
+      const endDate = document.getElementById('history-end-date')?.value;
+      
+      const history = await EnhancedESP32API.getAlarmHistory(startDate, endDate);
+      this.alarmHistory = history;
+      this.renderAlarmHistory();
+    } catch (error) {
+      console.error('Failed to load alarm history:', error);
+      this.showError('Failed to load alarm history');
+    }
+  }
+
+  updateAlarmStatistics(stats) {
+    const criticalCount = this.alarms.filter(a => a.severity === 'critical' && a.status === 'active').length;
+    const highCount = this.alarms.filter(a => a.severity === 'high' && a.status === 'active').length;
+    const mediumCount = this.alarms.filter(a => a.severity === 'medium' && a.status === 'active').length;
+    const activeCount = this.alarms.filter(a => a.status === 'active').length;
+
+    document.getElementById('critical-alarms').textContent = criticalCount;
+    document.getElementById('high-alarms').textContent = highCount;
+    document.getElementById('medium-alarms').textContent = mediumCount;
+    document.getElementById('active-alarms').textContent = activeCount;
+    document.getElementById('resolved-alarms').textContent = stats.resolvedLast24h || 0;
+  }
+
+  renderActiveAlarms() {
+    const tbody = document.getElementById('active-alarms-table');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    const activeAlarms = this.alarms.filter(alarm => 
+      alarm.status === 'active' || alarm.status === 'acknowledged'
+    );
+
+    if (activeAlarms.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+            <i class="fas fa-check-circle text-green-500 text-2xl mb-2"></i>
+            <p>No active alarms</p>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    activeAlarms.forEach(alarm => {
+      const row = this.createAlarmRow(alarm);
+      tbody.appendChild(row);
+    });
+  }
+
+  createAlarmRow(alarm) {
+    const row = document.createElement('tr');
+    row.className = 'hover:bg-gray-50';
+    
+    const severityColors = {
+      'critical': 'bg-red-500',
+      'high': 'bg-orange-500',
+      'medium': 'bg-yellow-500',
+      'low': 'bg-blue-500',
+      'info': 'bg-gray-500'
+    };
+
+    const statusColors = {
+      'active': 'bg-red-100 text-red-800',
+      'acknowledged': 'bg-yellow-100 text-yellow-800',
+      'resolved': 'bg-green-100 text-green-800'
+    };
+
+    row.innerHTML = `
+      <td class="px-6 py-4 whitespace-nowrap">
+        <input type="checkbox" class="alarm-checkbox rounded" data-alarm-id="${alarm.id}">
+      </td>
+      <td class="px-6 py-4 whitespace-nowrap">
+        <div class="flex items-center">
+          <div class="w-2 h-2 rounded-full mr-2 ${severityColors[alarm.severity]}"></div>
+          <span class="text-sm font-medium text-gray-900 capitalize">${alarm.severity}</span>
+        </div>
+      </td>
+      <td class="px-6 py-4 whitespace-nowrap">
+        <div class="text-sm text-gray-900">${alarm.source}</div>
+        <div class="text-sm text-gray-500">${alarm.sensorType || ''}</div>
+      </td>
+      <td class="px-6 py-4">
+        <div class="text-sm text-gray-900">${alarm.message}</div>
+        <div class="text-sm text-gray-500">Value: ${alarm.currentValue} ${alarm.unit || ''}</div>
+      </td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        ${new Date(alarm.timestamp).toLocaleString()}
+      </td>
+      <td class="px-6 py-4 whitespace-nowrap">
+        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusColors[alarm.status]}">
+          ${alarm.status}
+        </span>
+      </td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+        <div class="flex space-x-2">
+          ${alarm.status === 'active' ? `
+            <button class="text-blue-600 hover:text-blue-900" onclick="alarmManager.acknowledgeAlarm('${alarm.id}')">
+              Acknowledge
+            </button>
+          ` : ''}
+          <button class="text-green-600 hover:text-green-900" onclick="alarmManager.resolveAlarm('${alarm.id}')">
+            Resolve
+          </button>
+          <button class="text-gray-600 hover:text-gray-900" onclick="alarmManager.showAlarmDetails('${alarm.id}')">
+            Details
+          </button>
+        </div>
+      </td>
+    `;
+
+    // Bind checkbox event
+    const checkbox = row.querySelector('.alarm-checkbox');
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) {
+        this.selectedAlarms.add(alarm.id);
+      } else {
+        this.selectedAlarms.delete(alarm.id);
+      }
+      this.updateSelectedAlarmsCount();
+    });
+
+    return row;
+  }
+
+  renderAlarmHistory() {
+    const tbody = document.getElementById('alarm-history-table');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    if (this.alarmHistory.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+            No alarm history found for the selected date range
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    this.alarmHistory.forEach(alarm => {
+      const row = document.createElement('tr');
+      row.className = 'hover:bg-gray-50';
+      
+      const duration = alarm.endTime ? 
+        this.formatDuration(new Date(alarm.endTime) - new Date(alarm.startTime)) : 
+        'Ongoing';
+
+      row.innerHTML = `
+        <td class="px-6 py-4 whitespace-nowrap">
+          <span class="text-sm font-medium text-gray-900 capitalize">${alarm.severity}</span>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap">
+          <div class="text-sm text-gray-900">${alarm.source}</div>
+        </td>
+        <td class="px-6 py-4">
+          <div class="text-sm text-gray-900">${alarm.message}</div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+          ${new Date(alarm.startTime).toLocaleString()}
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+          ${alarm.endTime ? new Date(alarm.endTime).toLocaleString() : '--'}
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+          ${duration}
+        </td>
+      `;
+
+      tbody.appendChild(row);
+    });
+  }
+
+  renderAlarmRules() {
+    const grid = document.getElementById('alarm-rules-grid');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+
+    if (this.alarmRules.length === 0) {
+      grid.innerHTML = `
+        <div class="col-span-full text-center py-8 text-gray-500">
+          <i class="fas fa-cogs text-4xl mb-4"></i>
+          <p>No alarm rules configured</p>
+          <button class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" onclick="alarmManager.showAddRuleDialog()">
+            Create First Rule
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    this.alarmRules.forEach(rule => {
+      const card = this.createAlarmRuleCard(rule);
+      grid.appendChild(card);
+    });
+  }
+
+  createAlarmRuleCard(rule) {
+    const template = document.getElementById('alarm-rule-template');
+    const cardElement = template.content.cloneNode(true);
+    const card = cardElement.querySelector('div');
+
+    // Basic info
+    card.querySelector('.rule-name').textContent = rule.name;
+    card.querySelector('.rule-description').textContent = rule.description;
+    card.querySelector('.rule-sensor-type').textContent = rule.sensorType;
+    card.querySelector('.rule-condition').textContent = `${rule.operator} ${rule.threshold}`;
+    card.querySelector('.rule-threshold').textContent = `${rule.threshold} ${rule.unit || ''}`;
+    card.querySelector('.rule-trigger-count').textContent = rule.triggerCount || 0;
+
+    // Status indicator
+    const statusIndicator = card.querySelector('.rule-status-indicator');
+    statusIndicator.className += rule.enabled ? ' bg-green-500' : ' bg-gray-500';
+
+    // Severity badge
+    const severityBadge = card.querySelector('.rule-severity-badge');
+    severityBadge.textContent = rule.severity.toUpperCase();
+    const severityColors = {
+      'critical': 'bg-red-100 text-red-800',
+      'high': 'bg-orange-100 text-orange-800',
+      'medium': 'bg-yellow-100 text-yellow-800',
+      'low': 'bg-blue-100 text-blue-800',
+      'info': 'bg-gray-100 text-gray-800'
+    };
+    severityBadge.className += ` ${severityColors[rule.severity]}`;
+
+    // Enable/disable button
+    const enableBtn = card.querySelector('.rule-enable-btn');
+    enableBtn.className += rule.enabled ? 
+      ' bg-green-100 text-green-700 hover:bg-green-200' : 
+      ' bg-red-100 text-red-700 hover:bg-red-200';
+    enableBtn.title = rule.enabled ? 'Disable Rule' : 'Enable Rule';
+
+    // Bind events
+    enableBtn.addEventListener('click', () => {
+      this.toggleAlarmRule(rule.id);
+    });
+
+    card.querySelector('.rule-test-btn').addEventListener('click', () => {
+      this.testAlarmRule(rule.id);
+    });
+
+    card.querySelector('.rule-edit-btn').addEventListener('click', () => {
+      this.editAlarmRule(rule.id);
+    });
+
+    return card;
+  }
+
+  switchTab(tabName) {
+    this.activeTab = tabName;
+
+    // Update tab styling
+    document.querySelectorAll('.alarm-tab-btn').forEach(btn => {
+      if (btn.dataset.tab === tabName) {
+        btn.className = btn.className.replace('border-transparent text-gray-500', 'border-orange-500 text-orange-600');
+      } else {
+        btn.className = btn.className.replace('border-orange-500 text-orange-600', 'border-transparent text-gray-500');
+      }
+    });
+
+    // Show/hide tab content
+    document.querySelectorAll('.alarm-tab-content').forEach(content => {
+      content.classList.add('hidden');
+    });
+    
+    const activeTabContent = document.getElementById(`${tabName}-alarms-tab`) || 
+                             document.getElementById(`alarm-${tabName}-tab`);
+    if (activeTabContent) {
+      activeTabContent.classList.remove('hidden');
+    }
+
+    // Load data for the active tab
+    if (tabName === 'history') {
+      this.setDefaultHistoryDates();
+    } else if (tabName === 'rules') {
+      this.loadAlarmRules();
+    }
+  }
+
+  setDefaultHistoryDates() {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 7); // Last 7 days
+
+    const startInput = document.getElementById('history-start-date');
+    const endInput = document.getElementById('history-end-date');
+    
+    if (startInput) startInput.value = startDate.toISOString().split('T')[0];
+    if (endInput) endInput.value = endDate.toISOString().split('T')[0];
+  }
+
+  selectAllAlarms(checked) {
+    document.querySelectorAll('.alarm-checkbox').forEach(checkbox => {
+      checkbox.checked = checked;
+      const alarmId = checkbox.dataset.alarmId;
+      if (checked) {
+        this.selectedAlarms.add(alarmId);
+      } else {
+        this.selectedAlarms.delete(alarmId);
+      }
+    });
+    this.updateSelectedAlarmsCount();
+  }
+
+  updateSelectedAlarmsCount() {
+    const countElement = document.getElementById('selected-alarms-count');
+    if (countElement) {
+      countElement.textContent = this.selectedAlarms.size;
+    }
+  }
+
+  async acknowledgeAlarm(alarmId) {
+    try {
+      await EnhancedESP32API.acknowledgeAlarm(alarmId);
+      this.loadAlarms(); // Refresh
+    } catch (error) {
+      console.error('Failed to acknowledge alarm:', error);
+      this.showError('Failed to acknowledge alarm');
+    }
+  }
+
+  async resolveAlarm(alarmId) {
+    try {
+      await EnhancedESP32API.resolveAlarm(alarmId);
+      this.loadAlarms(); // Refresh
+    } catch (error) {
+      console.error('Failed to resolve alarm:', error);
+      this.showError('Failed to resolve alarm');
+    }
+  }
+
+  async bulkAcknowledgeAlarms() {
+    try {
+      const alarmIds = Array.from(this.selectedAlarms);
+      await EnhancedESP32API.bulkAcknowledgeAlarms(alarmIds);
+      this.selectedAlarms.clear();
+      this.loadAlarms(); // Refresh
+    } catch (error) {
+      console.error('Failed to bulk acknowledge alarms:', error);
+      this.showError('Failed to bulk acknowledge alarms');
+    }
+  }
+
+  async bulkResolveAlarms() {
+    try {
+      const alarmIds = Array.from(this.selectedAlarms);
+      await EnhancedESP32API.bulkResolveAlarms(alarmIds);
+      this.selectedAlarms.clear();
+      this.loadAlarms(); // Refresh
+    } catch (error) {
+      console.error('Failed to bulk resolve alarms:', error);
+      this.showError('Failed to bulk resolve alarms');
+    }
+  }
+
+  async bulkMuteAlarms() {
+    try {
+      const alarmIds = Array.from(this.selectedAlarms);
+      await EnhancedESP32API.bulkMuteAlarms(alarmIds);
+      this.selectedAlarms.clear();
+      this.loadAlarms(); // Refresh
+    } catch (error) {
+      console.error('Failed to bulk mute alarms:', error);
+      this.showError('Failed to bulk mute alarms');
+    }
+  }
+
+  async toggleAlarmRule(ruleId) {
+    try {
+      await EnhancedESP32API.toggleAlarmRule(ruleId);
+      this.loadAlarmRules(); // Refresh
+    } catch (error) {
+      console.error('Failed to toggle alarm rule:', error);
+      this.showError('Failed to toggle alarm rule');
+    }
+  }
+
+  async testAlarmRule(ruleId) {
+    try {
+      await EnhancedESP32API.testAlarmRule(ruleId);
+      this.showSuccess('Alarm rule test triggered');
+    } catch (error) {
+      console.error('Failed to test alarm rule:', error);
+      this.showError('Failed to test alarm rule');
+    }
+  }
+
+  formatDuration(milliseconds) {
+    const seconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d ${hours % 24}h`;
+    if (hours > 0) return `${hours}h ${minutes % 60}m`;
+    if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+    return `${seconds}s`;
+  }
+
+  showAlarmDetails(alarmId) {
+    // TODO: Implement alarm details modal
+    console.log('Show alarm details:', alarmId);
+  }
+
+  showCreateAlarmDialog() {
+    // TODO: Implement create alarm dialog
+    console.log('Show create alarm dialog');
+  }
+
+  showAddRuleDialog() {
+    // TODO: Implement add rule dialog
+    console.log('Show add rule dialog');
+  }
+
+  editAlarmRule(ruleId) {
+    // TODO: Implement edit rule dialog
+    console.log('Edit alarm rule:', ruleId);
+  }
+
+  exportAlarmHistory() {
+    // TODO: Implement alarm history export
+    console.log('Export alarm history');
+  }
+
+  showError(message) {
+    // TODO: Implement proper error notification
+    console.error(message);
+  }
+
+  showSuccess(message) {
+    // TODO: Implement proper success notification
+    console.log(message);
+  }
+}
+
+// Global instance for button onclick handlers
+let alarmManager;
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+  alarmManager = new AlarmManagement();
+});
+</script>

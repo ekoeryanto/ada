@@ -1,0 +1,623 @@
+---
+// Multi-RTU Dashboard Component
+---
+
+<div class="space-y-6">
+  <!-- RTU Overview Header -->
+  <div class="bg-white rounded-lg shadow-md p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-2xl font-bold text-gray-900">Multi-RTU Dashboard</h1>
+      <div class="flex items-center space-x-4">
+        <button 
+          id="refresh-all-rtus-btn"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <i class="fas fa-sync-alt mr-2"></i>Refresh All RTUs
+        </button>
+        <div id="total-devices-counter" class="px-3 py-1 bg-gray-100 rounded-lg text-sm">
+          <span class="text-gray-600">Total Devices:</span>
+          <span class="font-semibold text-gray-900 ml-1">0</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- RTU Status Summary -->
+    <div id="rtu-summary-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <!-- RTU status cards will be populated here -->
+    </div>
+  </div>
+
+  <!-- Selected RTU Details -->
+  <div id="selected-rtu-details" class="bg-white rounded-lg shadow-md p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-semibold text-gray-900">
+        <span id="selected-rtu-title">Select an RTU to view details</span>
+      </h2>
+      <div class="flex space-x-2">
+        <button 
+          id="scan-selected-rtu-btn"
+          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          disabled
+        >
+          <i class="fas fa-search mr-2"></i>Scan Devices
+        </button>
+        <button 
+          id="refresh-selected-rtu-btn"
+          class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+          disabled
+        >
+          <i class="fas fa-sync-alt mr-2"></i>Refresh
+        </button>
+      </div>
+    </div>
+    
+    <!-- RTU Tabs -->
+    <div class="border-b border-gray-200 mb-6">
+      <nav class="-mb-px flex space-x-8" id="rtu-tabs">
+        <button class="tab-button active" data-tab="sensors">
+          <i class="fas fa-thermometer-half mr-2"></i>Sensors
+        </button>
+        <button class="tab-button" data-tab="modbus">
+          <i class="fas fa-network-wired mr-2"></i>Modbus Devices
+        </button>
+        <button class="tab-button" data-tab="analog">
+          <i class="fas fa-chart-line mr-2"></i>Analog I/O
+        </button>
+        <button class="tab-button" data-tab="digital">
+          <i class="fas fa-toggle-on mr-2"></i>Digital I/O
+        </button>
+        <button class="tab-button" data-tab="alarms">
+          <i class="fas fa-exclamation-triangle mr-2"></i>Alarms
+        </button>
+      </nav>
+    </div>
+    
+    <!-- Tab Content -->
+    <div id="tab-content">
+      <!-- Sensors Tab -->
+      <div id="sensors-tab" class="tab-content active">
+        <div id="sensors-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div class="text-center text-gray-500 py-8">
+            <i class="fas fa-thermometer-half text-3xl mb-2"></i>
+            <p>Select an RTU to view sensors</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Modbus Tab -->
+      <div id="modbus-tab" class="tab-content hidden">
+        <div id="modbus-devices-list" class="space-y-4">
+          <div class="text-center text-gray-500 py-8">
+            <i class="fas fa-network-wired text-3xl mb-2"></i>
+            <p>Select an RTU to view Modbus devices</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Analog Tab -->
+      <div id="analog-tab" class="tab-content hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Analog Voltage -->
+          <div class="bg-gray-50 rounded-lg p-4">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">
+              <i class="fas fa-bolt text-yellow-500 mr-2"></i>Analog Voltage (0-10V)
+            </h3>
+            <div id="analog-voltage-list" class="space-y-2">
+              <div class="text-center text-gray-500 py-4">
+                <p>No voltage readings available</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Analog Current -->
+          <div class="bg-gray-50 rounded-lg p-4">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">
+              <i class="fas fa-tachometer-alt text-blue-500 mr-2"></i>Analog Current (4-20mA)
+            </h3>
+            <div id="analog-current-list" class="space-y-2">
+              <div class="text-center text-gray-500 py-4">
+                <p>No current readings available</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Digital Tab -->
+      <div id="digital-tab" class="tab-content hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Digital Inputs -->
+          <div class="bg-gray-50 rounded-lg p-4">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">
+              <i class="fas fa-sign-in-alt text-green-500 mr-2"></i>Digital Inputs
+            </h3>
+            <div id="digital-inputs-list" class="space-y-2">
+              <div class="text-center text-gray-500 py-4">
+                <p>No digital inputs available</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Digital Outputs -->
+          <div class="bg-gray-50 rounded-lg p-4">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">
+              <i class="fas fa-sign-out-alt text-red-500 mr-2"></i>Digital Outputs
+            </h3>
+            <div id="digital-outputs-list" class="space-y-2">
+              <div class="text-center text-gray-500 py-4">
+                <p>No digital outputs available</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Alarms Tab -->
+      <div id="alarms-tab" class="tab-content hidden">
+        <div id="alarms-list" class="space-y-4">
+          <div class="text-center text-gray-500 py-8">
+            <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
+            <p>Select an RTU to view alarms</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.tab-button {
+  @apply px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors;
+}
+
+.tab-button.active {
+  @apply text-blue-600 border-blue-600;
+}
+
+.tab-content {
+  @apply block;
+}
+
+.tab-content.hidden {
+  @apply hidden;
+}
+
+.rtu-card {
+  @apply bg-gray-50 rounded-lg p-4 border border-gray-200 hover:border-blue-300 transition-colors cursor-pointer;
+}
+
+.rtu-card.selected {
+  @apply border-blue-500 bg-blue-50;
+}
+
+.rtu-card.offline {
+  @apply border-red-300 bg-red-50;
+}
+
+.sensor-card {
+  @apply bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow;
+}
+
+.device-card {
+  @apply bg-white border border-gray-200 rounded-lg p-4;
+}
+
+.status-indicator {
+  @apply w-3 h-3 rounded-full;
+}
+
+.status-indicator.online {
+  @apply bg-green-400;
+}
+
+.status-indicator.offline {
+  @apply bg-red-400;
+}
+
+.status-indicator.warning {
+  @apply bg-yellow-400;
+}
+
+.status-indicator.unknown {
+  @apply bg-gray-400;
+}
+</style>
+
+<script>
+import { RTUClientManager } from '../lib/rtu-client';
+import EnhancedESP32API from '../lib/enhanced-api';
+
+class MultiRTUDashboard {
+  constructor() {
+    this.selectedRTU = null;
+    this.availableRTUs = [];
+    this.currentTab = 'sensors';
+    this.refreshInterval = null;
+    
+    this.init();
+  }
+
+  async init() {
+    this.bindEvents();
+    await this.loadAvailableRTUs();
+    this.startAutoRefresh();
+    
+    // Listen for RTU selection from sidebar
+    document.addEventListener('rtuSelected', (event) => {
+      const rtu = event.detail.rtu;
+      console.log('[Multi-RTU Dashboard] RTU selected from sidebar:', rtu);
+      this.selectRTU(rtu.interfaceId);
+    });
+  }
+
+  bindEvents() {
+    // Tab switching
+    document.querySelectorAll('.tab-button').forEach(button => {
+      button.addEventListener('click', (e) => {
+        const tab = e.target.dataset.tab;
+        this.switchTab(tab);
+      });
+    });
+
+    // RTU actions
+    document.getElementById('refresh-all-rtus-btn')?.addEventListener('click', () => {
+      this.refreshAllRTUs();
+    });
+
+    document.getElementById('scan-selected-rtu-btn')?.addEventListener('click', () => {
+      this.scanSelectedRTU();
+    });
+
+    document.getElementById('refresh-selected-rtu-btn')?.addEventListener('click', () => {
+      this.refreshSelectedRTU();
+    });
+  }
+
+  async loadAvailableRTUs() {
+    try {
+      console.log('[Multi-RTU Dashboard] Loading available RTUs...');
+      const interfaces = await EnhancedESP32API.getRTUInterfaces();
+      this.availableRTUs = interfaces;
+      
+      console.log('[Multi-RTU Dashboard] Loaded RTUs:', this.availableRTUs);
+      this.updateRTUSummary();
+      
+      // Auto-select ada-1 if available
+      const ada1 = interfaces.find(rtu => rtu.interfaceId === 1);
+      if (ada1) {
+        this.selectRTU(1);
+      }
+      
+    } catch (error) {
+      console.error('[Multi-RTU Dashboard] Failed to load RTUs:', error);
+      
+      if (window.showToast) {
+        window.showToast('Failed to load RTU interfaces', 'error');
+      }
+    }
+  }
+
+  updateRTUSummary() {
+    const summaryGrid = document.getElementById('rtu-summary-grid');
+    const totalDevicesCounter = document.getElementById('total-devices-counter');
+    
+    if (!summaryGrid) return;
+
+    // Clear existing cards
+    summaryGrid.innerHTML = '';
+    
+    let totalDevices = 0;
+    
+    this.availableRTUs.forEach(rtu => {
+      totalDevices += rtu.stats?.activeDevices || 0;
+      
+      const card = this.createRTUSummaryCard(rtu);
+      summaryGrid.appendChild(card);
+    });
+    
+    // Update total devices counter
+    if (totalDevicesCounter) {
+      const counter = totalDevicesCounter.querySelector('span:last-child');
+      if (counter) counter.textContent = totalDevices.toString();
+    }
+  }
+
+  createRTUSummaryCard(rtu) {
+    const card = document.createElement('div');
+    card.className = `rtu-card ${rtu.interfaceId === this.selectedRTU?.interfaceId ? 'selected' : ''}`;
+    card.dataset.rtuId = rtu.interfaceId;
+    
+    const isOnline = rtu.enabled && rtu.initialized;
+    const statusClass = isOnline ? 'online' : 'offline';
+    const successRate = Math.round(rtu.stats?.networkSuccessRate || 0);
+    
+    card.innerHTML = `
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center">
+          <div class="status-indicator ${statusClass} mr-3"></div>
+          <div>
+            <h3 class="font-semibold text-gray-900">${rtu.name}</h3>
+            <p class="text-sm text-gray-500">Interface ${rtu.interfaceId}</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-lg font-bold text-gray-900">${rtu.stats?.activeDevices || 0}</div>
+          <div class="text-sm text-gray-500">devices</div>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <span class="text-gray-500">Baud Rate:</span>
+          <span class="font-medium">${rtu.baudRate?.toLocaleString() || '--'}</span>
+        </div>
+        <div>
+          <span class="text-gray-500">Success:</span>
+          <span class="font-medium ${successRate >= 90 ? 'text-green-600' : successRate >= 70 ? 'text-yellow-600' : 'text-red-600'}">${successRate}%</span>
+        </div>
+      </div>
+    `;
+    
+    card.addEventListener('click', () => {
+      this.selectRTU(rtu.interfaceId);
+    });
+    
+    return card;
+  }
+
+  async selectRTU(rtuId) {
+    try {
+      console.log(`[Multi-RTU Dashboard] Selecting RTU ${rtuId}`);
+      
+      // Find RTU from available list
+      const rtu = this.availableRTUs.find(r => r.interfaceId === rtuId);
+      if (!rtu) {
+        console.warn(`[Multi-RTU Dashboard] RTU ${rtuId} not found in available RTUs`);
+        return;
+      }
+      
+      this.selectedRTU = rtu;
+      
+      // Update UI
+      this.updateSelectedRTUTitle();
+      this.updateRTUCardSelection();
+      this.enableRTUActions();
+      
+      // Load data for current tab
+      await this.loadTabData(this.currentTab);
+      
+      console.log(`[Multi-RTU Dashboard] RTU ${rtuId} (${rtu.name}) selected`);
+      
+    } catch (error) {
+      console.error(`[Multi-RTU Dashboard] Failed to select RTU ${rtuId}:`, error);
+    }
+  }
+
+  updateSelectedRTUTitle() {
+    const titleElement = document.getElementById('selected-rtu-title');
+    if (titleElement && this.selectedRTU) {
+      const statusText = this.selectedRTU.enabled && this.selectedRTU.initialized ? 'Online' : 'Offline';
+      const statusColor = this.selectedRTU.enabled && this.selectedRTU.initialized ? 'text-green-600' : 'text-red-600';
+      
+      titleElement.innerHTML = `
+        RTU ${this.selectedRTU.interfaceId}: ${this.selectedRTU.name}
+        <span class="text-sm ${statusColor} ml-2">(${statusText})</span>
+      `;
+    }
+  }
+
+  updateRTUCardSelection() {
+    // Update card selection
+    document.querySelectorAll('.rtu-card').forEach(card => {
+      card.classList.remove('selected');
+      if (this.selectedRTU && card.dataset.rtuId === this.selectedRTU.interfaceId.toString()) {
+        card.classList.add('selected');
+      }
+    });
+  }
+
+  enableRTUActions() {
+    document.getElementById('scan-selected-rtu-btn').disabled = false;
+    document.getElementById('refresh-selected-rtu-btn').disabled = false;
+  }
+
+  switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.tab-button').forEach(button => {
+      button.classList.remove('active');
+      if (button.dataset.tab === tabName) {
+        button.classList.add('active');
+      }
+    });
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => {
+      content.classList.add('hidden');
+    });
+    
+    document.getElementById(`${tabName}-tab`)?.classList.remove('hidden');
+    
+    this.currentTab = tabName;
+    
+    // Load data for the new tab
+    if (this.selectedRTU) {
+      this.loadTabData(tabName);
+    }
+  }
+
+  async loadTabData(tabName) {
+    if (!this.selectedRTU) return;
+    
+    const rtuClient = RTUClientManager.getRTUClient(this.selectedRTU.interfaceId);
+    
+    try {
+      switch (tabName) {
+        case 'sensors':
+          await this.loadSensorsData(rtuClient);
+          break;
+        case 'modbus':
+          await this.loadModbusData(rtuClient);
+          break;
+        case 'analog':
+          await this.loadAnalogData(rtuClient);
+          break;
+        case 'digital':
+          await this.loadDigitalData(rtuClient);
+          break;
+        case 'alarms':
+          await this.loadAlarmsData(rtuClient);
+          break;
+      }
+    } catch (error) {
+      console.error(`[Multi-RTU Dashboard] Failed to load ${tabName} data:`, error);
+    }
+  }
+
+  async loadSensorsData(rtuClient) {
+    try {
+      const sensors = await rtuClient.getUnifiedSensors();
+      this.updateSensorsGrid(sensors);
+    } catch (error) {
+      console.error('[Multi-RTU Dashboard] Failed to load sensors:', error);
+    }
+  }
+
+  async loadModbusData(rtuClient) {
+    try {
+      const devices = await rtuClient.getModbusDevices();
+      this.updateModbusDevicesList(devices);
+    } catch (error) {
+      console.error('[Multi-RTU Dashboard] Failed to load Modbus devices:', error);
+    }
+  }
+
+  async loadAnalogData(rtuClient) {
+    try {
+      const [voltage, current] = await Promise.all([
+        rtuClient.getAnalogVoltage(),
+        rtuClient.getAnalogCurrent()
+      ]);
+      
+      this.updateAnalogReadings(voltage, current);
+    } catch (error) {
+      console.error('[Multi-RTU Dashboard] Failed to load analog data:', error);
+    }
+  }
+
+  async loadDigitalData(rtuClient) {
+    try {
+      const digitalIO = await rtuClient.getDigitalIO();
+      this.updateDigitalIO(digitalIO);
+    } catch (error) {
+      console.error('[Multi-RTU Dashboard] Failed to load digital I/O:', error);
+    }
+  }
+
+  async loadAlarmsData(rtuClient) {
+    try {
+      const alarms = await rtuClient.getAlarms();
+      this.updateAlarmsList(alarms);
+    } catch (error) {
+      console.error('[Multi-RTU Dashboard] Failed to load alarms:', error);
+    }
+  }
+
+  updateSensorsGrid(sensors) {
+    // Implementation for updating sensors grid
+    console.log('[Multi-RTU Dashboard] Updating sensors grid:', sensors);
+  }
+
+  updateModbusDevicesList(devices) {
+    // Implementation for updating Modbus devices list
+    console.log('[Multi-RTU Dashboard] Updating Modbus devices:', devices);
+  }
+
+  updateAnalogReadings(voltage, current) {
+    // Implementation for updating analog readings
+    console.log('[Multi-RTU Dashboard] Updating analog readings:', { voltage, current });
+  }
+
+  updateDigitalIO(digitalIO) {
+    // Implementation for updating digital I/O
+    console.log('[Multi-RTU Dashboard] Updating digital I/O:', digitalIO);
+  }
+
+  updateAlarmsList(alarms) {
+    // Implementation for updating alarms list
+    console.log('[Multi-RTU Dashboard] Updating alarms:', alarms);
+  }
+
+  async refreshAllRTUs() {
+    console.log('[Multi-RTU Dashboard] Refreshing all RTUs...');
+    await this.loadAvailableRTUs();
+  }
+
+  async refreshSelectedRTU() {
+    if (!this.selectedRTU) return;
+    
+    console.log(`[Multi-RTU Dashboard] Refreshing RTU ${this.selectedRTU.interfaceId}...`);
+    await this.loadTabData(this.currentTab);
+  }
+
+  async scanSelectedRTU() {
+    if (!this.selectedRTU) return;
+    
+    try {
+      const rtuClient = RTUClientManager.getRTUClient(this.selectedRTU.interfaceId);
+      console.log(`[Multi-RTU Dashboard] Scanning RTU ${this.selectedRTU.interfaceId}...`);
+      
+      const scanBtn = document.getElementById('scan-selected-rtu-btn');
+      const originalText = scanBtn.innerHTML;
+      scanBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning...';
+      scanBtn.disabled = true;
+      
+      await rtuClient.scanModbusDevices();
+      
+      // Refresh data after scan
+      setTimeout(() => {
+        this.loadTabData(this.currentTab);
+      }, 2000);
+      
+      scanBtn.innerHTML = originalText;
+      scanBtn.disabled = false;
+      
+      if (window.showToast) {
+        window.showToast(`RTU ${this.selectedRTU.interfaceId} scan initiated`, 'success');
+      }
+      
+    } catch (error) {
+      console.error('[Multi-RTU Dashboard] Scan failed:', error);
+      
+      if (window.showToast) {
+        window.showToast('RTU scan failed', 'error');
+      }
+    }
+  }
+
+  startAutoRefresh() {
+    // Refresh data every 30 seconds
+    this.refreshInterval = setInterval(() => {
+      if (this.selectedRTU) {
+        this.loadTabData(this.currentTab);
+      }
+    }, 30000);
+  }
+
+  stopAutoRefresh() {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
+    }
+  }
+}
+
+// Initialize dashboard when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  const dashboard = new MultiRTUDashboard();
+  
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    dashboard.stopAutoRefresh();
+  });
+});
+</script>
