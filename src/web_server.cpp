@@ -327,7 +327,7 @@ void WebServerHandler::setupRoutes() {
         doc["alarm_status"] = analogCurrentMgr.getAlarmStatus();
         doc["has_errors"] = analogCurrentMgr.hasErrors();
         
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 2; i++) {  // Hardware only has 2 current sensors (ADS1115 AIN0, AIN1)
             CurrentReading reading = analogCurrentMgr.getReading(i);
             String sensorKey = "sensor_" + String(i);
             
@@ -362,7 +362,7 @@ void WebServerHandler::setupRoutes() {
         doc["alarm_status"] = analogCurrentMgr.getAlarmStatus();
         doc["has_errors"] = analogCurrentMgr.hasErrors();
         
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 2; i++) {  // Hardware only has 2 current sensors
             CurrentReading reading = analogCurrentMgr.getReading(i);
             String sensorKey = "sensor_" + String(i);
             
@@ -488,7 +488,7 @@ void WebServerHandler::setupRoutes() {
         
         for (int i = 0; i < 4; i++) {
             DigitalOutputStatus status = digitalIOMgr.getOutputStatus(i);
-            String outputKey = "output_" + String(i);
+            String outputKey = "do" + String(i + 1);  // do1, do2, do3, do4
             
             doc["outputs"][outputKey]["name"] = digitalIOMgr.getOutputName(i);
             doc["outputs"][outputKey]["info"] = digitalIOMgr.getOutputInfo(i);
@@ -518,7 +518,7 @@ void WebServerHandler::setupRoutes() {
         
         for (int i = 0; i < 4; i++) {
             DigitalInputReading reading = digitalIOMgr.getInputReading(i);
-            String inputKey = "input_" + String(i);
+            String inputKey = "di" + String(i + 1);  // di1, di2, di3, di4
             
             doc["inputs"][inputKey]["name"] = digitalIOMgr.getInputName(i);
             doc["inputs"][inputKey]["info"] = digitalIOMgr.getInputInfo(i);
@@ -550,7 +550,7 @@ void WebServerHandler::setupRoutes() {
         // Digital Inputs
         for (int i = 0; i < 4; i++) {
             DigitalInputReading reading = digitalIOMgr.getInputReading(i);
-            String inputKey = "input_" + String(i);
+            String inputKey = "di" + String(i + 1);  // di1, di2, di3, di4
             
             doc["inputs"][inputKey]["name"] = digitalIOMgr.getInputName(i);
             doc["inputs"][inputKey]["state"] = reading.currentState == DI_HIGH ? "HIGH" : "LOW";
@@ -566,7 +566,7 @@ void WebServerHandler::setupRoutes() {
         // Digital Outputs
         for (int i = 0; i < 4; i++) {
             DigitalOutputStatus status = digitalIOMgr.getOutputStatus(i);
-            String outputKey = "output_" + String(i);
+            String outputKey = "do" + String(i + 1);  // do1, do2, do3, do4
             
             doc["outputs"][outputKey]["name"] = digitalIOMgr.getOutputName(i);
             doc["outputs"][outputKey]["state"] = status.currentState;
@@ -591,7 +591,7 @@ void WebServerHandler::setupRoutes() {
         
         for (int i = 0; i < 4; i++) {
             DigitalInputReading reading = digitalIOMgr.getInputReading(i);
-            String inputKey = "input_" + String(i);
+            String inputKey = "di" + String(i + 1);  // di1, di2, di3, di4
             
             doc["inputs"][inputKey]["name"] = digitalIOMgr.getInputName(i);
             doc["inputs"][inputKey]["info"] = digitalIOMgr.getInputInfo(i);

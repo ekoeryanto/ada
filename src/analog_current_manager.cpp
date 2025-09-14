@@ -33,7 +33,7 @@ AnalogCurrentManager::AnalogCurrentManager() :
                   true, 250.0, 15.0, 2, "", true, true};
     
     // Initialize simulation variables
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {  // Hardware only has 2 current sensors (ADS1115 AIN0, AIN1)
         sensorSimulated[i] = false;
         simulationMode[i] = "fixed";
         simulationValue[i] = 50.0;      // Default 50% for demo (12mA)
@@ -43,7 +43,7 @@ AnalogCurrentManager::AnalogCurrentManager() :
     }
     
     // Initialize readings and filters
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {  // Hardware only has 2 current sensors
         readings[i] = {0, 0.0, 0.0, 0.0, CURRENT_SENSOR_ERROR, 0, false, 0.0, 0.0};
         errorCount[i] = 0;
         emaFilteredValue[i] = 0.0;
