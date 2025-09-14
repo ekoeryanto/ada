@@ -164,11 +164,21 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     // Map sensor key to GPIO pin (based on pins_config.h and ESP32 firmware)
     function getGPIOPin(key: string): number {
       const pinMap: { [key: string]: number } = {
-        'a11': 35,  // A11 -> GPIO 35 (AI1_PIN)
-        'a12': 34,  // A12 -> GPIO 34 (AI2_PIN)  
-        'a13': 36   // A13 -> GPIO 36 (AI3_PIN)
+        'ai1': 35,  // AI1 -> GPIO 35 (AI1_PIN)
+        'ai2': 34,  // AI2 -> GPIO 34 (AI2_PIN)  
+        'ai3': 36   // AI3 -> GPIO 36 (AI3_PIN)
       };
       return pinMap[key.toLowerCase()] || 0;
+    }
+
+    // Convert API key to display name (consistent with pins_config.h)
+    function getDisplayName(key: string): string {
+      const nameMap: { [key: string]: string } = {
+        'ai1': 'AI1',  // ai1 -> AI1 (matching AI1_PIN)
+        'ai2': 'AI2',  // ai2 -> AI2 (matching AI2_PIN)
+        'ai3': 'AI3'   // ai3 -> AI3 (matching AI3_PIN)
+      };
+      return nameMap[key.toLowerCase()] || key.toUpperCase();
     }
 
     // Render voltage sensors
@@ -181,14 +191,17 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       sensorsGrid.innerHTML = Object.entries(sensors).map(([key, sensor]: [string, any]) => {
         const statusDisplay = getStatusDisplay(sensor.status || 'OK');
         const voltagePercent = Math.min(Math.max((sensor.value / 10) * 100, 0), 100);
-        // Convert key to display name: a11 -> A11, a12 -> A12, a13 -> A13 (matching ESP32 firmware)
-        const displayName = key.toUpperCase(); 
+        // Convert key to display name: ai1 -> AI1, ai2 -> AI2, ai3 -> AI3 (matching pins_config.h)
+        const displayName = getDisplayName(key); 
         const gpioPin = getGPIOPin(key);
         
         return `
           <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border ${statusDisplay.borderColor}">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-white">${displayName} (GPIO${gpioPin})</h3>
+              <div>
+                <h3 class="text-lg font-semibold text-white">${displayName}</h3>
+                <span class="text-xs text-slate-400">Pin ${gpioPin}</span>
+              </div>
               <div class="px-2 py-1 rounded-full text-xs font-medium ${statusDisplay.bgColor} ${statusDisplay.color} ${statusDisplay.borderColor} border">
                 ${statusDisplay.text}
               </div>

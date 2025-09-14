@@ -165,7 +165,7 @@ void WebServerHandler::setupRoutes() {
         
         for (int i = 0; i < 3; i++) {
             AnalogReading reading = analogVoltageMgr.getReading(i);
-            String sensorKey = "a1" + String(i + 1);  // a11, a12, a13
+            String sensorKey = "ai" + String(i + 1);  // ai1, ai2, ai3
             
             doc["sensors"][sensorKey]["location"] = analogVoltageMgr.getLocation(i);
             doc["sensors"][sensorKey]["enabled"] = analogVoltageMgr.isSensorEnabled(i);
@@ -195,7 +195,7 @@ void WebServerHandler::setupRoutes() {
         doc["system_health"] = "OK";
         
         for (int i = 0; i < 3; i++) {
-            String sensorKey = "a1" + String(i + 1);  // a11, a12, a13
+            String sensorKey = "ai" + String(i + 1);  // ai1, ai2, ai3
             
             doc["sensors"][sensorKey]["location"] = analogVoltageMgr.getLocation(i);
             doc["sensors"][sensorKey]["health_score"] = analogVoltageMgr.getSensorHealth(i);
@@ -296,7 +296,7 @@ void WebServerHandler::setupRoutes() {
         doc["version"] = "2.0.0";
         
         for (int i = 0; i < 3; i++) {
-            String sensorKey = "a1" + String(i + 1);  // a11, a12, a13
+            String sensorKey = "ai" + String(i + 1);  // ai1, ai2, ai3
             
             doc["sensors"][sensorKey]["sensor_id"] = analogVoltageMgr.getSensorId(i);
             doc["sensors"][sensorKey]["location"] = analogVoltageMgr.getLocation(i);
@@ -329,7 +329,7 @@ void WebServerHandler::setupRoutes() {
         
         for (int i = 0; i < 2; i++) {  // Hardware only has 2 current sensors (ADS1115 AIN0, AIN1)
             CurrentReading reading = analogCurrentMgr.getReading(i);
-            String sensorKey = "a2" + String(i + 1);  // a21, a22
+            String sensorKey = "aci" + String(i + 1);  // aci1, aci2
             
             doc["sensors"][sensorKey]["location"] = analogCurrentMgr.getLocation(i);
             doc["sensors"][sensorKey]["enabled"] = analogCurrentMgr.isSensorEnabled(i);
@@ -622,7 +622,7 @@ void WebServerHandler::setupRoutes() {
         
         for (int i = 0; i < 4; i++) {
             DigitalOutputStatus status = digitalIOMgr.getOutputStatus(i);
-            String outputKey = "output_" + String(i);
+            String outputKey = "do" + String(i + 1);  // do1, do2, do3, do4
             
             doc["outputs"][outputKey]["name"] = digitalIOMgr.getOutputName(i);
             doc["outputs"][outputKey]["info"] = digitalIOMgr.getOutputInfo(i);

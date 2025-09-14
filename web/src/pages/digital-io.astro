@@ -141,6 +141,27 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       'do4': 14   // DO4_PIN
     };
 
+    // Convert API key to display name (consistent with pins_config.h)
+    function getDigitalInputDisplayName(key: string): string {
+      const nameMap: { [key: string]: string } = {
+        'di1': 'DI1',  // di1 -> DI1 (matching DI1_PIN)
+        'di2': 'DI2',  // di2 -> DI2 (matching DI2_PIN)
+        'di3': 'DI3',  // di3 -> DI3 (matching DI3_PIN)
+        'di4': 'DI4'   // di4 -> DI4 (matching DI4_PIN)
+      };
+      return nameMap[key.toLowerCase()] || key.toUpperCase();
+    }
+
+    function getDigitalOutputDisplayName(key: string): string {
+      const nameMap: { [key: string]: string } = {
+        'do1': 'DO1',  // do1 -> DO1 (matching DO1_PIN)
+        'do2': 'DO2',  // do2 -> DO2 (matching DO2_PIN)
+        'do3': 'DO3',  // do3 -> DO3 (matching DO3_PIN)
+        'do4': 'DO4'   // do4 -> DO4 (matching DO4_PIN)
+      };
+      return nameMap[key.toLowerCase()] || key.toUpperCase();
+    }
+
     let updateInterval: ReturnType<typeof setInterval>;
     let sequenceRunning = false;
     let isConnected = true;
@@ -208,7 +229,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         const isHigh = input.state === 'HIGH' || input.state === true || input.state === 1;
         const statusColor = isHigh ? 'text-green-400 bg-green-500/20 border-green-500/30' : 'text-gray-400 bg-gray-500/20 border-gray-500/30';
         const statusIcon = isHigh ? '●' : '○';
-        const displayName = key.toUpperCase(); // di1 -> DI1, di2 -> DI2, etc.
+        const displayName = getDigitalInputDisplayName(key); // di1 -> DI1, di2 -> DI2, etc.
         const pinNumber = DIGITAL_INPUT_PINS[key as keyof typeof DIGITAL_INPUT_PINS] || 'N/A';
         
         return `
@@ -246,7 +267,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         const isOn = output.state === true || output.state === 1 || output.state === 'HIGH';
         const statusColor = isOn ? 'text-green-400 bg-green-500/20 border-green-500/30' : 'text-gray-400 bg-gray-500/20 border-gray-500/30';
         const statusIcon = isOn ? '●' : '○';
-        const displayName = key.toUpperCase(); // do1 -> DO1, do2 -> DO2, etc.
+        const displayName = getDigitalOutputDisplayName(key); // do1 -> DO1, do2 -> DO2, etc.
         const pinNumber = DIGITAL_OUTPUT_PINS[key as keyof typeof DIGITAL_OUTPUT_PINS] || 'N/A';
         
         return `

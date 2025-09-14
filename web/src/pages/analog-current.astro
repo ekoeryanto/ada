@@ -4,7 +4,23 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
 
 <DashboardLayout 
   title="4-20mA Analog Current Sensors" 
-  description="Monitor and configure 4-20mA current loop sensors"
+  description="Monitor and confi    // Map sensor key to ADS1115 channel (based on pins_config.h and ESP32 firmware)
+    function getADS1115Channel(key: string): number {
+      const channelMap: { [key: string]: number } = {
+        'aci1': 0,  // ACI1 -> Channel 0 (ACI1_CHANNEL)
+        'aci2': 1   // ACI2 -> Channel 1 (ACI2_CHANNEL)
+      };
+      return channelMap[key.toLowerCase()] || 0;
+    }
+
+    // Convert API key to display name (consistent with pins_config.h)
+    function getDisplayName(key: string): string {
+      const nameMap: { [key: string]: string } = {
+        'aci1': 'ACI1',  // aci1 -> ACI1 (matching ACI1_CHANNEL)
+        'aci2': 'ACI2'   // aci2 -> ACI2 (matching ACI2_CHANNEL)
+      };
+      return nameMap[key.toLowerCase()] || key.toUpperCase();
+    }nt loop sensors"
   activePage="analog-current"
 >
   <!-- Connection Status -->
@@ -162,13 +178,22 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       }
     }
 
-    // Map sensor key to ADS1115 channel (based on ESP32 firmware)
+        // Map sensor key to ADS1115 channel (based on pins_config.h and ESP32 firmware)
     function getADS1115Channel(key: string): number {
       const channelMap: { [key: string]: number } = {
-        'a21': 0,  // A21 -> ADS1115 Channel 0 (AIN0)
-        'a22': 1   // A22 -> ADS1115 Channel 1 (AIN1)
+        'a21': 0,  // ACI1 -> Channel 0 (ACI1_CHANNEL)
+        'a22': 1   // ACI2 -> Channel 1 (ACI2_CHANNEL)
       };
       return channelMap[key.toLowerCase()] || 0;
+    }
+
+    // Convert API key to display name (consistent with pins_config.h)
+    function getDisplayName(key: string): string {
+      const nameMap: { [key: string]: string } = {
+        'a21': 'ACI1',  // a21 -> ACI1 (matching ACI1_CHANNEL)
+        'a22': 'ACI2'   // a22 -> ACI2 (matching ACI2_CHANNEL)
+      };
+      return nameMap[key.toLowerCase()] || key.toUpperCase();
     }
 
     // Render current sensors
@@ -182,14 +207,17 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         const statusDisplay = getStatusDisplay(sensor.status || 'Normal');
         const currentValue = sensor.current || sensor.value || 4; // Support both current and value fields
         const currentPercent = Math.min(Math.max(((currentValue - 4) / 16) * 100, 0), 100);
-        // Convert key to display name: a21 -> A21, a22 -> A22 (matching ESP32 firmware)
-        const displayName = key.toUpperCase(); 
+        // Convert key to display name: aci1 -> ACI1, aci2 -> ACI2 (matching pins_config.h)
+        const displayName = getDisplayName(key); 
         const adsChannel = getADS1115Channel(key);
         
         return `
           <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border ${statusDisplay.borderColor}">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-white">${displayName} (ADS1115 Ch${adsChannel})</h3>
+              <div>
+                <h3 class="text-lg font-semibold text-white">${displayName}</h3>
+                <span class="text-xs text-slate-400">ADS1115 Channel ${adsChannel}</span>
+              </div>
               <div class="px-2 py-1 rounded-full text-xs font-medium ${statusDisplay.bgColor} ${statusDisplay.color} ${statusDisplay.borderColor} border">
                 ${statusDisplay.text}
               </div>
