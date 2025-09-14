@@ -23,11 +23,11 @@
 #define RS485_TX 17
 #define RS485_DE 4
 
-// SD Card pins (SPI)
-#define SD_CS 5
-#define SD_MOSI 23
-#define SD_MISO 19
-#define SD_SCK 18
+// SD Card pins (using ESP32 default SPI pins)
+#define SD_CS 5      // Default ESP32 CS pin
+#define SD_MOSI 23   // Default ESP32 MOSI pin  
+#define SD_MISO 19   // Default ESP32 MISO pin
+#define SD_SCK 18    // Default ESP32 SCK pin
 
 // I2C pins for ADS1115 and RTC
 #define I2C_SDA 21

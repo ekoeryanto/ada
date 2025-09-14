@@ -17,11 +17,10 @@ SDManager::SDManager() {
 bool SDManager::initialize() {
     Serial.println("[SD] Initializing SD Manager...");
     
-    // Initialize SPI with custom pins - non-blocking
-    SPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
-    
-    // Try to initialize SD card - if it fails, just continue without SD
-    if (!SD.begin(SD_CS)) {
+    // Use default ESP32 SPI pins (like sample code)
+    // Default pins: CS=5, MOSI=23, MISO=19, SCK=18
+    // Just initialize SD card with default pins
+    if (!SD.begin()) {
         Serial.println("[SD] Card Mount Failed - continuing without SD");
         sdInitialized = false;
         sdCardPresent = false;
