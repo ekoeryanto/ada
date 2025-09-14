@@ -162,6 +162,27 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       return nameMap[key.toLowerCase()] || key.toUpperCase();
     }
 
+    // Convert API key to hardware number for display
+    function getDigitalInputHardwareNumber(key: string): string {
+      const numberMap: { [key: string]: string } = {
+        'di1': '1',  // DI1 -> display "1"
+        'di2': '2',  // DI2 -> display "2"
+        'di3': '3',  // DI3 -> display "3"
+        'di4': '4'   // DI4 -> display "4"
+      };
+      return numberMap[key.toLowerCase()] || '?';
+    }
+
+    function getDigitalOutputHardwareNumber(key: string): string {
+      const numberMap: { [key: string]: string } = {
+        'do1': '1',  // DO1 -> display "1"
+        'do2': '2',  // DO2 -> display "2"
+        'do3': '3',  // DO3 -> display "3"
+        'do4': '4'   // DO4 -> display "4"
+      };
+      return numberMap[key.toLowerCase()] || '?';
+    }
+
     let updateInterval: ReturnType<typeof setInterval>;
     let sequenceRunning = false;
     let isConnected = true;
@@ -231,10 +252,12 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         const statusIcon = isHigh ? '●' : '○';
         const displayName = getDigitalInputDisplayName(key); // di1 -> DI1, di2 -> DI2, etc.
         const pinNumber = DIGITAL_INPUT_PINS[key as keyof typeof DIGITAL_INPUT_PINS] || 'N/A';
+        const hardwareNumber = getDigitalInputHardwareNumber(key);
         
         return `
-          <div class="bg-slate-700/50 rounded-lg p-4 border ${isHigh ? 'border-green-500/30' : 'border-gray-500/30'}">
-            <div class="flex items-center justify-between mb-2">
+          <div class="bg-slate-700/50 rounded-lg p-4 border ${isHigh ? 'border-green-500/30' : 'border-gray-500/30'} relative overflow-hidden">
+            <div class="text-4xl font-bold text-white/10 absolute top-2 right-2 z-0 pointer-events-none select-none">${hardwareNumber}</div>
+            <div class="flex items-center justify-between mb-2 relative z-10">
               <div>
                 <h3 class="font-semibold text-white">${displayName}</h3>
                 <span class="text-xs text-slate-400">Pin ${pinNumber}</span>
@@ -246,7 +269,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
                 </span>
               </div>
             </div>
-            <div class="text-sm text-slate-400">
+            <div class="text-sm text-slate-400 relative z-10">
               <div>Name: ${input.name || 'Digital Input'}</div>
               <div>Pulses: ${input.pulse_count || 0} (Total: ${input.total_pulses || 0})</div>
               <div>Last Change: ${input.last_change ? new Date(input.last_change * 1000).toLocaleTimeString() : 'N/A'}</div>
@@ -269,10 +292,12 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         const statusIcon = isOn ? '●' : '○';
         const displayName = getDigitalOutputDisplayName(key); // do1 -> DO1, do2 -> DO2, etc.
         const pinNumber = DIGITAL_OUTPUT_PINS[key as keyof typeof DIGITAL_OUTPUT_PINS] || 'N/A';
+        const hardwareNumber = getDigitalOutputHardwareNumber(key);
         
         return `
-          <div class="bg-slate-700/50 rounded-lg p-4 border ${isOn ? 'border-green-500/30' : 'border-gray-500/30'}">
-            <div class="flex items-center justify-between mb-3">
+          <div class="bg-slate-700/50 rounded-lg p-4 border ${isOn ? 'border-green-500/30' : 'border-gray-500/30'} relative overflow-hidden">
+            <div class="text-4xl font-bold text-white/10 absolute top-2 right-2 z-0 pointer-events-none select-none">${hardwareNumber}</div>
+            <div class="flex items-center justify-between mb-3 relative z-10">
               <div>
                 <h3 class="font-semibold text-white">${displayName}</h3>
                 <span class="text-xs text-slate-400">Pin ${pinNumber}</span>
@@ -285,7 +310,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
               </div>
             </div>
             
-            <div class="space-y-2">
+            <div class="space-y-2 relative z-10">
               <div class="flex space-x-2">
                 <button onclick="setOutput('${key}', true)" 
                         class="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors ${isOn ? 'opacity-50' : ''}" 
@@ -376,9 +401,9 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
           addLogEntry('Starting test sequence', 'info');
           
           // Turn on each output sequentially
-          for (const output of data.outputs) {
+          for (const [key, output] of Object.entries(data.outputs)) {
             await adaApi.setDigitalOutput(output.id, true);
-            addLogEntry(`DO${output.id} ON`, 'info');
+            addLogEntry(`${output.id} ON`, 'info');
             await new Promise(resolve => setTimeout(resolve, 500));
             await updateData();
           }
@@ -386,7 +411,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
           await new Promise(resolve => setTimeout(resolve, 1000));
           
           // Turn off each output sequentially
-          for (const output of data.outputs) {
+          for (const [key, output] of Object.entries(data.outputs)) {
             await adaApi.setDigitalOutput(output.id, false);
             addLogEntry(`DO${output.id} OFF`, 'info');
             await new Promise(resolve => setTimeout(resolve, 500));

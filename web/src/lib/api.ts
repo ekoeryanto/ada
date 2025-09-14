@@ -102,15 +102,15 @@ export interface AnalogCurrentUIResponse {
   total_readings: number;
   alarm_status: string;
   has_errors: boolean;
-  sensors: Array<{
-    id: number;
+  sensors: Record<string, {
+    id: string;
     location: string;
     enabled: boolean;
     value: number;
     unit: string;
     current: number;
     voltage: number;
-    raw: number;
+    raw_adc: number;
     status: string;
     valid: boolean;
     timestamp: number;
@@ -158,8 +158,8 @@ export interface DigitalIOUIResponse {
   initialized: boolean;
   total_inputs: number;
   total_outputs: number;
-  inputs: Array<{
-    id: number;
+  inputs: Record<string, {
+    id: string;
     pin: number;
     name: string;
     state: boolean;
@@ -169,8 +169,8 @@ export interface DigitalIOUIResponse {
     pulse_count: number;
     alarm_active: boolean;
   }>;
-  outputs: Array<{
-    id: number;
+  outputs: Record<string, {
+    id: string;
     pin: number;
     name: string;
     state: boolean;
@@ -301,14 +301,14 @@ export interface AnalogVoltageUIResponse {
   total_readings: number;
   alarm_status: string;
   has_errors: boolean;
-  sensors: Array<{
-    id: number;
+  sensors: Record<string, {
+    id: string;
     location: string;
     enabled: boolean;
     value: number;
     unit: string;
     voltage: number;
-    raw: number;
+    raw_adc: number;
     raw_voltage: number;
     status: string;
     valid: boolean;
@@ -392,27 +392,32 @@ export class AdaApiClient {
     const data = await api('/analog-voltage');
     const parsed = AnalogVoltageSchema.parse(data);
     
-    // Convert object to array format for UI compatibility
-    const sensorsArray = Object.entries(parsed.sensors).map(([id, sensor]) => ({
-      id: parseInt(id.replace('sensor_', '')),
-      location: sensor.location,
-      enabled: sensor.enabled,
-      value: sensor.value,
-      unit: sensor.unit,
-      voltage: sensor.voltage,
-      raw: sensor.raw_adc,
-      raw_voltage: sensor.raw_voltage,
-      status: sensor.status,
-      valid: sensor.valid,
-      timestamp: sensor.timestamp,
-      low_alarm: sensor.low_alarm,
-      high_alarm: sensor.high_alarm,
-      errors: sensor.errors,
-    }));
+    // Keep object format with hardware keys (ai1, ai2, ai3) for UI compatibility
+    const sensorsObject = Object.fromEntries(
+      Object.entries(parsed.sensors).map(([key, sensor]) => [
+        key, // Keep original key (ai1, ai2, ai3)
+        {
+          id: key, // Use key as id instead of parsing to int
+          location: sensor.location,
+          enabled: sensor.enabled,
+          value: sensor.value,
+          unit: sensor.unit,
+          voltage: sensor.voltage,
+          raw_adc: sensor.raw_adc,
+          raw_voltage: sensor.raw_voltage,
+          status: sensor.status,
+          valid: sensor.valid,
+          timestamp: sensor.timestamp,
+          low_alarm: sensor.low_alarm,
+          high_alarm: sensor.high_alarm,
+          errors: sensor.errors,
+        }
+      ])
+    );
 
     return {
       ...parsed,
-      sensors: sensorsArray,
+      sensors: sensorsObject, // Return object, not array
     };
   }
 
@@ -421,29 +426,34 @@ export class AdaApiClient {
     const data = await api('/analog-current');
     const parsed = AnalogCurrentSchema.parse(data);
     
-    // Convert object to array format for UI compatibility
-    const sensorsArray = Object.entries(parsed.sensors).map(([id, sensor]) => ({
-      id: parseInt(id),
-      location: sensor.location,
-      enabled: sensor.enabled,
-      value: sensor.value,
-      unit: sensor.unit,
-      current: sensor.current,
-      voltage: sensor.voltage,
-      raw: sensor.raw_adc,
-      status: sensor.status,
-      valid: sensor.valid,
-      timestamp: sensor.timestamp,
-      loop_resistance: sensor.loop_resistance,
-      signal_quality: sensor.signal_quality,
-      low_alarm: sensor.low_alarm,
-      high_alarm: sensor.high_alarm,
-      errors: sensor.errors,
-    }));
+    // Keep object format with hardware keys (aci1, aci2) for UI compatibility
+    const sensorsObject = Object.fromEntries(
+      Object.entries(parsed.sensors).map(([key, sensor]) => [
+        key, // Keep original key (aci1, aci2)
+        {
+          id: key, // Use key as id instead of parsing to int
+          location: sensor.location,
+          enabled: sensor.enabled,
+          value: sensor.value,
+          unit: sensor.unit,
+          current: sensor.current,
+          voltage: sensor.voltage,
+          raw_adc: sensor.raw_adc,
+          status: sensor.status,
+          valid: sensor.valid,
+          timestamp: sensor.timestamp,
+          loop_resistance: sensor.loop_resistance,
+          signal_quality: sensor.signal_quality,
+          low_alarm: sensor.low_alarm,
+          high_alarm: sensor.high_alarm,
+          errors: sensor.errors,
+        }
+      ])
+    );
 
     return {
       ...parsed,
-      sensors: sensorsArray,
+      sensors: sensorsObject, // Return object, not array
     };
   }
 
@@ -464,36 +474,46 @@ export class AdaApiClient {
     const data = await api('/digital-io');
     const parsed = DigitalIOSchema.parse(data);
     
-    // Convert objects to arrays with id field for UI compatibility
-    const inputsArray = Object.keys(parsed.inputs).map((key, index) => ({
-      id: index + 1,
-      pin: 25 + index, // Assuming GPIO pins start from 25
-      name: parsed.inputs[key].name,
-      state: parsed.inputs[key].state === "HIGH" || parsed.inputs[key].state === true,
-      pullup: true, // Default assumption
-      last_change: parsed.inputs[key].last_change,
-      timestamp: parsed.inputs[key].timestamp,
-      pulse_count: parsed.inputs[key].pulse_count || 0,
-      alarm_active: parsed.inputs[key].alarm_active || false,
-    }));
+    // Keep object format with hardware keys (di1, di2, di3, di4 and do1, do2, do3, do4) for UI compatibility
+    const inputsObject = Object.fromEntries(
+      Object.entries(parsed.inputs).map(([key, input]) => [
+        key, // Keep original key (di1, di2, di3, di4)
+        {
+          id: key, // Use key as id
+          pin: parseInt(key.replace('di', '')) + 24, // di1->25, di2->26, etc (approximate from pins_config.h)
+          name: input.name,
+          state: input.state === "HIGH" || input.state === true,
+          pullup: true, // Default assumption
+          last_change: input.last_change || 0,
+          timestamp: input.timestamp,
+          pulse_count: input.pulse_count || 0,
+          alarm_active: input.alarm_active || false,
+        }
+      ])
+    );
     
-    const outputsArray = Object.keys(parsed.outputs).map((key, index) => ({
-      id: index + 1,
-      pin: 32 + index, // Assuming GPIO pins start from 32
-      name: parsed.outputs[key].name,
-      state: parsed.outputs[key].state === 1 || parsed.outputs[key].state === true,
-      mode: "output",
-      timestamp: Date.now() / 1000, // Current timestamp in seconds
-      last_change: parsed.outputs[key].last_operation || 0,
-      operations: parsed.outputs[key].operations || 0,
-    }));
+    const outputsObject = Object.fromEntries(
+      Object.entries(parsed.outputs).map(([key, output]) => [
+        key, // Keep original key (do1, do2, do3, do4)
+        {
+          id: key, // Use key as id
+          pin: parseInt(key.replace('do', '')) + 31, // do1->32, do2->33, etc (approximate from pins_config.h)
+          name: output.name,
+          state: output.state === 1 || output.state === true,
+          mode: "output",
+          timestamp: Date.now() / 1000, // Current timestamp in seconds
+          last_change: output.last_operation || 0,
+          operations: output.operations || 0,
+        }
+      ])
+    );
     
     return {
       initialized: parsed.initialized,
       total_inputs: parsed.total_inputs,
       total_outputs: parsed.total_outputs,
-      inputs: inputsArray,
-      outputs: outputsArray,
+      inputs: inputsObject, // Return object, not array
+      outputs: outputsObject, // Return object, not array
     };
   }
 
@@ -505,9 +525,12 @@ export class AdaApiClient {
     return api('/digital-io/outputs');
   }
 
-  async setDigitalOutput(outputId: number, state: boolean) {
+  async setDigitalOutput(outputId: number | string, state: boolean) {
     const formData = new URLSearchParams();
-    formData.append('output', outputId.toString());
+    // Convert string id (like "do1") to number by extracting digit
+    const numericId = typeof outputId === 'string' ? 
+      parseInt(outputId.replace(/[^\d]/g, '')) : outputId;
+    formData.append('output', numericId.toString());
     formData.append('state', state ? '1' : '0');
     
     return api('/digital-io/output', {
@@ -532,6 +555,18 @@ export class AdaApiClient {
   async getConfig(): Promise<ConfigResponse> {
     const data = await api('/config');
     return ConfigSchema.parse(data);
+  }
+
+  // Settings
+  async getSettings() {
+    return api('/settings');
+  }
+
+  async saveSettings(settings: any) {
+    return api('/settings', {
+      method: 'POST',
+      body: settings,
+    });
   }
 
   // Calibration
@@ -640,14 +675,34 @@ export class AdaApiClient {
     return WebhookSchema.parse(data);
   }
 
-  async createWebhook(webhook: { url: string; events: string[]; enabled?: boolean }) {
+  async createWebhook(webhook: { 
+    name: string; 
+    url: string; 
+    method?: string;
+    timeout?: number;
+    events: string[]; 
+    enabled?: boolean;
+    headers?: any;
+    template?: string;
+    description?: string;
+  }) {
     return api('/webhooks', {
       method: 'POST',
       body: webhook,
     });
   }
 
-  async updateWebhook(id: string, webhook: { url: string; events: string[]; enabled?: boolean }) {
+  async updateWebhook(id: string, webhook: { 
+    name: string; 
+    url: string; 
+    method?: string;
+    timeout?: number;
+    events: string[]; 
+    enabled?: boolean;
+    headers?: any;
+    template?: string;
+    description?: string;
+  }) {
     return api(`/webhooks/${id}`, {
       method: 'PUT',
       body: webhook,
@@ -680,7 +735,7 @@ export class AdaApiClient {
     return api('/webhooks/queue/retry', { method: 'POST' });
   }
 
-  async testWebhook(data: { url: string; payload?: any }) {
+  async testWebhook(data: { url: string; method?: string; headers?: any; payload?: any }) {
     return api('/webhooks/test', {
       method: 'POST',
       body: data,

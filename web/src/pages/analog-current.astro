@@ -4,23 +4,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
 
 <DashboardLayout 
   title="4-20mA Analog Current Sensors" 
-  description="Monitor and confi    // Map sensor key to ADS1115 channel (based on pins_config.h and ESP32 firmware)
-    function getADS1115Channel(key: string): number {
-      const channelMap: { [key: string]: number } = {
-        'aci1': 0,  // ACI1 -> Channel 0 (ACI1_CHANNEL)
-        'aci2': 1   // ACI2 -> Channel 1 (ACI2_CHANNEL)
-      };
-      return channelMap[key.toLowerCase()] || 0;
-    }
-
-    // Convert API key to display name (consistent with pins_config.h)
-    function getDisplayName(key: string): string {
-      const nameMap: { [key: string]: string } = {
-        'aci1': 'ACI1',  // aci1 -> ACI1 (matching ACI1_CHANNEL)
-        'aci2': 'ACI2'   // aci2 -> ACI2 (matching ACI2_CHANNEL)
-      };
-      return nameMap[key.toLowerCase()] || key.toUpperCase();
-    }nt loop sensors"
+  description="Monitor and configure 4-20mA current loop sensors"
   activePage="analog-current"
 >
   <!-- Connection Status -->
@@ -178,11 +162,11 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       }
     }
 
-        // Map sensor key to ADS1115 channel (based on pins_config.h and ESP32 firmware)
+    // Map sensor key to ADS1115 channel (based on pins_config.h and ESP32 firmware)
     function getADS1115Channel(key: string): number {
       const channelMap: { [key: string]: number } = {
-        'a21': 0,  // ACI1 -> Channel 0 (ACI1_CHANNEL)
-        'a22': 1   // ACI2 -> Channel 1 (ACI2_CHANNEL)
+        'aci1': 0,  // ACI1 -> Channel 0 (ACI1_CHANNEL)
+        'aci2': 1   // ACI2 -> Channel 1 (ACI2_CHANNEL)
       };
       return channelMap[key.toLowerCase()] || 0;
     }
@@ -190,10 +174,19 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     // Convert API key to display name (consistent with pins_config.h)
     function getDisplayName(key: string): string {
       const nameMap: { [key: string]: string } = {
-        'a21': 'ACI1',  // a21 -> ACI1 (matching ACI1_CHANNEL)
-        'a22': 'ACI2'   // a22 -> ACI2 (matching ACI2_CHANNEL)
+        'aci1': 'ACI1',  // aci1 -> ACI1 (matching ACI1_CHANNEL)
+        'aci2': 'ACI2'   // aci2 -> ACI2 (matching ACI2_CHANNEL)
       };
       return nameMap[key.toLowerCase()] || key.toUpperCase();
+    }
+
+    // Convert API key to hardware number for display
+    function getHardwareNumber(key: string): string {
+      const numberMap: { [key: string]: string } = {
+        'aci1': '1',  // ACI1 -> display "1"
+        'aci2': '2'   // ACI2 -> display "2"
+      };
+      return numberMap[key.toLowerCase()] || '?';
     }
 
     // Render current sensors
@@ -202,7 +195,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         sensorsGrid.innerHTML = '<div class="text-slate-400">No sensor data available</div>';
         return;
       }
-
+      
       sensorsGrid.innerHTML = Object.entries(sensors).map(([key, sensor]: [string, any]) => {
         const statusDisplay = getStatusDisplay(sensor.status || 'Normal');
         const currentValue = sensor.current || sensor.value || 4; // Support both current and value fields
@@ -210,20 +203,25 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         // Convert key to display name: aci1 -> ACI1, aci2 -> ACI2 (matching pins_config.h)
         const displayName = getDisplayName(key); 
         const adsChannel = getADS1115Channel(key);
+        const hardwareNumber = getHardwareNumber(key);
         
         return `
-          <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border ${statusDisplay.borderColor}">
+          <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border ${statusDisplay.borderColor} relative overflow-hidden">
+            <!-- Header with large hardware number -->
             <div class="flex items-center justify-between mb-4">
               <div>
-                <h3 class="text-lg font-semibold text-white">${displayName}</h3>
-                <span class="text-xs text-slate-400">ADS1115 Channel ${adsChannel}</span>
+                <div class="text-6xl font-bold text-white/10 absolute top-2 left-4 z-0 pointer-events-none select-none">${hardwareNumber}</div>
+                <div class="relative z-10">
+                  <h3 class="text-lg font-semibold text-white">${displayName}</h3>
+                  <span class="text-xs text-slate-400">ADS1115 Channel ${adsChannel}</span>
+                </div>
               </div>
-              <div class="px-2 py-1 rounded-full text-xs font-medium ${statusDisplay.bgColor} ${statusDisplay.color} ${statusDisplay.borderColor} border">
+              <div class="px-2 py-1 rounded-full text-xs font-medium ${statusDisplay.bgColor} ${statusDisplay.color} ${statusDisplay.borderColor} border relative z-10">
                 ${statusDisplay.text}
               </div>
             </div>
             
-            <div class="mb-4">
+            <div class="mb-4 relative z-10">
               <div class="flex justify-between text-sm mb-2">
                 <span class="text-slate-400">Current</span>
                 <span class="text-white font-bold">${currentValue.toFixed(3)} mA</span>
@@ -239,7 +237,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
               </div>
             </div>
 
-            <div class="space-y-2 text-sm">
+            <div class="space-y-2 text-sm relative z-10">
               <div class="flex justify-between">
                 <span class="text-slate-400">Raw ADC:</span>
                 <span class="text-white">${sensor.raw_adc || 0}</span>
@@ -346,8 +344,9 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     }
 
     // Update chart data
-    function updateChartData(sensors: any[]) {
-      sensors.forEach((sensor, index) => {
+    function updateChartData(sensors: any) {
+      // Convert object to array values for chart processing
+      Object.values(sensors).forEach((sensor: any, index) => {
         if (!chartData[index]) chartData[index] = [];
         
         chartData[index].push(sensor.current);
@@ -390,10 +389,12 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     }
 
     // Update statistics
-    function updateStats(sensors: any[], metadata?: any) {
-      const totalSensors = sensors.length;
-      const activeSensors = sensors.filter(s => s.status === 'OK').length;
-      const avgCurrent = sensors.reduce((sum, s) => sum + s.current, 0) / totalSensors;
+    function updateStats(sensors: any, metadata?: any) {
+      // Convert object to array values for stats processing
+      const sensorsArray = Object.values(sensors);
+      const totalSensors = sensorsArray.length;
+      const activeSensors = sensorsArray.filter((s: any) => s.status === 'OK').length;
+      const avgCurrent = sensorsArray.reduce((sum: number, s: any) => sum + s.current, 0) / totalSensors;
       
       sensorInfo.innerHTML = `
         <div class="flex justify-between text-sm">
@@ -421,11 +422,11 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         </div>
         <div class="flex justify-between text-sm">
           <span class="text-slate-400">Min Current:</span>
-          <span class="text-white">${Math.min(...sensors.map(s => s.current)).toFixed(3)}mA</span>
+          <span class="text-white">${Math.min(...sensorsArray.map((s: any) => s.current)).toFixed(3)}mA</span>
         </div>
         <div class="flex justify-between text-sm">
           <span class="text-slate-400">Max Current:</span>
-          <span class="text-white">${Math.max(...sensors.map(s => s.current)).toFixed(3)}mA</span>
+          <span class="text-white">${Math.max(...sensorsArray.map((s: any) => s.current)).toFixed(3)}mA</span>
         </div>
         <div class="flex justify-between text-sm">
           <span class="text-slate-400">Sampling Rate:</span>

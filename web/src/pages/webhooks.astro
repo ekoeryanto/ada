@@ -681,9 +681,14 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     const eventCheckboxes = document.querySelectorAll('.webhook-event-checkbox:checked') as NodeListOf<HTMLInputElement>;
     const events = Array.from(eventCheckboxes).map(cb => cb.value);
 
-    if (!name || !url || events.length === 0) {
-      (window as any).showToast?.('Please fill in name, URL, and select at least one event type', 'error');
+    if (!name || !url) {
+      (window as any).showToast?.('Please fill in name and URL', 'error');
       return;
+    }
+
+    // If no events selected, use default events for testing
+    if (events.length === 0) {
+      events.push('sensor_data'); // Default event type
     }
 
     let headers = {};
@@ -708,12 +713,15 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       description
     };
 
+    console.log('Sending webhook data:', webhookData);
+
     try {
       if (editingWebhookId) {
         await adaApi.updateWebhook(editingWebhookId, webhookData);
         (window as any).showToast?.('Webhook updated successfully', 'success');
       } else {
-        await adaApi.createWebhook(webhookData);
+        const result = await adaApi.createWebhook(webhookData);
+        console.log('Create webhook result:', result);
         (window as any).showToast?.('Webhook created successfully', 'success');
       }
 
@@ -736,15 +744,71 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     }
   }
 
+  async function testWebhookConfig() {
+    const url = (document.getElementById('webhook-url') as HTMLInputElement)?.value;
+    const method = (document.getElementById('webhook-method') as HTMLSelectElement)?.value || 'POST';
+    const headersText = (document.getElementById('webhook-headers') as HTMLTextAreaElement)?.value;
+    const template = (document.getElementById('webhook-template') as HTMLTextAreaElement)?.value;
+
+    if (!url) {
+      (window as any).showToast?.('Please enter a URL to test', 'error');
+      return;
+    }
+
+    let headers = {};
+    if (headersText.trim()) {
+      try {
+        headers = JSON.parse(headersText);
+      } catch (error) {
+        (window as any).showToast?.('Invalid JSON in headers field', 'error');
+        return;
+      }
+    }
+
+    try {
+      const testPayload = {
+        timestamp: new Date().toISOString(),
+        event: 'test',
+        device_id: 'test-device',
+        data: {
+          message: 'This is a test webhook'
+        }
+      };
+
+      const testData = { 
+        url: url,
+        method: method,
+        headers: headers,
+        payload: template ? JSON.parse(template) : testPayload
+      };
+
+      console.log('Testing webhook with data:', testData);
+
+      const result = await adaApi.testWebhook(testData);
+      
+      (window as any).showToast?.('Webhook configuration test successful', 'success');
+      console.log('Test result:', result);
+    } catch (error) {
+      console.error('Failed to test webhook configuration:', error);
+      (window as any).showToast?.('Failed to test webhook configuration', 'error');
+    }
+  }
+
   async function toggleWebhook(webhookId: string) {
     try {
       const webhook = webhooks.find(w => w.id === webhookId);
       if (!webhook) return;
 
       await adaApi.updateWebhook(webhookId, {
+        name: webhook.name,
         url: webhook.url,
+        method: webhook.method,
+        timeout: webhook.timeout,
         events: webhook.events || [],
-        enabled: !webhook.enabled
+        enabled: !webhook.enabled,
+        headers: webhook.headers,
+        template: webhook.template,
+        description: webhook.description
       });
 
       await loadWebhookData();
@@ -786,6 +850,39 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     }
   }
 
+  // Placeholder functions for missing handlers - to be implemented
+  async function testAllWebhooks() {
+    (window as any).showToast?.('Test all webhooks - to be implemented', 'info');
+  }
+
+  async function clearWebhookQueue() {
+    (window as any).showToast?.('Clear webhook queue - to be implemented', 'info');
+  }
+
+  async function processQueue() {
+    (window as any).showToast?.('Process queue - to be implemented', 'info');
+  }
+
+  async function pauseQueue() {
+    (window as any).showToast?.('Pause queue - to be implemented', 'info');
+  }
+
+  async function clearFailedItems() {
+    (window as any).showToast?.('Clear failed items - to be implemented', 'info');
+  }
+
+  async function createFromTemplate(template: string) {
+    (window as any).showToast?.(`Create from ${template} template - to be implemented`, 'info');
+  }
+
+  async function testWebhookUrl() {
+    (window as any).showToast?.('Test webhook URL - to be implemented', 'info');
+  }
+
+  async function retryQueueItem(itemId: string) {
+    (window as any).showToast?.('Retry queue item - to be implemented', 'info');
+  }
+
   async function refreshWebhooks() {
     await loadWebhookData();
   }
@@ -809,6 +906,29 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
 
   // Initialize page
   document.addEventListener('DOMContentLoaded', () => {
+    // Make functions globally available for onclick handlers
+    (window as any).createWebhook = createWebhook;
+    (window as any).editWebhook = editWebhook;
+    (window as any).closeWebhookModal = closeWebhookModal;
+    (window as any).saveWebhook = saveWebhook;
+    (window as any).testWebhook = testWebhook;
+    (window as any).testWebhookConfig = testWebhookConfig;
+    (window as any).toggleWebhook = toggleWebhook;
+    (window as any).deleteWebhook = deleteWebhook;
+    (window as any).saveGlobalSettings = saveGlobalSettings;
+    (window as any).refreshWebhooks = refreshWebhooks;
+    (window as any).refreshQueue = refreshQueue;
+    
+    // Placeholder functions
+    (window as any).testAllWebhooks = testAllWebhooks;
+    (window as any).clearWebhookQueue = clearWebhookQueue;
+    (window as any).processQueue = processQueue;
+    (window as any).pauseQueue = pauseQueue;
+    (window as any).clearFailedItems = clearFailedItems;
+    (window as any).createFromTemplate = createFromTemplate;
+    (window as any).testWebhookUrl = testWebhookUrl;
+    (window as any).retryQueueItem = retryQueueItem;
+    
     loadWebhookData();
     
     // Auto-refresh webhooks and queue every 30 seconds

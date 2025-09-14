@@ -355,7 +355,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       try {
         const currentData = await adaApi.getAnalogCurrent();
         if (currentData.sensors) {
-          currentData.sensors.forEach((sensor: any) => {
+          Object.entries(currentData.sensors).forEach(([key, sensor]: [string, any]) => {
             if (sensor.low_alarm || sensor.high_alarm) {
               alarmCount++;
               activeAlarms.push({
@@ -411,14 +411,14 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       
       // Add voltage sensors
       if (voltageData.sensors) {
-        voltageData.sensors.forEach((sensor: any) => {
+        Object.entries(voltageData.sensors).forEach(([key, sensor]: [string, any]) => {
           sensorOptions += `<option value="voltage_${sensor.id}">${sensor.location || `Voltage Sensor ${sensor.id}`}</option>`;
         });
       }
       
       // Add current sensors
       if (currentData.sensors) {
-        currentData.sensors.forEach((sensor: any) => {
+        Object.entries(currentData.sensors).forEach(([key, sensor]: [string, any]) => {
           sensorOptions += `<option value="current_${sensor.id}">${sensor.location || `Current Sensor ${sensor.id}`}</option>`;
         });
       }
@@ -916,6 +916,39 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
 
   // Initialize page
   document.addEventListener('DOMContentLoaded', () => {
+    // Make functions available globally for onclick handlers
+    (window as any).createAlarm = createAlarm;
+    (window as any).acknowledgeAll = acknowledgeAll;
+    (window as any).refreshAlarms = refreshAlarms;
+    (window as any).saveNotificationSettings = saveNotificationSettings;
+    (window as any).testAlarmSound = testAlarmSound;
+    (window as any).testNotifications = testNotifications;
+    (window as any).silenceAll = silenceAll;
+    (window as any).closeAlarmModal = closeAlarmModal;
+    (window as any).saveAlarmRule = saveAlarmRule;
+    (window as any).acknowledgeAlarm = acknowledgeAlarm;
+    (window as any).resolveAlarm = resolveAlarm;
+    
+    // Add placeholder functions for missing ones
+    (window as any).openRuleEditor = function() {
+      console.log('Rule editor functionality not yet implemented');
+    };
+    (window as any).openEscalationEditor = function() {
+      console.log('Escalation editor functionality not yet implemented');
+    };
+    (window as any).viewAlarmDetails = function(alarmId: string) {
+      console.log('View alarm details for:', alarmId);
+    };
+    (window as any).editRule = function(ruleId: string) {
+      console.log('Edit rule:', ruleId);
+    };
+    (window as any).deleteRule = function(ruleId: string) {
+      console.log('Delete rule:', ruleId);
+    };
+    (window as any).deleteEscalationRule = function(ruleId: string) {
+      console.log('Delete escalation rule:', ruleId);
+    };
+    
     loadAlarmData();
     
     // Set up auto-refresh

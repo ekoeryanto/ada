@@ -181,6 +181,16 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       return nameMap[key.toLowerCase()] || key.toUpperCase();
     }
 
+    // Convert API key to hardware number for display
+    function getHardwareNumber(key: string): string {
+      const numberMap: { [key: string]: string } = {
+        'ai1': '1',  // AI1 -> display "1"
+        'ai2': '2',  // AI2 -> display "2"
+        'ai3': '3'   // AI3 -> display "3"
+      };
+      return numberMap[key.toLowerCase()] || '?';
+    }
+
     // Render voltage sensors
     function renderSensors(sensors: any) {
       if (!sensors || typeof sensors !== 'object') {
@@ -194,20 +204,25 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         // Convert key to display name: ai1 -> AI1, ai2 -> AI2, ai3 -> AI3 (matching pins_config.h)
         const displayName = getDisplayName(key); 
         const gpioPin = getGPIOPin(key);
+        const hardwareNumber = getHardwareNumber(key);
         
         return `
-          <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border ${statusDisplay.borderColor}">
+          <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border ${statusDisplay.borderColor} relative overflow-hidden">
+            <!-- Header with large hardware number -->
             <div class="flex items-center justify-between mb-4">
               <div>
-                <h3 class="text-lg font-semibold text-white">${displayName}</h3>
-                <span class="text-xs text-slate-400">Pin ${gpioPin}</span>
+                <div class="text-6xl font-bold text-white/10 absolute top-2 left-4 z-0 pointer-events-none select-none">${hardwareNumber}</div>
+                <div class="relative z-10">
+                  <h3 class="text-lg font-semibold text-white">${displayName}</h3>
+                  <span class="text-xs text-slate-400">Pin ${gpioPin}</span>
+                </div>
               </div>
-              <div class="px-2 py-1 rounded-full text-xs font-medium ${statusDisplay.bgColor} ${statusDisplay.color} ${statusDisplay.borderColor} border">
+              <div class="px-2 py-1 rounded-full text-xs font-medium ${statusDisplay.bgColor} ${statusDisplay.color} ${statusDisplay.borderColor} border relative z-10">
                 ${statusDisplay.text}
               </div>
             </div>
             
-            <div class="mb-4">
+            <div class="mb-4 relative z-10">
               <div class="flex justify-between text-sm mb-2">
                 <span class="text-slate-400">Voltage</span>
                 <span class="text-white font-bold">${sensor.value.toFixed(3)} V</span>
@@ -223,7 +238,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
               </div>
             </div>
 
-            <div class="space-y-2 text-sm">
+            <div class="space-y-2 text-sm relative z-10">
               <div class="flex justify-between">
                 <span class="text-slate-400">Raw ADC:</span>
                 <span class="text-white">${sensor.raw_adc || 0}</span>
@@ -327,8 +342,9 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     }
 
     // Update chart data
-    function updateChartData(sensors: any[]) {
-      sensors.forEach((sensor, index) => {
+    function updateChartData(sensors: any) {
+      // Convert object to array values for chart processing
+      Object.values(sensors).forEach((sensor: any, index) => {
         if (!chartData[index]) chartData[index] = [];
         
         chartData[index].push(sensor.voltage);

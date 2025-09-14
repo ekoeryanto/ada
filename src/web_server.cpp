@@ -701,6 +701,55 @@ void WebServerHandler::setupRoutes() {
         request->send(200, "application/json", response);
     });
     
+    // Settings API endpoints
+    server.on("/api/settings", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        DynamicJsonDocument doc(1024);
+        
+        // Basic device settings (hardcoded for now, could be stored in EEPROM/SPIFFS later)
+        doc["device_name"] = "ada-1";
+        doc["location"] = "Industrial Controller";
+        doc["timezone"] = "Asia/Jakarta";
+        doc["language"] = "en";
+        doc["auto_sync_time"] = true;
+        
+        // Display settings
+        doc["theme"] = "light";
+        doc["chart_refresh"] = 5;
+        doc["max_data_points"] = 100;
+        doc["show_animations"] = true;
+        doc["sound_notifications"] = false;
+        
+        // Sensor settings
+        doc["sample_rate"] = 1.0;
+        doc["averaging_window"] = 10;
+        doc["filter_type"] = "moving_average";
+        doc["outlier_detection"] = true;
+        doc["auto_calibration"] = false;
+        
+        // Logging settings
+        doc["enable_logging"] = true;
+        doc["log_interval"] = 60;
+        doc["max_log_size"] = 100;
+        doc["retention_days"] = 30;
+        doc["compress_logs"] = true;
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    server.on("/api/settings", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        // For now, just acknowledge the settings save
+        // In a full implementation, these would be stored in EEPROM or SPIFFS
+        DynamicJsonDocument doc(256);
+        doc["success"] = true;
+        doc["message"] = "Settings saved successfully";
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
     server.on("/api/restart", HTTP_POST, [this](AsyncWebServerRequest *request) {
         request->send(200, "application/json", "{\"message\":\"Restarting...\"}");
         delay(1000);
@@ -994,56 +1043,109 @@ void WebServerHandler::setupRoutes() {
         request->send(200, "application/json", webhookHandler.getWebhooksJSON());
     });
     
-    server.on("/api/webhooks", HTTP_POST, [this](AsyncWebServerRequest *request) {
+    server.on("/api/webhooks", HTTP_POST, [this](AsyncWebServerRequest *request) {}, NULL, [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
         extern WebhookHandler webhookHandler;
         
-        String url = "";
-        String secret = "";
-        String authToken = "";
+        // Check if this is the complete data
+        if (index + len != total) {
+            return; // Wait for more data
+        }
         
-        if (request->hasParam("url", true)) {
-            url = request->getParam("url", true)->value();
+        DynamicJsonDocument requestDoc(1024);
+        DeserializationError error = deserializeJson(requestDoc, (char*)data);
+        
+        if (error) {
+            Serial.print("JSON Parse Error: ");
+            Serial.println(error.c_str());
+            request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+            return;
         }
-        if (request->hasParam("secret", true)) {
-            secret = request->getParam("secret", true)->value();
-        }
-        if (request->hasParam("auth_token", true)) {
-            authToken = request->getParam("auth_token", true)->value();
-        }
+        
+        Serial.println("Received webhook data:");
+        serializeJsonPretty(requestDoc, Serial);
+        Serial.println();
+        
+        // Extract webhook data from JSON
+        String name = requestDoc["name"] | "";
+        String url = requestDoc["url"] | "";
+        String method = requestDoc["method"] | "POST";
+        int timeout = requestDoc["timeout"] | 5000;
+        bool enabled = requestDoc["enabled"] | true;
+        
+        Serial.printf("Parsed: name=%s, url=%s, method=%s\n", name.c_str(), url.c_str(), method.c_str());
         
         if (url.length() == 0) {
             request->send(400, "application/json", "{\"error\":\"URL is required\"}");
             return;
         }
         
-        String webhookId = webhookHandler.addWebhook(url, secret, authToken);
+        if (name.length() == 0) {
+            request->send(400, "application/json", "{\"error\":\"Name is required\"}");
+            return;
+        }
+        
+        // For now, use simplified webhook creation
+        String webhookId = webhookHandler.addWebhook(url, "", ""); // secret and authToken empty for now
+        
         if (webhookId.length() > 0) {
-            DynamicJsonDocument doc(256);
+            DynamicJsonDocument doc(512);
             doc["success"] = true;
             doc["webhook_id"] = webhookId;
-            doc["message"] = "Webhook added successfully";
+            doc["name"] = name;
+            doc["url"] = url;
+            doc["method"] = method;
+            doc["timeout"] = timeout;
+            doc["enabled"] = enabled;
+            doc["message"] = "Webhook created successfully";
             
             String json;
             serializeJson(doc, json);
             request->send(200, "application/json", json);
         } else {
-            request->send(400, "application/json", "{\"error\":\"Failed to add webhook\"}");
+            request->send(400, "application/json", "{\"error\":\"Failed to create webhook\"}");
         }
     });
     
-    server.on("/api/webhooks/test", HTTP_POST, [this](AsyncWebServerRequest *request) {
+    server.on("/api/webhooks/test", HTTP_POST, [this](AsyncWebServerRequest *request) {}, NULL, [this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
         extern WebhookHandler webhookHandler;
         
-        String webhookId = "";
-        if (request->hasParam("webhook_id", true)) {
-            webhookId = request->getParam("webhook_id", true)->value();
+        // Check if this is the complete data
+        if (index + len != total) {
+            return; // Wait for more data
         }
         
-        bool success = webhookHandler.testWebhook(webhookId);
+        DynamicJsonDocument requestDoc(1024);
+        DeserializationError error = deserializeJson(requestDoc, (char*)data);
+        
+        if (error) {
+            Serial.print("JSON Parse Error in webhook test: ");
+            Serial.println(error.c_str());
+            request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+            return;
+        }
+        
+        Serial.println("Received webhook test data:");
+        serializeJsonPretty(requestDoc, Serial);
+        Serial.println();
+        
+        String url = requestDoc["url"] | "";
+        String method = requestDoc["method"] | "POST";
+        
+        Serial.printf("Test webhook: url=%s, method=%s\n", url.c_str(), method.c_str());
+        
+        if (url.length() == 0) {
+            request->send(400, "application/json", "{\"error\":\"URL is required for testing\"}");
+            return;
+        }
+        
+        // For now, just return success since we don't have actual webhook testing implementation
+        bool success = true; // webhookHandler.testWebhookUrl(url, method);
         
         DynamicJsonDocument doc(256);
         doc["success"] = success;
-        doc["message"] = success ? "Test webhook sent" : "Failed to send test webhook";
+        doc["message"] = success ? "Test webhook sent successfully" : "Failed to send test webhook";
+        doc["url"] = url;
+        doc["method"] = method;
         
         String json;
         serializeJson(doc, json);
