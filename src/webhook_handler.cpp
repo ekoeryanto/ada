@@ -563,3 +563,19 @@ void WebhookHandler::retryFailed() {
     
     Serial.printf("[WEBHOOK] Retrying %d failed webhooks\n", retryCount);
 }
+
+unsigned long WebhookHandler::getTotalSent() {
+    return totalSent;
+}
+
+unsigned long WebhookHandler::getTotalSuccess() {
+    return totalSuccess;
+}
+
+unsigned long WebhookHandler::getTotalFailed() {
+    return totalFailed;
+}
+
+int WebhookHandler::getQueueSize() {
+    return queueSize;
+}
