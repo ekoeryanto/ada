@@ -1,4 +1,5 @@
 #include "sd_manager.h"
+#include "ntp_manager.h"
 #include <time.h>
 #include <vector>
 
@@ -200,20 +201,85 @@ bool SDManager::removeDir(const char* path) {
 
 bool SDManager::logData(const String& data) {
     if (!isMounted()) return false;
-    // Implementation would go here
-    return false;
+    
+    // Simple data logging without timestamp
+    String filename = "system.log";
+    File logFile = SD.open("/" + filename, FILE_APPEND);
+    
+    if (!logFile) {
+        if (DEBUG_ENABLED) {
+            Serial.println("[SD] Failed to open log file: " + filename);
+        }
+        return false;
+    }
+    
+    logFile.println(data);
+    logFile.close();
+    
+    return true;
 }
 
 bool SDManager::logDataWithTimestamp(const String& data) {
     if (!isMounted()) return false;
-    // Implementation would go here
-    return false;
+    
+    // Get current timestamp from NTP Manager
+    String timestamp;
+    if (ntpMgr.isSynced()) {
+        timestamp = ntpMgr.getCurrentDateTimeString();
+    } else {
+        // Fallback to millis if NTP not available
+        timestamp = String(millis());
+    }
+    
+    // Create timestamped log entry
+    String logEntry = timestamp + "," + data;
+    
+    // Write to daily log file
+    String filename = "data_" + getDateString() + ".csv";
+    File logFile = SD.open("/" + filename, FILE_APPEND);
+    
+    if (!logFile) {
+        if (DEBUG_ENABLED) {
+            Serial.println("[SD] Failed to open log file: " + filename);
+        }
+        return false;
+    }
+    
+    logFile.println(logEntry);
+    logFile.close();
+    
+    if (DEBUG_ENABLED) {
+        Serial.println("[SD] Data logged: " + logEntry);
+    }
+    
+    return true;
 }
 
 bool SDManager::createLogFile(const String& filename) {
     if (!isMounted()) return false;
-    // Implementation would go here
-    return false;
+    
+    String logFilename = filename.isEmpty() ? generateLogFilename() : filename;
+    
+    // Create log file with CSV header if it doesn't exist
+    if (!SD.exists("/" + logFilename)) {
+        File logFile = SD.open("/" + logFilename, FILE_WRITE);
+        if (!logFile) {
+            if (DEBUG_ENABLED) {
+                Serial.println("[SD] Failed to create log file: " + logFilename);
+            }
+            return false;
+        }
+        
+        // Write CSV header
+        logFile.println("timestamp,sensor_type,data");
+        logFile.close();
+        
+        if (DEBUG_ENABLED) {
+            Serial.println("[SD] Created log file: " + logFilename);
+        }
+    }
+    
+    return true;
 }
 
 String SDManager::generateLogFilename() {
@@ -264,7 +330,27 @@ String SDManager::formatBytes(uint64_t bytes) {
 }
 
 String SDManager::getCurrentTimestamp() {
-    return String(millis());
+    // Use NTP Manager for proper timestamp if available
+    if (ntpMgr.isSynced()) {
+        return ntpMgr.getCurrentDateTimeString();
+    } else {
+        // Fallback to millis-based timestamp
+        return String(millis());
+    }
+}
+
+String SDManager::getDateString() {
+    // Get current date for daily log files
+    if (ntpMgr.isSynced()) {
+        DateTime now = ntpMgr.getCurrentTime();
+        char dateStr[16];
+        snprintf(dateStr, sizeof(dateStr), "%04d%02d%02d", 
+                now.year(), now.month(), now.day());
+        return String(dateStr);
+    } else {
+        // Fallback to day based on millis
+        return String(millis() / 86400000);  // Days since boot
+    }
 }
 
 bool SDManager::isOperationSafe() {

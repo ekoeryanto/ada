@@ -55,6 +55,7 @@ public:
     bool logDataWithTimestamp(const String& data);
     bool createLogFile(const String& filename = "");
     String generateLogFilename();
+    String getDateString();  // Helper for daily log files
     
     // System information
     String getCardInfo();

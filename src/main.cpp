@@ -32,6 +32,7 @@
 #include "sd_manager.h"
 #include "ntp_manager.h"
 #include "analog_voltage_manager.h"
+#include "analog_current_manager.h"
 #include "analytics_manager.h"
 #include "remote_diagnostics.h"
 #include "webhook_handler.h"
@@ -120,6 +121,66 @@ void setup() {
         // Serial.println("[Main] - All sensors have enhanced identity and alarm configuration");
     } else {
         Serial.println("[Main] Analog Voltage Manager initialization failed!");
+    }
+    
+    // Initialize Analog Current Manager for 4-20mA sensors
+    Serial.println("[Main] Initializing Analog Current Manager...");
+    if (analogCurrentMgr.begin()) {
+        Serial.println("[Main] Analog Current Manager initialized successfully");
+        
+        // Configure current loop sensors for different applications
+        analogCurrentMgr.configureSensor(0, "Level Tank 2", "mm", 0.0, 5000.0, 119.0, 2.0, 500.0, 4500.0);
+        analogCurrentMgr.configureSensor(1, "Flow Line 2", "L/min", 0.0, 200.0, 120.0, 2.0, 20.0, 180.0);
+        analogCurrentMgr.configureSensor(2, "Pressure Sys", "bar", 0.0, 16.0, 120.0, 2.0, 2.0, 14.0);
+        
+        // Configure enhanced sensor identity for current loops
+        analogCurrentMgr.configureSensorIdentity(0, "LEVEL_TK2_004", "Rosemount", "3051L", "RM789123456", 
+                                               "2025-09-14", "Tank 2 level transmitter (4-20mA)", "Tank_B", "critical,level,tank,4-20ma");
+        analogCurrentMgr.configureSensorIdentity(1, "FLOW_LINE2_005", "Yokogawa", "ADMAG AE", "YG123789456",
+                                               "2025-09-14", "Secondary line flow meter (4-20mA)", "Line_2", "flow,line,backup,4-20ma");
+        analogCurrentMgr.configureSensorIdentity(2, "PRESS_SYS_006", "Endress+Hauser", "Cerabar PMC21", "EH456123789",
+                                               "2025-09-14", "System pressure transmitter (4-20mA)", "System", "pressure,system,main,4-20ma");
+        
+        // Configure current loop parameters
+        analogCurrentMgr.configureCurrentLoop(0, 4.0, 20.0, 119.0, 2.0);  // Tank level with custom sense resistor
+        analogCurrentMgr.configureCurrentLoop(1, 4.0, 20.0, 120.0, 2.0);  // Flow meter standard config
+        analogCurrentMgr.configureCurrentLoop(2, 4.0, 20.0, 120.0, 2.0);  // Pressure transmitter standard config
+        
+        // Configure loop diagnostics for health monitoring
+        analogCurrentMgr.configureLoopDiagnostics(0, true, 250.0, 15.0);  // Level sensor: expected 250Ω ±15%
+        analogCurrentMgr.configureLoopDiagnostics(1, true, 300.0, 20.0);  // Flow meter: expected 300Ω ±20% (longer cable)
+        analogCurrentMgr.configureLoopDiagnostics(2, true, 200.0, 10.0);  // Pressure: expected 200Ω ±10% (short cable)
+        
+        // Configure alarm settings for current loops
+        analogCurrentMgr.setAlarmConfig(0, 4, "EMERGENCY: Tank level critical!", true);  // Emergency level alarm
+        analogCurrentMgr.setAlarmConfig(1, 2, "WARNING: Secondary flow deviation", true);  // Warning flow alarm
+        analogCurrentMgr.setAlarmConfig(2, 3, "CRITICAL: System pressure abnormal!", true);  // Critical pressure alarm
+        
+        // Configure advanced filtering for current sensors
+        analogCurrentMgr.setSmoothingFactor(0, 0.15);  // Heavy smoothing for level (slow changes)
+        analogCurrentMgr.enableOutlierDetection(0, true, 12.0);  // 12% outlier threshold for level
+        
+        analogCurrentMgr.setSmoothingFactor(1, 0.35);  // Moderate smoothing for flow
+        analogCurrentMgr.enableOutlierDetection(1, true, 20.0);  // 20% outlier threshold for flow variations
+        
+        analogCurrentMgr.setSmoothingFactor(2, 0.25);  // Moderate smoothing for pressure
+        analogCurrentMgr.enableOutlierDetection(2, true, 15.0);  // 15% outlier threshold for pressure
+        
+        // Set timing configuration
+        analogCurrentMgr.setReadInterval(1500);    // 1.5 seconds for current loops
+        analogCurrentMgr.setLogInterval(300000);   // 5 minutes logging interval
+        
+        // Enable data logging and streaming
+        analogCurrentMgr.enableLogging(sdMgr.isMounted());
+        analogCurrentMgr.enableStreaming(true);
+        
+        Serial.println("[Main] Analog current sensors configured:");
+        Serial.println("[Main] - Sensor 0: Level Tank 2 (AI1) - 0-5000 mm [LEVEL_TK2_004]");
+        Serial.println("[Main] - Sensor 1: Flow Line 2 (AI2) - 0-200 L/min [FLOW_LINE2_005]");
+        Serial.println("[Main] - Sensor 2: Pressure Sys (AI3) - 0-16 bar [PRESS_SYS_006]");
+        Serial.println("[Main] - All current loops have diagnostics and health monitoring enabled");
+    } else {
+        Serial.println("[Main] Analog Current Manager initialization failed!");
     }
     
     // Initialize WiFi Manager
@@ -247,6 +308,9 @@ void loop() {
     // Handle Analog Voltage Manager (sensor readings)
     analogVoltageMgr.handle();
     
+    // Handle Analog Current Manager (4-20mA sensor readings)
+    analogCurrentMgr.handle();
+    
     // Handle Analytics Manager (data analysis and trends)
     analyticsMgr.handle();
     
@@ -259,11 +323,22 @@ void loop() {
     // Feed sensor data to analytics
     static unsigned long lastAnalyticsUpdate = 0;
     if (millis() - lastAnalyticsUpdate > 5000) {  // Every 5 seconds
+        // Feed voltage sensor data to analytics
         for (int i = 0; i < 3; i++) {
             if (analogVoltageMgr.isSensorEnabled(i)) {
                 AnalogReading reading = analogVoltageMgr.getReading(i);
                 if (reading.valid) {
                     analyticsMgr.addDataPoint(i, reading.scaledValue, reading.timestamp);
+                }
+            }
+        }
+        
+        // Feed current sensor data to analytics (offset sensor IDs by 3)
+        for (int i = 0; i < 3; i++) {
+            if (analogCurrentMgr.isSensorEnabled(i)) {
+                CurrentReading reading = analogCurrentMgr.getReading(i);
+                if (reading.valid) {
+                    analyticsMgr.addDataPoint(i + 3, reading.scaledValue, reading.timestamp);
                 }
             }
         }
