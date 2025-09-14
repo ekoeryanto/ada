@@ -1180,16 +1180,22 @@ void WebServerHandler::setupRoutes() {
         
         for (int i = 0; i < webhookMetaCount; i++) {
             JsonObject webhook = webhooks.createNestedObject();
+            webhook["id"] = webhookMeta[i].id;
             webhook["name"] = webhookMeta[i].name;
             webhook["url"] = webhookMeta[i].url;
             webhook["method"] = webhookMeta[i].method;
             webhook["enabled"] = webhookMeta[i].enabled;
             webhook["created_at"] = webhookMeta[i].created_at;
-            // Add some default values expected by client
             webhook["timeout"] = 5000;
             webhook["max_retries"] = 3;
             webhook["headers"] = "{}";
             webhook["payload_template"] = "{}";
+            
+            // Add events array (required by Zod schema)
+            JsonArray events = webhook.createNestedArray("events");
+            // Add some default events
+            events.add("sensor_data");
+            events.add("alarm_triggered");
         }
         
         // Add statistics object
@@ -1243,9 +1249,10 @@ void WebServerHandler::setupRoutes() {
         Serial.println();
         
         // Extract webhook data from JSON
-        String name = requestDoc["name"] | "";
-        String url = requestDoc["url"] | "";
-        String method = requestDoc["method"] | "POST";
+        String name = requestDoc["name"].as<String>();
+        String url = requestDoc["url"].as<String>();
+        String method = requestDoc["method"].as<String>();
+        if (method.length() == 0) method = "POST";
         int timeout = requestDoc["timeout"] | 5000;
         bool enabled = requestDoc["enabled"] | true;
         

@@ -203,10 +203,16 @@ export const DiagnosticsSchema = z.object({
 export const WebhookSchema = z.object({
   webhooks: z.array(z.object({
     id: z.string(),
+    name: z.string().optional(),
     url: z.string(),
+    method: z.string().optional(),
     events: z.array(z.string()),
     enabled: z.boolean(),
     created_at: z.number(),
+    timeout: z.number().optional(),
+    max_retries: z.number().optional(),
+    headers: z.string().optional(),
+    payload_template: z.string().optional(),
   })),
   statistics: z.object({
     total_sent: z.number(),
