@@ -8,6 +8,7 @@
 #include "config.h"
 #include <ESPAsyncWebServer.h>
 #include <AsyncTCP.h>
+#include "modbus_manager.h"
 
 // Forward declarations
 class OTAHandler;

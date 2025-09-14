@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <ModbusMaster.h>
+#include <ModbusRtu.h>
 #include <HardwareSerial.h>
 #include <vector>
 #include <map>
@@ -187,9 +188,18 @@ private:
     // Hardware configuration
     HardwareSerial* serial;         // Serial interface
     ModbusMaster* master;           // Modbus master instance
+    Modbus* slave;                  // Modbus slave instance
     uint8_t rxPin;                  // RX pin
     uint8_t txPin;                  // TX pin
     uint8_t dePin;                  // DE/RE pin (optional)
+    uint8_t slaveAddress;           // Our own Modbus slave address
+    bool slaveEnabled;              // Enable slave functionality
+    
+    // Slave data arrays
+    uint16_t holdingRegs[100];      // Holding registers (0-99)
+    uint16_t inputRegs[100];        // Input registers (0-99)
+    bool coils[100];                // Coils (0-99)
+    bool discreteInputs[100];       // Discrete inputs (0-99)
     
     // Device management
     std::vector<ModbusDeviceConfig> devices;
@@ -363,6 +373,31 @@ public:
     void enableFlowControl(bool enable = true);
     void setBaudRate(uint32_t baudRate);
     void setSerialConfig(uint8_t dataBits, uint8_t parity, uint8_t stopBits);
+    
+    // Additional methods for PLC-like functionality
+    bool deviceExists(uint8_t slaveId);
+    uint8_t getConnectedDeviceCount();
+    bool startDeviceDiscovery(uint8_t startId = 1, uint8_t endId = 247);
+    unsigned long getLastCommunicationTime(uint8_t slaveId);
+    uint8_t getDeviceHealth(uint8_t slaveId);
+    uint16_t getErrorCount(uint8_t slaveId);
+    bool writeRegister(uint8_t slaveId, uint16_t address, uint16_t value);
+    
+    // Modbus Slave functionality for ada-1 board
+    bool enableSlave(uint8_t slaveAddr = MODBUS_SLAVE_ADDRESS);
+    void disableSlave();
+    bool isSlaveEnabled();
+    void updateSlaveData();
+    
+    // Slave data access methods
+    void setHoldingRegister(uint16_t address, uint16_t value);
+    uint16_t getHoldingRegister(uint16_t address);
+    void setInputRegister(uint16_t address, uint16_t value);
+    uint16_t getInputRegister(uint16_t address);
+    void setCoil(uint16_t address, bool value);
+    bool getCoil(uint16_t address);
+    void setDiscreteInput(uint16_t address, bool value);
+    bool getDiscreteInput(uint16_t address);
 };
 
 // Global instance

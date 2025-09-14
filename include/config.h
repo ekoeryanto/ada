@@ -36,6 +36,11 @@
 // Network Configuration
 #define HOSTNAME "ada-1"
 
+// Modbus Configuration
+#define MODBUS_SLAVE_ADDRESS 1      // Board ada-1 Modbus slave address
+#define MODBUS_BAUD_RATE 9600       // Default baud rate
+#define MODBUS_ENABLE_SLAVE true    // Enable Modbus slave functionality
+
 // Timing Configuration
 #define HEARTBEAT_INTERVAL 30000    // 30 seconds
 #define STATUS_UPDATE_INTERVAL 5000 // 5 seconds

@@ -76,20 +76,6 @@ void onModbusDataUpdated(const ModbusReading& reading) {
                      reading.deviceName.c_str(), reading.registerName.c_str(),
                      reading.stringValue.c_str(), reading.unit.c_str(), reading.quality);
     }
-    
-    // Process high-priority readings immediately
-    if (reading.deviceName.indexOf("SHT20") >= 0) {
-        // Temperature/humidity sensor - check for alarms
-        if (reading.registerName == "Temperature" && reading.scaledValue > 40.0) {
-            Serial.println("[ALARM] High temperature detected: " + String(reading.scaledValue) + "°C");
-            webhookHandler.sendAlarmTriggered("temperature_high", "WARNING", reading.scaledValue, 40.0);
-        }
-        
-        if (reading.registerName == "Humidity" && reading.scaledValue > 80.0) {
-            Serial.println("[ALARM] High humidity detected: " + String(reading.scaledValue) + "%RH");
-            webhookHandler.sendAlarmTriggered("humidity_high", "WARNING", reading.scaledValue, 80.0);
-        }
-    }
 }
 
 void onModbusError(uint8_t slaveId, uint8_t errorCode, const String& message) {
@@ -379,81 +365,7 @@ void setup() {
     if (modbusManager.begin()) {
         Serial.println("[Main] Modbus RTU Manager initialized successfully");
         
-        // Configure SHT20 Temperature/Humidity sensor (from sample code)
-        ModbusDeviceConfig sht20Config;
-        sht20Config.name = "SHT20_Sensor";
-        sht20Config.description = "Temperature and Humidity Sensor";
-        sht20Config.manufacturer = "Sensirion";
-        sht20Config.model = "SHT20";
-        sht20Config.slaveId = 1;  // From sample code
-        sht20Config.baudRate = 9600;
-        sht20Config.dataBits = 8;
-        sht20Config.parity = 0;  // None
-        sht20Config.stopBits = 1;
-        sht20Config.enabled = true;
-        sht20Config.group = "Environment";
-        sht20Config.tags = "temperature,humidity,environment";
-        sht20Config.responseTimeout = 1000;
-        sht20Config.frameDelay = 100;
-        sht20Config.retryDelay = 500;
-        sht20Config.maxRetries = 3;
-        sht20Config.healthMonitoring = true;
-        sht20Config.healthInterval = 30000;
-        
-        // Temperature register (address 0x001, from sample code)
-        ModbusRegisterMap tempReg;
-        tempReg.name = "Temperature";
-        tempReg.address = 0x001;
-        tempReg.dataType = MB_TYPE_UINT16;
-        tempReg.byteOrder = MB_BYTE_ORDER_ABCD;
-        tempReg.registerCount = 1;
-        tempReg.scaleFactor = 0.1f;  // Divide by 10 (from sample code)
-        tempReg.offset = 0.0f;
-        tempReg.unit = "°C";
-        tempReg.group = "Environment";
-        tempReg.tags = "temperature,sht20";
-        tempReg.readOnly = true;
-        tempReg.minValue = -40.0f;
-        tempReg.maxValue = 85.0f;
-        tempReg.autoUpdate = true;
-        tempReg.updateInterval = 5000;  // 5 seconds
-        tempReg.valid = false;
-        tempReg.quality = 0;
-        tempReg.timestamp = 0;
-        
-        // Humidity register (address 0x002, inferred from sample code logic)
-        ModbusRegisterMap humiReg;
-        humiReg.name = "Humidity";
-        humiReg.address = 0x002;
-        humiReg.dataType = MB_TYPE_UINT16;
-        humiReg.byteOrder = MB_BYTE_ORDER_ABCD;
-        humiReg.registerCount = 1;
-        humiReg.scaleFactor = 0.1f;  // Divide by 10
-        humiReg.offset = 0.0f;
-        humiReg.unit = "%RH";
-        humiReg.group = "Environment";
-        humiReg.tags = "humidity,sht20";
-        humiReg.readOnly = true;
-        humiReg.minValue = 0.0f;
-        humiReg.maxValue = 100.0f;
-        humiReg.autoUpdate = true;
-        humiReg.updateInterval = 5000;
-        humiReg.valid = false;
-        humiReg.quality = 0;
-        humiReg.timestamp = 0;
-        
-        // Add registers to device configuration
-        sht20Config.inputRegisters.push_back(tempReg);
-        sht20Config.inputRegisters.push_back(humiReg);
-        
-        // Add SHT20 device
-        if (modbusManager.addDevice(sht20Config)) {
-            Serial.println("[Main] SHT20 sensor configured successfully");
-        } else {
-            Serial.println("[Main] Failed to configure SHT20 sensor");
-        }
-        
-        // Configure additional demo device (Energy Meter example)
+        // Configure demo device (Energy Meter example)
         ModbusDeviceConfig energyMeterConfig;
         energyMeterConfig.name = "Energy_Meter";
         energyMeterConfig.description = "3-Phase Energy Meter";
@@ -517,8 +429,19 @@ void setup() {
         // Enable auto-discovery for additional devices
         modbusManager.enableAutoDiscovery(true);
         
+        // Enable Modbus Slave mode for ada-1 board (address 1)
+        if (modbusManager.enableSlave(MODBUS_SLAVE_ADDRESS)) {
+            Serial.printf("[Main] Modbus Slave enabled at address %d\n", MODBUS_SLAVE_ADDRESS);
+            Serial.println("[Main] - AI1-AI3 -> Input Registers 0-2");
+            Serial.println("[Main] - DI1-DI4 -> Discrete Inputs 0-3");
+            Serial.println("[Main] - DO1-DO4 -> Coils 0-3");
+            Serial.println("[Main] - System Status -> Holding Registers 0-2");
+        } else {
+            Serial.println("[Main] Failed to enable Modbus Slave mode");
+        }
+        
         Serial.println("[Main] Modbus devices configured:");
-        Serial.println("[Main] - SHT20 Temperature/Humidity Sensor (ID: 1) - ENABLED");
+        Serial.printf("[Main] - ada-1 Board (ID: %d) - SLAVE MODE ENABLED\n", MODBUS_SLAVE_ADDRESS);
         Serial.println("[Main] - Energy Meter Demo (ID: 2) - DISABLED");
         Serial.println("[Main] - Auto-discovery enabled for additional devices");
         Serial.println("[Main] - Health monitoring and logging enabled");
@@ -660,6 +583,9 @@ void loop() {
     // Handle Modbus RTU Manager (RS485 communication)
     modbusManager.handle();
     
+    // Update Modbus Slave data for ada-1 board
+    modbusManager.updateSlaveData();
+    
     // Handle Analytics Manager (data analysis and trends)
     analyticsMgr.handle();
     
@@ -717,7 +643,7 @@ void loop() {
             // Individual device readings
             std::vector<uint8_t> connectedDevices = modbusManager.getConnectedDevices();
             for (uint8_t slaveId : connectedDevices) {
-                // Get SHT20 readings if available
+                // Get temperature readings if available
                 ModbusReading tempReading = modbusManager.readRegister(slaveId, "Temperature");
                 if (tempReading.valid) {
                     analyticsMgr.addDataPoint(16 + slaveId, tempReading.scaledValue, tempReading.timestamp);

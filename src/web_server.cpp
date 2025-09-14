@@ -685,7 +685,241 @@ void WebServerHandler::setupRoutes() {
         serializeJson(doc, json);
         request->send(200, "application/json", json);
     });
+
+    // ===== MODBUS MANAGEMENT API ENDPOINTS =====
+    // Get all Modbus devices status
+    server.on("/api/modbus/devices", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern ModbusManager modbusManager;
+        
+        DynamicJsonDocument doc(4096);
+        doc["initialized"] = modbusManager.isInitialized();
+        doc["total_devices"] = modbusManager.getDeviceCount();
+        doc["connected_devices"] = modbusManager.getConnectedDeviceCount();
+        
+        // Network statistics
+        ModbusNetworkStats stats = modbusManager.getNetworkStats();
+        doc["network"]["success_rate"] = stats.networkSuccessRate;
+        doc["network"]["avg_response_time"] = stats.averageResponseTime;
+        doc["network"]["total_requests"] = stats.totalRequests;
+        doc["network"]["failed_requests"] = stats.failedRequests;
+        doc["network"]["active_devices"] = stats.activeDevices;
+        
+        // Device list
+        JsonArray devices = doc.createNestedArray("devices");
+        std::vector<uint8_t> connectedDevices = modbusManager.getConnectedDevices();
+        
+        for (uint8_t slaveId : connectedDevices) {
+            JsonObject device = devices.createNestedObject();
+            device["slave_id"] = slaveId;
+            device["name"] = modbusManager.getDeviceName(slaveId);
+            device["status"] = "connected";
+            device["last_communication"] = modbusManager.getLastCommunicationTime(slaveId);
+            device["error_count"] = modbusManager.getErrorCount(slaveId);
+            device["health_score"] = modbusManager.getDeviceHealth(slaveId);
+        }
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
     
+    // Add new Modbus device
+    server.on("/api/modbus/devices", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        extern ModbusManager modbusManager;
+        
+        // Parse JSON body
+        String body;
+        if (request->hasParam("plain", true)) {
+            body = request->getParam("plain", true)->value();
+        }
+        
+        DynamicJsonDocument requestDoc(1024);
+        deserializeJson(requestDoc, body);
+        
+        // Create device config from JSON
+        ModbusDeviceConfig config;
+        config.name = requestDoc["name"].as<String>();
+        config.description = requestDoc["description"].as<String>();
+        config.slaveId = requestDoc["slave_id"];
+        config.baudRate = requestDoc["baud_rate"] | 9600;
+        config.dataBits = requestDoc["data_bits"] | 8;
+        config.parity = requestDoc["parity"] | 0;
+        config.stopBits = requestDoc["stop_bits"] | 1;
+        config.enabled = requestDoc["enabled"] | true;
+        config.responseTimeout = requestDoc["response_timeout"] | 1000;
+        config.frameDelay = requestDoc["frame_delay"] | 100;
+        config.retryDelay = requestDoc["retry_delay"] | 500;
+        config.maxRetries = requestDoc["max_retries"] | 3;
+        config.healthMonitoring = requestDoc["health_monitoring"] | true;
+        config.healthInterval = requestDoc["health_interval"] | 30000;
+        
+        bool success = modbusManager.addDevice(config);
+        
+        DynamicJsonDocument responseDoc(256);
+        responseDoc["success"] = success;
+        responseDoc["message"] = success ? "Device added successfully" : "Failed to add device";
+        
+        String response;
+        serializeJson(responseDoc, response);
+        request->send(success ? 200 : 400, "application/json", response);
+    });
+    
+    // Get specific device configuration
+    server.on("/api/modbus/devices/*", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern ModbusManager modbusManager;
+        
+        String path = request->url();
+        int slaveId = path.substring(path.lastIndexOf('/') + 1).toInt();
+        
+        if (!modbusManager.deviceExists(slaveId)) {
+            request->send(404, "application/json", "{\"error\":\"Device not found\"}");
+            return;
+        }
+        
+        DynamicJsonDocument doc(1024);
+        doc["slave_id"] = slaveId;
+        doc["name"] = modbusManager.getDeviceName(slaveId);
+        doc["connected"] = modbusManager.isDeviceConnected(slaveId);
+        doc["health_score"] = modbusManager.getDeviceHealth(slaveId);
+        doc["error_count"] = modbusManager.getErrorCount(slaveId);
+        doc["last_communication"] = modbusManager.getLastCommunicationTime(slaveId);
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    // Remove Modbus device
+    server.on("/api/modbus/devices/*", HTTP_DELETE, [this](AsyncWebServerRequest *request) {
+        extern ModbusManager modbusManager;
+        
+        String path = request->url();
+        int slaveId = path.substring(path.lastIndexOf('/') + 1).toInt();
+        
+        bool success = modbusManager.removeDevice(slaveId);
+        
+        DynamicJsonDocument doc(256);
+        doc["success"] = success;
+        doc["message"] = success ? "Device removed successfully" : "Failed to remove device";
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(success ? 200 : 400, "application/json", response);
+    });
+    
+    // Read register from device
+    server.on("/api/modbus/read", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        extern ModbusManager modbusManager;
+        
+        String body;
+        if (request->hasParam("plain", true)) {
+            body = request->getParam("plain", true)->value();
+        }
+        
+        DynamicJsonDocument requestDoc(512);
+        deserializeJson(requestDoc, body);
+        
+        uint8_t slaveId = requestDoc["slave_id"];
+        String registerName = requestDoc["register_name"];
+        
+        ModbusReading reading = modbusManager.readRegister(slaveId, registerName);
+        
+        DynamicJsonDocument responseDoc(512);
+        responseDoc["success"] = reading.valid;
+        responseDoc["slave_id"] = slaveId;
+        responseDoc["register_name"] = registerName;
+        responseDoc["value"] = reading.scaledValue;
+        responseDoc["raw_data"] = JsonArray();
+        JsonArray rawArray = responseDoc["raw_data"];
+        for (size_t i = 0; i < reading.rawData.size(); i++) {
+            rawArray.add(reading.rawData[i]);
+        }
+        responseDoc["unit"] = reading.unit;
+        responseDoc["timestamp"] = reading.timestamp;
+        responseDoc["quality"] = reading.quality;
+        
+        String response;
+        serializeJson(responseDoc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    // Write register to device
+    server.on("/api/modbus/write", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        extern ModbusManager modbusManager;
+        
+        String body;
+        if (request->hasParam("plain", true)) {
+            body = request->getParam("plain", true)->value();
+        }
+        
+        DynamicJsonDocument requestDoc(512);
+        deserializeJson(requestDoc, body);
+        
+        uint8_t slaveId = requestDoc["slave_id"];
+        uint16_t address = requestDoc["address"];
+        uint16_t value = requestDoc["value"];
+        
+        bool success = modbusManager.writeRegister(slaveId, address, value);
+        
+        DynamicJsonDocument responseDoc(256);
+        responseDoc["success"] = success;
+        responseDoc["message"] = success ? "Register written successfully" : "Failed to write register";
+        
+        String response;
+        serializeJson(responseDoc, response);
+        request->send(success ? 200 : 400, "application/json", response);
+    });
+    
+    // Auto-discover Modbus devices
+    server.on("/api/modbus/discover", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        extern ModbusManager modbusManager;
+        
+        String startIdStr = "1";
+        String endIdStr = "247";
+        
+        if (request->hasParam("start_id", true)) {
+            startIdStr = request->getParam("start_id", true)->value();
+        }
+        if (request->hasParam("end_id", true)) {
+            endIdStr = request->getParam("end_id", true)->value();
+        }
+        
+        uint8_t startId = startIdStr.toInt();
+        uint8_t endId = endIdStr.toInt();
+        
+        // Start discovery (this should be async in real implementation)
+        bool success = modbusManager.startDeviceDiscovery(startId, endId);
+        
+        DynamicJsonDocument doc(256);
+        doc["success"] = success;
+        doc["message"] = success ? "Device discovery started" : "Failed to start discovery";
+        doc["scan_range"]["start"] = startId;
+        doc["scan_range"]["end"] = endId;
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(success ? 200 : 400, "application/json", response);
+    });
+    
+    // Get Modbus network statistics
+    server.on("/api/modbus/stats", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern ModbusManager modbusManager;
+        
+        ModbusNetworkStats stats = modbusManager.getNetworkStats();
+        
+        DynamicJsonDocument doc(512);
+        doc["network_success_rate"] = stats.networkSuccessRate;
+        doc["average_response_time"] = stats.averageResponseTime;
+        doc["total_requests"] = stats.totalRequests;
+        doc["failed_requests"] = stats.failedRequests;
+        doc["active_devices"] = stats.activeDevices;
+        doc["last_update"] = millis();
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+
     server.onNotFound([this](AsyncWebServerRequest *request) {
         request->send(404, "application/json", "{\"error\":\"Not found\"}");
     });

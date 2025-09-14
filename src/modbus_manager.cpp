@@ -12,9 +12,12 @@ ModbusManager modbusManager;
 ModbusManager::ModbusManager() :
     serial(nullptr),
     master(nullptr),
+    slave(nullptr),
     rxPin(RS485_RX),
     txPin(RS485_TX),
     dePin(RS485_DE),
+    slaveAddress(MODBUS_SLAVE_ADDRESS),
+    slaveEnabled(false),
     currentDevice(0),
     initialized(false),
     scanningEnabled(true),
@@ -36,6 +39,12 @@ ModbusManager::ModbusManager() :
     deviceDisconnectedCallback(nullptr),
     dataUpdatedCallback(nullptr),
     errorCallback(nullptr) {
+    
+    // Initialize slave data arrays to zero
+    memset(holdingRegs, 0, sizeof(holdingRegs));
+    memset(inputRegs, 0, sizeof(inputRegs));
+    memset(coils, 0, sizeof(coils));
+    memset(discreteInputs, 0, sizeof(discreteInputs));
     
     // Initialize network stats
     networkStats = {
@@ -1036,4 +1045,323 @@ String ModbusManager::getDeviceName(uint8_t slaveId) {
         }
     }
     return "Unknown Device";
+}
+
+// Additional methods for PLC-like functionality
+bool ModbusManager::deviceExists(uint8_t slaveId) {
+    for (const auto& device : devices) {
+        if (device.slaveId == slaveId) {
+            return true;
+        }
+    }
+    return false;
+}
+
+uint8_t ModbusManager::getConnectedDeviceCount() {
+    uint8_t count = 0;
+    for (size_t i = 0; i < devices.size(); i++) {
+        if (i < deviceStatus.size() && deviceStatus[i].connected) {
+            count++;
+        }
+    }
+    return count;
+}
+
+bool ModbusManager::startDeviceDiscovery(uint8_t startId, uint8_t endId) {
+    if (!initialized || !master) {
+        return false;
+    }
+    
+    if (DEBUG_ENABLED) {
+        Serial.printf("[Modbus] Starting device discovery: ID %d to %d\n", startId, endId);
+    }
+    
+    // Simple discovery implementation - try to read holding register 0 from each device
+    bool foundAny = false;
+    for (uint8_t id = startId; id <= endId; id++) {
+        if (deviceExists(id)) {
+            continue; // Skip already configured devices
+        }
+        
+        // Try to read a common register (usually holding register 0)
+        master->clearResponseBuffer();
+        uint8_t result = master->readHoldingRegisters(0, 1);
+        
+        delay(100); // Small delay between attempts
+        
+        if (result == master->ku8MBSuccess) {
+            if (DEBUG_ENABLED) {
+                Serial.printf("[Modbus] Device found at ID %d\n", id);
+            }
+            
+            // Create a basic device configuration for discovered device
+            ModbusDeviceConfig discoveredDevice;
+            discoveredDevice.name = "Auto_Device_" + String(id);
+            discoveredDevice.description = "Auto-discovered device";
+            discoveredDevice.slaveId = id;
+            discoveredDevice.enabled = false; // Disabled by default until configured
+            discoveredDevice.baudRate = 9600;
+            discoveredDevice.dataBits = 8;
+            discoveredDevice.parity = 0;
+            discoveredDevice.stopBits = 1;
+            discoveredDevice.responseTimeout = 1000;
+            discoveredDevice.frameDelay = 100;
+            discoveredDevice.retryDelay = 500;
+            discoveredDevice.maxRetries = 3;
+            discoveredDevice.healthMonitoring = true;
+            discoveredDevice.healthInterval = 30000;
+            
+            addDevice(discoveredDevice);
+            foundAny = true;
+        }
+    }
+    
+    return foundAny;
+}
+
+unsigned long ModbusManager::getLastCommunicationTime(uint8_t slaveId) {
+    for (size_t i = 0; i < devices.size(); i++) {
+        if (devices[i].slaveId == slaveId && i < deviceStatus.size()) {
+            return deviceStatus[i].lastCommunication;
+        }
+    }
+    return 0;
+}
+
+uint8_t ModbusManager::getDeviceHealth(uint8_t slaveId) {
+    for (size_t i = 0; i < devices.size(); i++) {
+        if (devices[i].slaveId == slaveId && i < deviceStatus.size()) {
+            // Calculate health score based on success rate and response time
+            float successRate = deviceStatus[i].successfulRequests > 0 ?
+                (float)deviceStatus[i].successfulRequests / (deviceStatus[i].successfulRequests + deviceStatus[i].errorCount) * 100 : 0;            if (successRate >= 95) return 100; // Excellent
+            else if (successRate >= 85) return 80; // Good
+            else if (successRate >= 70) return 60; // Fair
+            else if (successRate >= 50) return 40; // Poor
+            else return 20; // Very poor
+        }
+    }
+    return 0; // Device not found
+}
+
+uint16_t ModbusManager::getErrorCount(uint8_t slaveId) {
+    for (size_t i = 0; i < devices.size(); i++) {
+        if (devices[i].slaveId == slaveId && i < deviceStatus.size()) {
+            return deviceStatus[i].errorCount;
+        }
+    }
+    return 0;
+}
+
+bool ModbusManager::writeRegister(uint8_t slaveId, uint16_t address, uint16_t value) {
+    if (!initialized || !master) {
+        return false;
+    }
+    
+    if (!deviceExists(slaveId)) {
+        if (DEBUG_ENABLED) {
+            Serial.printf("[Modbus] Write failed: Device ID %d not configured\n", slaveId);
+        }
+        return false;
+    }
+    
+    master->clearResponseBuffer();
+    master->begin(slaveId, *serial);
+    uint8_t result = master->writeSingleRegister(address, value);
+    
+    bool success = (result == master->ku8MBSuccess);
+    
+    if (DEBUG_ENABLED) {
+        Serial.printf("[Modbus] Write register %d at device %d: %s (value: %d)\n", 
+                     address, slaveId, success ? "SUCCESS" : "FAILED", value);
+    }
+    
+    // Update device statistics
+    for (size_t i = 0; i < devices.size(); i++) {
+        if (devices[i].slaveId == slaveId && i < deviceStatus.size()) {
+            if (success) {
+                deviceStatus[i].lastCommunication = millis();
+                deviceStatus[i].connected = true;
+            } else {
+                deviceStatus[i].errorCount++;
+            }
+            break;
+        }
+    }
+    
+    return success;
+}
+
+// Missing methods implementation
+uint8_t ModbusManager::getDeviceCount() {
+    return devices.size();
+}
+
+bool ModbusManager::isDeviceConnected(uint8_t slaveId) {
+    for (size_t i = 0; i < devices.size(); i++) {
+        if (devices[i].slaveId == slaveId && i < deviceStatus.size()) {
+            return deviceStatus[i].connected;
+        }
+    }
+    return false;
+}
+
+bool ModbusManager::removeDevice(uint8_t slaveId) {
+    for (size_t i = 0; i < devices.size(); i++) {
+        if (devices[i].slaveId == slaveId) {
+            devices.erase(devices.begin() + i);
+            if (i < deviceStatus.size()) {
+                deviceStatus.erase(deviceStatus.begin() + i);
+            }
+            if (DEBUG_ENABLED) {
+                Serial.printf("[Modbus] Device ID %d removed\n", slaveId);
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+// ============================================
+// Modbus Slave Implementation for ada-1 Board
+// ============================================
+
+bool ModbusManager::enableSlave(uint8_t slaveAddr) {
+    if (!initialized || !serial) {
+        Serial.println("[Modbus Slave] Manager not initialized");
+        return false;
+    }
+    
+    if (slave) {
+        delete slave;
+        slave = nullptr;
+    }
+    
+    slave = new Modbus(slaveAddr, *serial, dePin);
+    if (!slave) {
+        Serial.println("[Modbus Slave] Failed to create slave instance");
+        return false;
+    }
+    
+    slave->start();
+    slaveAddress = slaveAddr;
+    slaveEnabled = true;
+    
+    if (DEBUG_ENABLED) {
+        Serial.printf("[Modbus Slave] Started at address %d\n", slaveAddr);
+    }
+    
+    return true;
+}
+
+void ModbusManager::disableSlave() {
+    if (slave) {
+        delete slave;
+        slave = nullptr;
+    }
+    slaveEnabled = false;
+    
+    if (DEBUG_ENABLED) {
+        Serial.println("[Modbus Slave] Disabled");
+    }
+}
+
+bool ModbusManager::isSlaveEnabled() {
+    return slaveEnabled && slave != nullptr;
+}
+
+void ModbusManager::updateSlaveData() {
+    if (!isSlaveEnabled()) {
+        return;
+    }
+    
+    // Update input registers with sensor data
+    // AI1-AI3 (Analog inputs) -> registers 0-2
+    setInputRegister(0, analogRead(AI1_PIN));
+    setInputRegister(1, analogRead(AI2_PIN));
+    setInputRegister(2, analogRead(AI3_PIN));
+    
+    // DI1-DI4 (Digital inputs) -> discrete inputs 0-3
+    setDiscreteInput(0, digitalRead(DI1_PIN));
+    setDiscreteInput(1, digitalRead(DI2_PIN));
+    setDiscreteInput(2, digitalRead(DI3_PIN));
+    setDiscreteInput(3, digitalRead(DI4_PIN));
+    
+    // DO1-DO4 states -> coils 0-3
+    setCoil(0, digitalRead(DO1_PIN));
+    setCoil(1, digitalRead(DO2_PIN));
+    setCoil(2, digitalRead(DO3_PIN));
+    setCoil(3, digitalRead(DO4_PIN));
+    
+    // System status -> holding registers
+    setHoldingRegister(0, ESP.getFreeHeap() / 1024);  // Free heap in KB
+    setHoldingRegister(1, WiFi.RSSI() + 100);         // WiFi RSSI (0-100)
+    setHoldingRegister(2, millis() / 1000);           // Uptime in seconds
+    
+    // Process Modbus requests
+    slave->poll();
+}
+
+// Slave data access methods
+void ModbusManager::setHoldingRegister(uint16_t address, uint16_t value) {
+    if (address < 100) {
+        holdingRegs[address] = value;
+        // Note: Direct register setting for ModbusRtu library
+    }
+}
+
+uint16_t ModbusManager::getHoldingRegister(uint16_t address) {
+    if (address < 100) {
+        return holdingRegs[address];
+    }
+    return 0;
+}
+
+void ModbusManager::setInputRegister(uint16_t address, uint16_t value) {
+    if (address < 100) {
+        inputRegs[address] = value;
+        // Note: Direct register setting for ModbusRtu library
+    }
+}
+
+uint16_t ModbusManager::getInputRegister(uint16_t address) {
+    if (address < 100) {
+        return inputRegs[address];
+    }
+    return 0;
+}
+
+void ModbusManager::setCoil(uint16_t address, bool value) {
+    if (address < 100) {
+        coils[address] = value;
+        // Note: Direct register setting for ModbusRtu library
+        
+        // Control physical outputs for DO pins
+        if (address < 4) {
+            int pin = (address == 0) ? DO1_PIN : 
+                     (address == 1) ? DO2_PIN :
+                     (address == 2) ? DO3_PIN : DO4_PIN;
+            digitalWrite(pin, value);
+        }
+    }
+}
+
+bool ModbusManager::getCoil(uint16_t address) {
+    if (address < 100) {
+        return coils[address];
+    }
+    return false;
+}
+
+void ModbusManager::setDiscreteInput(uint16_t address, bool value) {
+    if (address < 100) {
+        discreteInputs[address] = value;
+        // Note: Direct register setting for ModbusRtu library
+    }
+}
+
+bool ModbusManager::getDiscreteInput(uint16_t address) {
+    if (address < 100) {
+        return discreteInputs[address];
+    }
+    return false;
 }

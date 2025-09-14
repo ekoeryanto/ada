@@ -29,6 +29,9 @@ bool OTAHandler::initialize(AsyncWebServer* webServer) {
     ArduinoOTA.setPassword(OTA_PASSWORD);
     ArduinoOTA.setPort(3232); // Standard ESP32 OTA port
     
+    // Set timeout values for better reliability
+    ArduinoOTA.setTimeout(120000);  // 2 minutes timeout
+    
     ArduinoOTA.onStart([]() {
         String type;
         if (ArduinoOTA.getCommand() == U_FLASH) {
@@ -38,6 +41,7 @@ bool OTAHandler::initialize(AsyncWebServer* webServer) {
         }
         Serial.println("[ArduinoOTA] Start updating " + type);
         Serial.println("[ArduinoOTA] Ready to receive firmware");
+        Serial.println("[ArduinoOTA] Starting upload process...");
     });
     
     ArduinoOTA.onEnd([]() {
@@ -48,8 +52,8 @@ bool OTAHandler::initialize(AsyncWebServer* webServer) {
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
         static unsigned int lastPercent = 0;
         unsigned int percent = (progress / (total / 100));
-        if (percent != lastPercent && percent % 10 == 0) {
-            Serial.printf("[ArduinoOTA] Progress: %u%%\n", percent);
+        if (percent != lastPercent && percent % 5 == 0) {  // Report every 5%
+            Serial.printf("[ArduinoOTA] Progress: %u%% (%u/%u bytes)\n", percent, progress, total);
             lastPercent = percent;
         }
     });
@@ -109,6 +113,13 @@ void OTAHandler::handle() {
     ElegantOTA.loop();
     
     // Handle ArduinoOTA for command line uploads
+    // Add a periodic debug message to ensure this is being called
+    static unsigned long lastDebug = 0;
+    if (millis() - lastDebug > 60000) {  // Every 60 seconds
+        Serial.printf("[OTA] Handler active - ArduinoOTA listening on port 3232\n");
+        lastDebug = millis();
+    }
+    
     ArduinoOTA.handle();
 }
 
