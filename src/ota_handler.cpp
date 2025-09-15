@@ -30,7 +30,10 @@ bool OTAHandler::initialize(AsyncWebServer* webServer) {
     ArduinoOTA.setPort(3232); // Standard ESP32 OTA port
     
     // Set timeout values for better reliability
-    ArduinoOTA.setTimeout(120000);  // 2 minutes timeout
+    ArduinoOTA.setTimeout(300000);  // 5 minutes timeout (increased from 2)
+    
+    // Enable mDNS for better discovery
+    ArduinoOTA.setMdnsEnabled(true);
     
     ArduinoOTA.onStart([]() {
         String type;
@@ -42,35 +45,50 @@ bool OTAHandler::initialize(AsyncWebServer* webServer) {
         Serial.println("[ArduinoOTA] Start updating " + type);
         Serial.println("[ArduinoOTA] Ready to receive firmware");
         Serial.println("[ArduinoOTA] Starting upload process...");
+        Serial.println("[ArduinoOTA] Client connected, beginning transfer...");
+        
+        // Disable other services during OTA
+        otaHandler.updateInProgress = true;
     });
     
     ArduinoOTA.onEnd([]() {
         Serial.println("\n[ArduinoOTA] Update completed successfully");
         Serial.println("[ArduinoOTA] Restarting...");
+        otaHandler.updateInProgress = false;
     });
     
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
         static unsigned int lastPercent = 0;
+        static unsigned long lastTime = 0;
         unsigned int percent = (progress / (total / 100));
-        if (percent != lastPercent && percent % 5 == 0) {  // Report every 5%
-            Serial.printf("[ArduinoOTA] Progress: %u%% (%u/%u bytes)\n", percent, progress, total);
+        unsigned long currentTime = millis();
+        
+        if (percent != lastPercent || (currentTime - lastTime) > 5000) {  // Report every % or every 5 seconds
+            Serial.printf("[ArduinoOTA] Progress: %u%% (%u/%u bytes) - %.2f KB/s\n", 
+                percent, progress, total, 
+                (float)(progress - 0) / ((currentTime - 0) / 1000.0) / 1024.0);
             lastPercent = percent;
+            lastTime = currentTime;
         }
     });
     
     ArduinoOTA.onError([](ota_error_t error) {
         Serial.printf("[ArduinoOTA] Error[%u]: ", error);
         if (error == OTA_AUTH_ERROR) {
-            Serial.println("Auth Failed");
+            Serial.println("Auth Failed - Check OTA password");
         } else if (error == OTA_BEGIN_ERROR) {
-            Serial.println("Begin Failed");
+            Serial.println("Begin Failed - Check partition table");
         } else if (error == OTA_CONNECT_ERROR) {
-            Serial.println("Connect Failed");
+            Serial.println("Connect Failed - Network connectivity issue");
         } else if (error == OTA_RECEIVE_ERROR) {
-            Serial.println("Receive Failed");
+            Serial.println("Receive Failed - Transfer interrupted");
         } else if (error == OTA_END_ERROR) {
-            Serial.println("End Failed");
+            Serial.println("End Failed - Failed to finalize update");
         }
+        
+        // Reset state on error
+        otaHandler.updateInProgress = false;
+        Serial.println("[ArduinoOTA] OTA error occurred, resetting state");
     });
     
     ArduinoOTA.begin();

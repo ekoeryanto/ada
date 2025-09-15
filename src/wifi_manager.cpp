@@ -1,5 +1,6 @@
 #include "wifi_manager.h"
 #include "system_manager.h"
+#include "ota_handler.h"
 
 // Global instance
 WiFiManagerHandler wifiMgr;
@@ -95,6 +96,11 @@ bool WiFiManagerHandler::startConfigPortal() {
 }
 
 void WiFiManagerHandler::handleWiFi() {
+    // Skip WiFi reconnection during OTA update to avoid interruption
+    if (otaHandler.isUpdateInProgress()) {
+        return;
+    }
+    
     // Check if WiFi is still connected
     if (WiFi.status() != WL_CONNECTED) {
         systemMgr.setStatus(SYSTEM_WIFI_CONNECTING);
