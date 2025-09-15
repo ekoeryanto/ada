@@ -434,6 +434,8 @@ void setup() {
         // Enable auto-discovery for additional devices
         modbusManager.enableAutoDiscovery(true);
         
+        // Modbus Slave functionality disabled for now (only Master needed)
+        /*
         // Enable Modbus Slave mode for ada-1 board (address 1)
         if (modbusManager.enableSlave(MODBUS_SLAVE_ADDRESS)) {
             Serial.printf("[Main] Modbus Slave enabled at address %d\n", MODBUS_SLAVE_ADDRESS);
@@ -444,6 +446,7 @@ void setup() {
         } else {
             Serial.println("[Main] Failed to enable Modbus Slave mode");
         }
+        */
         
         Serial.println("[Main] Modbus devices configured:");
         Serial.printf("[Main] - ada-1 Board (ID: %d) - SLAVE MODE ENABLED\n", MODBUS_SLAVE_ADDRESS);
@@ -628,8 +631,8 @@ void loop() {
     // Handle Modbus RTU Manager (RS485 communication)
     modbusManager.handle();
     
-    // Update Modbus Slave data for ada-1 board
-    modbusManager.updateSlaveData();
+    // Modbus Slave functionality disabled for now
+    // modbusManager.updateSlaveData();
     
     // Handle Analytics Manager (data analysis and trends)
     analyticsMgr.handle();

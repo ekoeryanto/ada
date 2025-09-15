@@ -12,7 +12,6 @@ ModbusManager modbusManager;
 ModbusManager::ModbusManager() :
     serial(nullptr),
     master(nullptr),
-    slave(nullptr),
     rxPin(RS485_RX),
     txPin(RS485_TX),
     dePin(RS485_DE),
@@ -39,12 +38,6 @@ ModbusManager::ModbusManager() :
     deviceDisconnectedCallback(nullptr),
     dataUpdatedCallback(nullptr),
     errorCallback(nullptr) {
-    
-    // Initialize slave data arrays to zero
-    memset(holdingRegs, 0, sizeof(holdingRegs));
-    memset(inputRegs, 0, sizeof(inputRegs));
-    memset(coils, 0, sizeof(coils));
-    memset(discreteInputs, 0, sizeof(discreteInputs));
     
     // Initialize network stats
     networkStats = {
@@ -1221,147 +1214,15 @@ bool ModbusManager::removeDevice(uint8_t slaveId) {
     return false;
 }
 
-// ============================================
-// Modbus Slave Implementation for ada-1 Board
-// ============================================
-
-bool ModbusManager::enableSlave(uint8_t slaveAddr) {
-    if (!initialized || !serial) {
-        Serial.println("[Modbus Slave] Manager not initialized");
-        return false;
-    }
-    
-    if (slave) {
-        delete slave;
-        slave = nullptr;
-    }
-    
-    slave = new Modbus(slaveAddr, *serial, dePin);
-    if (!slave) {
-        Serial.println("[Modbus Slave] Failed to create slave instance");
-        return false;
-    }
-    
-    slave->start();
-    slaveAddress = slaveAddr;
-    slaveEnabled = true;
-    
-    if (DEBUG_ENABLED) {
-        Serial.printf("[Modbus Slave] Started at address %d\n", slaveAddr);
-    }
-    
-    return true;
+// Master functionality methods (for future expansion)
+bool ModbusManager::enableMaster(uint8_t rxPin, uint8_t txPin, uint8_t dePin) {
+    return begin(rxPin, txPin, dePin);
 }
 
-void ModbusManager::disableSlave() {
-    if (slave) {
-        delete slave;
-        slave = nullptr;
-    }
-    slaveEnabled = false;
-    
-    if (DEBUG_ENABLED) {
-        Serial.println("[Modbus Slave] Disabled");
-    }
+void ModbusManager::disableMaster() {
+    end();
 }
 
-bool ModbusManager::isSlaveEnabled() {
-    return slaveEnabled && slave != nullptr;
-}
-
-void ModbusManager::updateSlaveData() {
-    if (!isSlaveEnabled()) {
-        return;
-    }
-    
-    // Update input registers with sensor data
-    // AI1-AI3 (Analog inputs) -> registers 0-2
-    setInputRegister(0, analogRead(AI1_PIN));
-    setInputRegister(1, analogRead(AI2_PIN));
-    setInputRegister(2, analogRead(AI3_PIN));
-    
-    // DI1-DI4 (Digital inputs) -> discrete inputs 0-3
-    setDiscreteInput(0, digitalRead(DI1_PIN));
-    setDiscreteInput(1, digitalRead(DI2_PIN));
-    setDiscreteInput(2, digitalRead(DI3_PIN));
-    setDiscreteInput(3, digitalRead(DI4_PIN));
-    
-    // DO1-DO4 states -> coils 0-3
-    setCoil(0, digitalRead(DO1_PIN));
-    setCoil(1, digitalRead(DO2_PIN));
-    setCoil(2, digitalRead(DO3_PIN));
-    setCoil(3, digitalRead(DO4_PIN));
-    
-    // System status -> holding registers
-    setHoldingRegister(0, ESP.getFreeHeap() / 1024);  // Free heap in KB
-    setHoldingRegister(1, WiFi.RSSI() + 100);         // WiFi RSSI (0-100)
-    setHoldingRegister(2, millis() / 1000);           // Uptime in seconds
-    
-    // Process Modbus requests
-    slave->poll();
-}
-
-// Slave data access methods
-void ModbusManager::setHoldingRegister(uint16_t address, uint16_t value) {
-    if (address < 100) {
-        holdingRegs[address] = value;
-        // Note: Direct register setting for ModbusRtu library
-    }
-}
-
-uint16_t ModbusManager::getHoldingRegister(uint16_t address) {
-    if (address < 100) {
-        return holdingRegs[address];
-    }
-    return 0;
-}
-
-void ModbusManager::setInputRegister(uint16_t address, uint16_t value) {
-    if (address < 100) {
-        inputRegs[address] = value;
-        // Note: Direct register setting for ModbusRtu library
-    }
-}
-
-uint16_t ModbusManager::getInputRegister(uint16_t address) {
-    if (address < 100) {
-        return inputRegs[address];
-    }
-    return 0;
-}
-
-void ModbusManager::setCoil(uint16_t address, bool value) {
-    if (address < 100) {
-        coils[address] = value;
-        // Note: Direct register setting for ModbusRtu library
-        
-        // Control physical outputs for DO pins
-        if (address < 4) {
-            int pin = (address == 0) ? DO1_PIN : 
-                     (address == 1) ? DO2_PIN :
-                     (address == 2) ? DO3_PIN : DO4_PIN;
-            digitalWrite(pin, value);
-        }
-    }
-}
-
-bool ModbusManager::getCoil(uint16_t address) {
-    if (address < 100) {
-        return coils[address];
-    }
-    return false;
-}
-
-void ModbusManager::setDiscreteInput(uint16_t address, bool value) {
-    if (address < 100) {
-        discreteInputs[address] = value;
-        // Note: Direct register setting for ModbusRtu library
-    }
-}
-
-bool ModbusManager::getDiscreteInput(uint16_t address) {
-    if (address < 100) {
-        return discreteInputs[address];
-    }
-    return false;
+bool ModbusManager::isMasterEnabled() {
+    return initialized && master != nullptr;
 }

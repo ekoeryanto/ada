@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 #include <ModbusMaster.h>
-#include <ModbusRtu.h>
 #include <HardwareSerial.h>
 #include <vector>
 #include <map>
@@ -188,12 +187,11 @@ private:
     // Hardware configuration
     HardwareSerial* serial;         // Serial interface
     ModbusMaster* master;           // Modbus master instance
-    Modbus* slave;                  // Modbus slave instance
     uint8_t rxPin;                  // RX pin
     uint8_t txPin;                  // TX pin
     uint8_t dePin;                  // DE/RE pin (optional)
-    uint8_t slaveAddress;           // Our own Modbus slave address
-    bool slaveEnabled;              // Enable slave functionality
+    uint8_t slaveAddress;           // Our own Modbus slave address (for future use)
+    bool slaveEnabled;              // Enable slave functionality (disabled for now)
     
     // Slave data arrays
     uint16_t holdingRegs[100];      // Holding registers (0-99)
@@ -383,21 +381,16 @@ public:
     uint16_t getErrorCount(uint8_t slaveId);
     bool writeRegister(uint8_t slaveId, uint16_t address, uint16_t value);
     
-    // Modbus Slave functionality for ada-1 board
-    bool enableSlave(uint8_t slaveAddr = MODBUS_SLAVE_ADDRESS);
-    void disableSlave();
-    bool isSlaveEnabled();
-    void updateSlaveData();
+    // Modbus Master functionality for communication with other devices
+    bool enableMaster(uint8_t rxPin = RS485_RX, uint8_t txPin = RS485_TX, uint8_t dePin = RS485_DE);
+    void disableMaster();
+    bool isMasterEnabled();
     
-    // Slave data access methods
-    void setHoldingRegister(uint16_t address, uint16_t value);
-    uint16_t getHoldingRegister(uint16_t address);
-    void setInputRegister(uint16_t address, uint16_t value);
-    uint16_t getInputRegister(uint16_t address);
-    void setCoil(uint16_t address, bool value);
-    bool getCoil(uint16_t address);
-    void setDiscreteInput(uint16_t address, bool value);
-    bool getDiscreteInput(uint16_t address);
+    // Future: Modbus Slave functionality (not implemented yet)
+    // bool enableSlave(uint8_t slaveAddr = MODBUS_SLAVE_ADDRESS);
+    // void disableSlave();
+    // bool isSlaveEnabled();
+    // void updateSlaveData();
 };
 
 // Global instance
