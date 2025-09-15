@@ -136,7 +136,7 @@ void saveWebhookMetaToStorage() {
 WebServerHandler webServer;
 
 WebServerHandler::WebServerHandler() 
-    : server(WEB_SERVER_PORT), ws("/ws")
+    : server(WEB_SERVER_PORT)
 {
     serverStarted = false;
 }
@@ -148,9 +148,9 @@ bool WebServerHandler::initialize() {
     loadWebhookMetaFromStorage();
     
     setupRoutes();
-    setupWebSocket();
+    // Note: WebSocket support removed to reduce firmware size
     
-    // Serial.printf("[WebServer] Web server initialized on port %d with WebSocket support\n", WEB_SERVER_PORT);
+    // Serial.printf("[WebServer] Web server initialized on port %d\n", WEB_SERVER_PORT);
     return true;
 }
 
@@ -1664,10 +1664,9 @@ void WebServerHandler::setupRoutes() {
 
 void WebServerHandler::begin() {
     // Start AsyncWebServer
-    server.addHandler(&ws);  // Add WebSocket handler
     server.begin();
     serverStarted = true;
-    // Serial.println("[WebServer] Web server started with WebSocket support");
+    // Serial.println("[WebServer] Web server started");
 }
 
 void WebServerHandler::end() {
@@ -1798,150 +1797,4 @@ String WebServerHandler::generateWebPage() {
     html += "</body></html>";
     
     return html;
-}
-
-// WebSocket implementation
-void WebServerHandler::setupWebSocket() {
-    ws.onEvent([this](AsyncWebSocket *server, AsyncWebSocketClient *client, 
-                     AwsEventType type, void *arg, uint8_t *data, size_t len) {
-        onWebSocketEvent(server, client, type, arg, data, len);
-    });
-    
-    // Serial.println("[WebServer] WebSocket handler configured");
-}
-
-void WebServerHandler::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, 
-                                        AwsEventType type, void *arg, uint8_t *data, size_t len) {
-    switch(type) {
-        case WS_EVT_CONNECT:
-            // Serial.printf("[WebSocket] Client #%u connected from %s\n", 
-            //              client->id(), client->remoteIP().toString().c_str());
-            // Send initial sensor data to new client
-            {
-                DynamicJsonDocument doc(1024);
-                doc["type"] = "welcome";
-                doc["message"] = "Connected to ESP32 Analog Sensor System";
-                doc["timestamp"] = millis();
-                String response;
-                serializeJson(doc, response);
-                client->text(response);
-            }
-            break;
-            
-        case WS_EVT_DISCONNECT:
-            // Serial.printf("[WebSocket] Client #%u disconnected\n", client->id());
-            break;
-            
-        case WS_EVT_DATA:
-            handleWebSocketMessage(arg, data, len);
-            break;
-            
-        case WS_EVT_PONG:
-        case WS_EVT_ERROR:
-            break;
-    }
-}
-
-void WebServerHandler::handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
-    AwsFrameInfo *info = (AwsFrameInfo*)arg;
-    if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
-        data[len] = 0;
-        String message = (char*)data;
-        
-        // Serial.printf("[WebSocket] Received message: %s\n", message.c_str());
-        
-        // Parse JSON message
-        DynamicJsonDocument doc(512);
-        DeserializationError error = deserializeJson(doc, message);
-        
-        if (!error) {
-            String command = doc["command"] | "";
-            
-            if (command == "ping") {
-                // Respond to ping
-                DynamicJsonDocument response(256);
-                response["type"] = "pong";
-                response["timestamp"] = millis();
-                String responseStr;
-                serializeJson(response, responseStr);
-                ws.textAll(responseStr);
-                
-            } else if (command == "get_sensor_data") {
-                // Send current sensor data
-                broadcastSensorData();
-                
-            } else if (command == "enable_streaming") {
-                bool enable = doc["enable"] | false;
-                unsigned long interval = doc["interval"] | 1000;  // Default 1 second
-                
-                // Enable/disable streaming via analog voltage manager
-                extern AnalogVoltageManager analogVoltageMgr;
-                analogVoltageMgr.enableStreaming(enable);
-                analogVoltageMgr.setStreamInterval(interval);
-                
-                DynamicJsonDocument response(256);
-                response["type"] = "streaming_config";
-                response["enabled"] = enable;
-                response["interval"] = interval;
-                String responseStr;
-                serializeJson(response, responseStr);
-                ws.textAll(responseStr);
-                
-                // Serial.printf("[WebSocket] Streaming %s with interval %lu ms\n", 
-                //              enable ? "enabled" : "disabled", interval);
-            }
-        }
-    }
-}
-
-void WebServerHandler::notifyWebSocketClients(const String& message) {
-    if (ws.count() > 0) {
-        ws.textAll(message);
-    }
-}
-
-void WebServerHandler::broadcastToWebSocket(const String& message) {
-    notifyWebSocketClients(message);
-}
-
-int WebServerHandler::getWebSocketClientCount() {
-    return ws.count();
-}
-
-void WebServerHandler::broadcastSensorData() {
-    extern AnalogVoltageManager analogVoltageMgr;
-    if (!analogVoltageMgr.isInitialized()) return;
-    
-    DynamicJsonDocument doc(2048);
-    doc["type"] = "sensor_data";
-    doc["timestamp"] = millis();
-    
-    JsonArray sensors = doc.createNestedArray("sensors");
-    AnalogReading* readings = analogVoltageMgr.getAllReadings();
-    
-    for (int i = 0; i < 3; i++) {
-        JsonObject sensor = sensors.createNestedObject();
-        sensor["id"] = i;
-        sensor["location"] = analogVoltageMgr.getLocation(i);
-        sensor["value"] = readings[i].scaledValue;
-        sensor["unit"] = analogVoltageMgr.getUnit(i);
-        sensor["voltage"] = readings[i].calibratedVoltage;
-        sensor["status"] = analogVoltageMgr.getStatusString(i);
-        sensor["timestamp"] = readings[i].timestamp;
-        sensor["valid"] = readings[i].valid;
-        
-        // Health data
-        sensor["health_score"] = analogVoltageMgr.getHealthScore(i);
-        sensor["is_dead"] = analogVoltageMgr.isDeadSensor(i);
-        sensor["is_stuck"] = analogVoltageMgr.isStuckSensor(i);
-        
-        // Alarm status
-        sensor["is_alarm"] = (analogVoltageMgr.isLowValue(i) || analogVoltageMgr.isHighValue(i));
-        sensor["low_threshold"] = analogVoltageMgr.getLowThreshold(i);
-        sensor["high_threshold"] = analogVoltageMgr.getHighThreshold(i);
-    }
-    
-    String message;
-    serializeJson(doc, message);
-    notifyWebSocketClients(message);
 }
