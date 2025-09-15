@@ -1,5 +1,6 @@
 #include "sd_manager.h"
 #include "ntp_manager.h"
+#include "webhook_handler.h"
 #include <time.h>
 #include <vector>
 
@@ -12,6 +13,8 @@ SDManager::SDManager() {
     cardSize = 0;
     cardType = CARD_NONE;
     lastCheck = 0;
+    bufferLoggingEnabled = true; // Enable buffer logging by default
+    logBuffer.reserve(MAX_BUFFER_SIZE); // Pre-allocate memory
 }
 
 bool SDManager::initialize() {
@@ -20,31 +23,70 @@ bool SDManager::initialize() {
     // Use default ESP32 SPI pins (like sample code)
     // Default pins: CS=5, MOSI=23, MISO=19, SCK=18
     // Just initialize SD card with default pins
-    if (!SD.begin()) {
-        Serial.println("[SD] Card Mount Failed - continuing without SD");
-        sdInitialized = false;
-        sdCardPresent = false;
+    
+    // Reset state first
+    sdInitialized = false;
+    sdCardPresent = false;
+    cardType = CARD_NONE;
+    cardSize = 0;
+    
+    try {
+        if (!SD.begin()) {
+            Serial.println("[SD] Card Mount Failed - continuing without SD logging");
+            Serial.println("[SD] System will operate normally without SD card");
+            return false;
+        }
+        
+        // Check card presence with timeout protection
+        unsigned long startTime = millis();
+        while (millis() - startTime < 3000) {  // 3 second timeout
+            cardType = SD.cardType();
+            if (cardType != CARD_NONE) break;
+            delay(100);
+        }
+        
+        if (cardType == CARD_NONE) {
+            Serial.println("[SD] No SD card detected - continuing without SD logging");
+            Serial.println("[SD] Insert SD card and restart to enable logging");
+            return false;
+        }
+        
+        // Test card access - try to get card size
+        uint64_t testSize = 0;
+        try {
+            testSize = SD.cardSize();
+        } catch (...) {
+            Serial.println("[SD] Card access failed - possible corruption");
+            Serial.println("[SD] Try formatting the SD card or use a different one");
+            return false;
+        }
+        
+        if (testSize == 0) {
+            Serial.println("[SD] Invalid card size - possible corruption");
+            Serial.println("[SD] Try formatting the SD card or use a different one");
+            return false;
+        }
+        
+        cardSize = testSize / (1024 * 1024); // Convert to MB
+        sdInitialized = true;
+        sdCardPresent = true;
+        
+        Serial.printf("[SD] SD Manager initialized successfully\n");
+        Serial.printf("[SD] Card Type: %s\n", getCardType().c_str());
+        Serial.printf("[SD] Card Size: %llu MB\n", cardSize);
+        Serial.println("[SD] Logging to SD card enabled");
+        
+        return true;
+        
+    } catch (const std::exception& e) {
+        Serial.printf("[SD] Exception during initialization: %s\n", e.what());
+        Serial.println("[SD] Continuing without SD logging");
+        return false;
+    } catch (...) {
+        Serial.println("[SD] Unknown error during SD initialization");
+        Serial.println("[SD] Continuing without SD logging");
         return false;
     }
-    
-    // Check card presence
-    cardType = SD.cardType();
-    if (cardType == CARD_NONE) {
-        Serial.println("[SD] No SD card attached - continuing without SD");
-        sdInitialized = false;
-        sdCardPresent = false;
-        return false;
-    }
-    
-    cardSize = SD.cardSize() / (1024 * 1024); // Convert to MB
-    sdInitialized = true;
-    sdCardPresent = true;
-    
-    Serial.printf("[SD] SD Manager initialized successfully\n");
-    Serial.printf("[SD] Card Type: %s\n", getCardType().c_str());
-    Serial.printf("[SD] Card Size: %llu MB\n", cardSize);
-    
-    return true;
 }
 
 void SDManager::handle() {
@@ -61,9 +103,35 @@ void SDManager::handle() {
                 Serial.println("[SD] Card removed - hot-plug detected");
                 sdCardPresent = false;
                 sdInitialized = false;
+                
+                // Inform user about buffer logging
+                if (bufferLoggingEnabled && DEBUG_ENABLED) {
+                    Serial.printf("[SD] Logging will continue in memory buffer (%d entries max)\n", MAX_BUFFER_SIZE);
+                }
+                
             } else if (currentType != CARD_NONE && !sdCardPresent) {
                 Serial.println("[SD] Card inserted - attempting remount");
-                initialize(); // Try to reinitialize
+                if (initialize()) {
+                    // Card reinserted successfully - try to flush buffer
+                    if (!logBuffer.empty()) {
+                        Serial.printf("[SD] Attempting to flush %d buffered entries to SD\n", logBuffer.size());
+                        flushBufferToSD();
+                    }
+                }
+            }
+        } else {
+            // SD not initialized - periodically try to reinitialize in case card was inserted
+            if (currentTime % 30000 == 0) { // Every 30 seconds
+                initialize();
+            }
+        }
+        
+        // Buffer management - warn if buffer is getting full
+        if (bufferLoggingEnabled && logBuffer.size() > (MAX_BUFFER_SIZE * 0.8)) {
+            if (DEBUG_ENABLED) {
+                Serial.printf("[SD] Warning: Log buffer is %d%% full (%d/%d entries)\n", 
+                             (int)((logBuffer.size() * 100) / MAX_BUFFER_SIZE), 
+                             logBuffer.size(), MAX_BUFFER_SIZE);
             }
         }
     }
@@ -198,31 +266,27 @@ bool SDManager::removeDir(const char* path) {
     return false;
 }
 
-bool SDManager::logData(const String& data) {
-    if (!isMounted()) return false;
-    
-    // Simple data logging without timestamp
-    String filename = "system.log";
-    File logFile = SD.open("/" + filename, FILE_APPEND);
-    
-    if (!logFile) {
-        if (DEBUG_ENABLED) {
-            Serial.println("[SD] Failed to open log file: " + filename);
+// Helper method to get current date string for file naming
+String SDManager::getDateString() {
+    extern NTPManager ntpMgr;
+    if (ntpMgr.isSynced()) {
+        // Extract date part from datetime string (assume format: YYYY-MM-DD HH:MM:SS)
+        String datetime = ntpMgr.getCurrentTimeString();
+        int spaceIndex = datetime.indexOf(' ');
+        if (spaceIndex > 0) {
+            return datetime.substring(0, spaceIndex); // Return YYYY-MM-DD part
         }
-        return false;
+        return "date_" + String(millis() / 86400000); // Fallback
+    } else {
+        // Fallback to simple millis-based naming
+        return "day_" + String(millis() / 86400000); // Days since startup
     }
-    
-    logFile.println(data);
-    logFile.close();
-    
-    return true;
 }
 
 bool SDManager::logDataWithTimestamp(const String& data) {
-    if (!isMounted()) return false;
-    
     // Get current timestamp from NTP Manager
     String timestamp;
+    extern NTPManager ntpMgr; // Forward reference
     if (ntpMgr.isSynced()) {
         timestamp = ntpMgr.getCurrentDateTimeString();
     } else {
@@ -233,25 +297,39 @@ bool SDManager::logDataWithTimestamp(const String& data) {
     // Create timestamped log entry
     String logEntry = timestamp + "," + data;
     
-    // Write to daily log file
-    String filename = "data_" + getDateString() + ".csv";
-    File logFile = SD.open("/" + filename, FILE_APPEND);
-    
-    if (!logFile) {
-        if (DEBUG_ENABLED) {
-            Serial.println("[SD] Failed to open log file: " + filename);
+    // Try to write to SD card first
+    if (isMounted()) {
+        String filename = "data_" + getDateString() + ".csv";
+        File logFile = SD.open("/" + filename, FILE_APPEND);
+        
+        if (logFile) {
+            logFile.println(logEntry);
+            logFile.close();
+            
+            // If SD write successful and we have buffered data, try to flush buffer
+            if (!logBuffer.empty()) {
+                flushBufferToSD();
+            }
+            
+            return true;
+        } else {
+            if (DEBUG_ENABLED) {
+                Serial.println("[SD] Failed to open log file: " + filename);
+            }
         }
-        return false;
     }
     
-    logFile.println(logEntry);
-    logFile.close();
-    
-    if (DEBUG_ENABLED) {
-        Serial.println("[SD] Data logged: " + logEntry);
+    // SD not available or write failed - use buffer if enabled
+    if (bufferLoggingEnabled) {
+        addToBuffer(logEntry);
+        if (DEBUG_ENABLED) {
+            Serial.printf("[SD] Logged to buffer (%d/%d): %s\n", 
+                         logBuffer.size(), MAX_BUFFER_SIZE, data.c_str());
+        }
+        return true; // Consider buffer logging as success
     }
     
-    return true;
+    return false; // Both SD and buffer failed/disabled
 }
 
 bool SDManager::createLogFile(const String& filename) {
@@ -330,6 +408,7 @@ String SDManager::formatBytes(uint64_t bytes) {
 
 String SDManager::getCurrentTimestamp() {
     // Use NTP Manager for proper timestamp if available
+    extern NTPManager ntpMgr; // Forward reference
     if (ntpMgr.isSynced()) {
         return ntpMgr.getCurrentDateTimeString();
     } else {
@@ -338,17 +417,105 @@ String SDManager::getCurrentTimestamp() {
     }
 }
 
-String SDManager::getDateString() {
-    // Get current date for daily log files
-    if (ntpMgr.isSynced()) {
-        DateTime now = ntpMgr.getCurrentTime();
-        char dateStr[16];
-        snprintf(dateStr, sizeof(dateStr), "%04d%02d%02d", 
-                now.year(), now.month(), now.day());
-        return String(dateStr);
-    } else {
-        // Fallback to day based on millis
-        return String(millis() / 86400000);  // Days since boot
+// Buffer management methods
+void SDManager::addToBuffer(const String& logEntry) {
+    if (!bufferLoggingEnabled) return;
+    
+    // Add new entry
+    logBuffer.push_back(logEntry);
+    
+    // Keep buffer size under limit (FIFO - remove oldest)
+    while (logBuffer.size() > MAX_BUFFER_SIZE) {
+        logBuffer.erase(logBuffer.begin());
+    }
+}
+
+void SDManager::flushBufferToSD() {
+    if (!isMounted() || logBuffer.empty()) return;
+    
+    String filename = "data_" + getDateString() + ".csv";
+    File logFile = SD.open("/" + filename, FILE_APPEND);
+    
+    if (!logFile) {
+        if (DEBUG_ENABLED) {
+            Serial.println("[SD] Failed to open log file for buffer flush");
+        }
+        return;
+    }
+    
+    // Write all buffered entries
+    size_t flushed = 0;
+    for (const String& entry : logBuffer) {
+        logFile.println(entry);
+        flushed++;
+    }
+    
+    logFile.close();
+    
+    if (DEBUG_ENABLED) {
+        Serial.printf("[SD] Flushed %d entries from buffer to SD\n", flushed);
+    }
+    
+    // Clear buffer after successful flush
+    logBuffer.clear();
+}
+
+void SDManager::sendBufferToWebhook() {
+    if (logBuffer.empty()) return;
+    
+    // Forward declare webhook handler
+    extern WebhookHandler webhookHandler;
+    
+    if (!webhookHandler.isInitialized()) {
+        if (DEBUG_ENABLED) {
+            Serial.println("[SD] Webhook not available for buffer backup");
+        }
+        return;
+    }
+    
+    // Send buffer as bulk data via webhook
+    String bulkData = "";
+    for (const String& entry : logBuffer) {
+        if (bulkData.length() > 0) bulkData += "\n";
+        bulkData += entry;
+    }
+    
+    // Use webhook to send buffered data (implement this in webhook handler)
+    // webhookHandler.sendBulkData("sd_buffer", bulkData);
+    
+    if (DEBUG_ENABLED) {
+        Serial.printf("[SD] Attempted to send %d buffered entries via webhook\n", logBuffer.size());
+    }
+}
+
+void SDManager::enableBufferLogging(bool enable) {
+    bufferLoggingEnabled = enable;
+    if (DEBUG_ENABLED) {
+        Serial.printf("[SD] Buffer logging %s\n", enable ? "enabled" : "disabled");
+    }
+    
+    if (!enable) {
+        // Clear buffer when disabling
+        logBuffer.clear();
+    }
+}
+
+bool SDManager::isBufferLoggingEnabled() {
+    return bufferLoggingEnabled;
+}
+
+size_t SDManager::getBufferSize() {
+    return logBuffer.size();
+}
+
+std::vector<String> SDManager::getBufferContent() {
+    return logBuffer; // Return copy
+}
+
+void SDManager::clearBuffer() {
+    logBuffer.clear();
+    if (DEBUG_ENABLED) {
+        Serial.println("[SD] Log buffer cleared");
     }
 }
 

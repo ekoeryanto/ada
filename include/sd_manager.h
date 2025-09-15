@@ -20,12 +20,23 @@ private:
     const unsigned long CHECK_INTERVAL = 5000; // Check every 5 seconds
     const unsigned long OPERATION_TIMEOUT = 2000; // 2 second timeout for operations
     
+    // Fallback logging buffer when SD is unavailable
+    std::vector<String> logBuffer;
+    const size_t MAX_BUFFER_SIZE = 100; // Keep last 100 log entries in memory
+    bool bufferLoggingEnabled;
+    
     // Private helper methods
     void detectCardType();
     bool checkCardPresence();
     String formatBytes(uint64_t bytes);
     String getCurrentTimestamp();
+    String getDateString();
     bool isOperationSafe();
+    void addToBuffer(const String& logEntry);
+    void flushBufferToSD();
+    void sendBufferToWebhook();
+    bool createLogFile(const String& filename);
+    String generateLogFilename();
     
 public:
     SDManager();
@@ -50,12 +61,18 @@ public:
     bool createDir(const char* path);
     bool removeDir(const char* path);
     
-    // Data logging specific methods
-    bool logData(const String& data);
+    // Data logging methods (safe with fallback)
     bool logDataWithTimestamp(const String& data);
-    bool createLogFile(const String& filename = "");
-    String generateLogFilename();
-    String getDateString();  // Helper for daily log files
+    bool logError(const String& error);
+    bool logDebug(const String& debug);
+    
+    // Buffer management
+    void enableBufferLogging(bool enable = true);
+    bool isBufferLoggingEnabled();
+    size_t getBufferSize();
+    std::vector<String> getBufferContent();
+    void clearBuffer();
+    // Note: flushBufferToSD() and sendBufferToWebhook() are private methods
     
     // System information
     String getCardInfo();
