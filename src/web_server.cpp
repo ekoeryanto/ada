@@ -1657,6 +1657,32 @@ void WebServerHandler::setupRoutes() {
         request->send(200, "application/json", response);
     });
 
+    // OTA Upload endpoint
+    server.on("/update", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        extern OTAHandler otaHandler;
+        
+        DynamicJsonDocument response(256);
+        response["success"] = !Update.hasError();
+        
+        if (Update.hasError()) {
+            response["error"] = "Update failed";
+        } else {
+            response["message"] = "Update successful, rebooting...";
+        }
+        
+        String responseStr;
+        serializeJson(response, responseStr);
+        request->send(response["success"] ? 200 : 400, "application/json", responseStr);
+        
+        if (!Update.hasError()) {
+            delay(1000);
+            ESP.restart();
+        }
+    }, [this](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+        extern OTAHandler otaHandler;
+        otaHandler.handleOTAUpload(request, filename, index, data, len, final);
+    });
+
     server.onNotFound([this](AsyncWebServerRequest *request) {
         request->send(404, "application/json", "{\"error\":\"Not found\"}");
     });

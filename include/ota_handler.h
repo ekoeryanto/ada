@@ -2,7 +2,6 @@
 #define OTA_HANDLER_H
 
 #include <ESPAsyncWebServer.h>
-#include <ElegantOTA.h>
 #include <WiFi.h>
 #include <Update.h>
 #include <ArduinoOTA.h>
@@ -11,12 +10,13 @@
 
 class OTAHandler {
 private:
-    AsyncWebServer* server;  // Use AsyncWebServer with ElegantOTA async mode
+    AsyncWebServer* server;  // Use AsyncWebServer for simple OTA upload
     bool otaEnabled;
     bool updateInProgress;
     
     // Helper functions
     void setupOTACallbacks();
+    void handleOTAResult(AsyncWebServerRequest *request);
     
 public:
     OTAHandler();
@@ -38,6 +38,9 @@ public:
     // Info functions
     String getUpdateURL();
     String getStatus();
+    
+    // OTA Upload handler (public for web server access)
+    void handleOTAUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
 };
 
 // Global instance

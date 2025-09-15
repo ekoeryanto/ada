@@ -20,9 +20,54 @@ bool OTAHandler::initialize(AsyncWebServer* webServer) {
     
     Serial.println("[OTA] Initializing OTA handler...");
     
-    // Initialize ElegantOTA in async mode with AsyncWebServer (for web interface)
-    ElegantOTA.begin(server, OTA_USERNAME, OTA_PASSWORD);
-    ElegantOTA.setAutoReboot(true);
+    // Setup simple web-based OTA upload page (no ElegantOTA)
+    server->on("/update", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String html = R"(
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32 OTA Update</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        .container { max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; text-align: center; }
+        .upload-form { margin: 20px 0; }
+        input[type="file"] { width: 100%; padding: 10px; margin: 10px 0; border: 2px dashed #ddd; border-radius: 4px; }
+        input[type="submit"] { background: #007bff; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; }
+        input[type="submit"]:hover { background: #0056b3; }
+        .progress { width: 100%; height: 20px; background: #f0f0f0; border-radius: 10px; margin: 10px 0; display: none; }
+        .progress-bar { height: 100%; background: #007bff; border-radius: 10px; width: 0%; transition: width 0.3s; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ESP32 Firmware Update</h1>
+        <form method='POST' action='/update' enctype='multipart/form-data' class="upload-form">
+            <input type='file' name='update' accept='.bin' required>
+            <input type='submit' value='Update Firmware'>
+        </form>
+        <div class="progress" id="progress">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div id="status"></div>
+    </div>
+    <script>
+        document.querySelector('form').onsubmit = function() {
+            document.getElementById('progress').style.display = 'block';
+            document.getElementById('status').innerHTML = 'Uploading...';
+        }
+    </script>
+</body>
+</html>
+        )";
+        request->send(200, "text/html", html);
+    });
+    
+    server->on("/update", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        handleOTAResult(request);
+    }, [this](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+        handleOTAUpload(request, filename, index, data, len, final);
+    });
     
     // Initialize ArduinoOTA (for command line uploads)
     ArduinoOTA.setHostname(HOSTNAME);
@@ -100,38 +145,46 @@ bool OTAHandler::initialize(AsyncWebServer* webServer) {
     otaEnabled = true;
     Serial.println("[OTA] OTA handler initialized successfully");
     Serial.printf("[OTA] Web OTA URL: http://%s/update\n", WiFi.localIP().toString().c_str());
-    Serial.printf("[OTA] Web Username: %s\n", OTA_USERNAME);
     Serial.printf("[OTA] Command line OTA: IP %s, Port 3232, Password: %s\n", WiFi.localIP().toString().c_str(), OTA_PASSWORD);
     
     return true;
 }
 
-void OTAHandler::setupOTACallbacks() {
-    // ElegantOTA has built-in callbacks for progress, start, end events
-    ElegantOTA.onStart([]() {
-        Serial.println("[OTA] Update Start");
-    });
-    
-    ElegantOTA.onProgress([](size_t current, size_t total) {
-        Serial.printf("[OTA] Progress: %u%%\r", (current / (total / 100)));
-    });
-    
-    ElegantOTA.onEnd([](bool success) {
-        if (success) {
-            Serial.println("\n[OTA] Update finished successfully!");
-        } else {
-            Serial.println("\n[OTA] Update failed!");
+void OTAHandler::handleOTAUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+    if (!index) {
+        Serial.printf("[OTA] Web update start: %s\n", filename.c_str());
+        updateInProgress = true;
+        if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
+            Update.printError(Serial);
         }
-    });
+    }
+    
+    if (Update.write(data, len) != len) {
+        Update.printError(Serial);
+    }
+    
+    if (final) {
+        if (Update.end(true)) {
+            Serial.printf("[OTA] Web update success: %u bytes\n", index + len);
+        } else {
+            Update.printError(Serial);
+        }
+        updateInProgress = false;
+    }
+}
+
+void OTAHandler::handleOTAResult(AsyncWebServerRequest *request) {
+    if (Update.hasError()) {
+        request->send(500, "text/plain", "Update failed");
+    } else {
+        request->send(200, "text/plain", "Update successful, restarting...");
+        delay(1000);
+        ESP.restart();
+    }
 }
 
 void OTAHandler::handle() {
-    // ElegantOTA in async mode handles requests automatically
-    // Just need to call loop for any background tasks
-    ElegantOTA.loop();
-    
     // Handle ArduinoOTA for command line uploads
-    // Add a periodic debug message to ensure this is being called
     static unsigned long lastDebug = 0;
     if (millis() - lastDebug > 60000) {  // Every 60 seconds
         Serial.printf("[OTA] Handler active - ArduinoOTA listening on port 3232\n");
