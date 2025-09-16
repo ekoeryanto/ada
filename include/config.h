@@ -20,6 +20,15 @@
 #define OTA_PASSWORD "Mar9aMulya"
 #define OTA_PORT 8080
 
+// Auto-Update Configuration
+#define AUTO_UPDATE_ENABLED true                    // Enable auto-update by default
+#define AUTO_UPDATE_SERVER_URL "https://your-server.com/firmware"  // Default update server
+#define AUTO_UPDATE_CHECK_INTERVAL 3600000         // Check every 1 hour (3600000 ms)
+#define AUTO_UPDATE_VERSION_ENDPOINT "/version"    // Version check endpoint
+#define AUTO_UPDATE_FIRMWARE_ENDPOINT "/download"  // Firmware download endpoint
+#define AUTO_UPDATE_MAX_RETRY 3                    // Maximum retry attempts
+#define AUTO_UPDATE_RETRY_DELAY 300000             // 5 minutes retry delay
+
 // Web Server Configuration
 #define WEB_SERVER_PORT 80
 

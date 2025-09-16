@@ -233,17 +233,15 @@ export const ModbusSchema = z.object({
     active_devices: z.number(),
   }),
   devices: z.array(z.object({
-    id: z.number(),
-    address: z.number(),
+    slave_id: z.number(),
     name: z.string(),
-    type: z.string(),
-    status: z.string(),
-    last_communication: z.number(),
+    status: z.string(), // "connected" or "offline"
     error_count: z.number(),
+    health_score: z.number(),
+    description: z.string(),
+    baud_rate: z.number(),
     enabled: z.boolean(),
-    registers_read: z.number(),
-    registers_written: z.number(),
-    response_time: z.number(),
+    response_timeout: z.number(),
   })).default([]),
 });
 
@@ -260,23 +258,16 @@ export interface ModbusUIResponse {
     active_devices: number;
   };
   devices: Array<{
-    id: number;
-    address: number;
+    slave_id: number;
     name: string;
-    type: string;
-    status: string;
-    last_communication: number;
+    status: string; // "connected" or "offline"
     error_count: number;
+    health_score: number;
+    description: string;
+    baud_rate: number;
     enabled: boolean;
-    registers_read: number;
-    registers_written: number;
-    response_time: number;
+    response_timeout: number;
   }>;
-  statistics?: {
-    total_requests: number;
-    success_rate: number;
-    error_count: number;
-  };
 }
 
 export const AnalogVoltageSchema = z.object({
@@ -757,11 +748,6 @@ export class AdaApiClient {
     return {
       ...parsed,
       devices: parsed.devices,
-      statistics: {
-        total_requests: parsed.network.total_requests,
-        success_rate: parsed.network.success_rate,
-        error_count: parsed.network.failed_requests,
-      },
     };
   }
 

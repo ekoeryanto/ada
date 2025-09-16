@@ -65,7 +65,7 @@ bool ModbusManager::begin(uint8_t rxPin, uint8_t txPin, uint8_t dePin) {
         return false;
     }
     
-    serial->begin(9600, SERIAL_8N1, rxPin, txPin);
+    serial->begin(19200, SERIAL_8E1, rxPin, txPin);  // Altivar 61: 19200 baud, 8-E-1
     
     // Initialize Modbus master
     master = new ModbusMaster();

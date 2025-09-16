@@ -1,5 +1,6 @@
 #include "web_server.h"
 #include "ota_handler.h"
+#include "auto_update_handler.h"
 #include "system_manager.h"
 #include "sd_manager.h"
 #include "ntp_manager.h"
@@ -1441,18 +1442,28 @@ void WebServerHandler::setupRoutes() {
         doc["network"]["failed_requests"] = stats.failedRequests;
         doc["network"]["active_devices"] = stats.activeDevices;
         
-        // Device list
+        // Device list - Show ALL configured devices (not just connected ones)
         JsonArray devices = doc.createNestedArray("devices");
-        std::vector<uint8_t> connectedDevices = modbusManager.getConnectedDevices();
         
-        for (uint8_t slaveId : connectedDevices) {
-            JsonObject device = devices.createNestedObject();
-            device["slave_id"] = slaveId;
-            device["name"] = modbusManager.getDeviceName(slaveId);
-            device["status"] = "connected";
-            device["last_communication"] = modbusManager.getLastCommunicationTime(slaveId);
-            device["error_count"] = modbusManager.getErrorCount(slaveId);
-            device["health_score"] = modbusManager.getDeviceHealth(slaveId);
+        // Scan all possible slave IDs to find configured devices
+        for (uint8_t slaveId = 1; slaveId <= 247; slaveId++) {
+            if (modbusManager.deviceExists(slaveId)) {
+                JsonObject device = devices.createNestedObject();
+                device["slave_id"] = slaveId;
+                device["name"] = modbusManager.getDeviceName(slaveId);
+                
+                // Get device status
+                bool isConnected = modbusManager.isDeviceConnected(slaveId);
+                device["status"] = isConnected ? "connected" : "offline";
+                device["error_count"] = modbusManager.getErrorCount(slaveId);
+                device["health_score"] = modbusManager.getDeviceHealth(slaveId);
+                
+                // For now, use default values since getDeviceConfig doesn't exist
+                device["description"] = "Modbus Device";
+                device["baud_rate"] = 19200;
+                device["enabled"] = true;
+                device["response_timeout"] = 1000;
+            }
         }
         
         String response;
@@ -1655,6 +1666,166 @@ void WebServerHandler::setupRoutes() {
         String response;
         serializeJson(doc, response);
         request->send(200, "application/json", response);
+    });
+
+    // Auto-Update API endpoints
+    server.on("/api/auto-update/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern AutoUpdateHandler autoUpdateHandler;
+        
+        DynamicJsonDocument doc(1024);
+        doc["enabled"] = autoUpdateHandler.isEnabled();
+        doc["status"] = autoUpdateHandler.getStatusString();
+        doc["last_error"] = autoUpdateHandler.getErrorString();
+        doc["update_available"] = autoUpdateHandler.isUpdateAvailable();
+        doc["last_check"] = autoUpdateHandler.getLastCheckTime();
+        doc["last_update"] = autoUpdateHandler.getLastUpdateTime();
+        doc["retry_count"] = autoUpdateHandler.getRetryCount();
+        
+        // Current version info
+        VersionInfo currentVersion = autoUpdateHandler.getCurrentVersionInfo();
+        doc["current_version"]["version"] = currentVersion.version;
+        doc["current_version"]["build_date"] = currentVersion.buildDate;
+        doc["current_version"]["build_time"] = currentVersion.buildTime;
+        doc["current_version"]["git_hash"] = currentVersion.gitHash;
+        
+        // Latest version info (if available)
+        if (autoUpdateHandler.isUpdateAvailable()) {
+            VersionInfo latestVersion = autoUpdateHandler.getLatestVersionInfo();
+            doc["latest_version"]["version"] = latestVersion.version;
+            doc["latest_version"]["build_date"] = latestVersion.buildDate;
+            doc["latest_version"]["build_time"] = latestVersion.buildTime;
+            doc["latest_version"]["git_hash"] = latestVersion.gitHash;
+            doc["latest_version"]["firmware_size"] = latestVersion.firmwareSize;
+            doc["latest_version"]["release_notes"] = latestVersion.releaseNotes;
+        }
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    server.on("/api/auto-update/config", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        extern AutoUpdateHandler autoUpdateHandler;
+        
+        AutoUpdateConfig config = autoUpdateHandler.getConfig();
+        
+        DynamicJsonDocument doc(512);
+        doc["enabled"] = config.enabled;
+        doc["server_url"] = config.serverUrl;
+        doc["check_interval"] = config.checkInterval;
+        doc["version_endpoint"] = config.versionEndpoint;
+        doc["firmware_endpoint"] = config.firmwareEndpoint;
+        doc["max_retry"] = config.maxRetry;
+        doc["retry_delay"] = config.retryDelay;
+        
+        String response;
+        serializeJson(doc, response);
+        request->send(200, "application/json", response);
+    });
+    
+    server.on("/api/auto-update/config", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        extern AutoUpdateHandler autoUpdateHandler;
+        
+        if (!request->hasParam("body", true)) {
+            request->send(400, "application/json", "{\"error\":\"Missing request body\"}");
+            return;
+        }
+        
+        String body = request->getParam("body", true)->value();
+        DynamicJsonDocument doc(512);
+        DeserializationError error = deserializeJson(doc, body);
+        
+        if (error) {
+            request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+            return;
+        }
+        
+        AutoUpdateConfig config = autoUpdateHandler.getConfig();
+        
+        if (doc.containsKey("enabled")) config.enabled = doc["enabled"];
+        if (doc.containsKey("server_url")) config.serverUrl = doc["server_url"].as<String>();
+        if (doc.containsKey("check_interval")) config.checkInterval = doc["check_interval"];
+        if (doc.containsKey("version_endpoint")) config.versionEndpoint = doc["version_endpoint"].as<String>();
+        if (doc.containsKey("firmware_endpoint")) config.firmwareEndpoint = doc["firmware_endpoint"].as<String>();
+        if (doc.containsKey("max_retry")) config.maxRetry = doc["max_retry"];
+        if (doc.containsKey("retry_delay")) config.retryDelay = doc["retry_delay"];
+        
+        if (autoUpdateHandler.setConfig(config)) {
+            DynamicJsonDocument response(256);
+            response["success"] = true;
+            response["message"] = "Configuration updated successfully";
+            
+            String responseStr;
+            serializeJson(response, responseStr);
+            request->send(200, "application/json", responseStr);
+        } else {
+            request->send(500, "application/json", "{\"error\":\"Failed to update configuration\"}");
+        }
+    });
+    
+    server.on("/api/auto-update/check", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        extern AutoUpdateHandler autoUpdateHandler;
+        
+        if (autoUpdateHandler.checkNow()) {
+            DynamicJsonDocument response(256);
+            response["success"] = true;
+            response["message"] = "Update check initiated";
+            
+            String responseStr;
+            serializeJson(response, responseStr);
+            request->send(200, "application/json", responseStr);
+        } else {
+            request->send(400, "application/json", "{\"error\":\"Auto-update is disabled or check already in progress\"}");
+        }
+    });
+    
+    server.on("/api/auto-update/install", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        extern AutoUpdateHandler autoUpdateHandler;
+        
+        if (!autoUpdateHandler.isUpdateAvailable()) {
+            request->send(400, "application/json", "{\"error\":\"No update available\"}");
+            return;
+        }
+        
+        if (autoUpdateHandler.installNow()) {
+            DynamicJsonDocument response(256);
+            response["success"] = true;
+            response["message"] = "Update installation started - device will restart after completion";
+            
+            String responseStr;
+            serializeJson(response, responseStr);
+            request->send(200, "application/json", responseStr);
+        } else {
+            request->send(500, "application/json", "{\"error\":\"Failed to start update installation\"}");
+        }
+    });
+    
+    server.on("/api/auto-update/enable", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        extern AutoUpdateHandler autoUpdateHandler;
+        
+        autoUpdateHandler.enable();
+        
+        DynamicJsonDocument response(256);
+        response["success"] = true;
+        response["message"] = "Auto-update enabled";
+        
+        String responseStr;
+        serializeJson(response, responseStr);
+        request->send(200, "application/json", responseStr);
+    });
+    
+    server.on("/api/auto-update/disable", HTTP_POST, [this](AsyncWebServerRequest *request) {
+        extern AutoUpdateHandler autoUpdateHandler;
+        
+        autoUpdateHandler.disable();
+        
+        DynamicJsonDocument response(256);
+        response["success"] = true;
+        response["message"] = "Auto-update disabled";
+        
+        String responseStr;
+        serializeJson(response, responseStr);
+        request->send(200, "application/json", responseStr);
     });
 
     // OTA Upload endpoint

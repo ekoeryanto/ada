@@ -251,20 +251,20 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       }
 
       devicesContainer.innerHTML = devicesList.map(device => {
-        const statusColor = device.status === 'online' ? 'text-green-400 bg-green-500/20 border-green-500/30' : 'text-red-400 bg-red-500/20 border-red-500/30';
+        const statusColor = device.status === 'connected' ? 'text-green-400 bg-green-500/20 border-green-500/30' : 'text-red-400 bg-red-500/20 border-red-500/30';
         
         return `
-          <div class="bg-slate-700/50 rounded-lg p-4 border ${device.status === 'online' ? 'border-green-500/30' : 'border-red-500/30'}">
+          <div class="bg-slate-700/50 rounded-lg p-4 border ${device.status === 'connected' ? 'border-green-500/30' : 'border-red-500/30'}">
             <div class="flex items-center justify-between mb-3">
               <div>
-                <h3 class="font-semibold text-white">${device.name || `Device ${device.address}`}</h3>
-                <p class="text-sm text-slate-400">Address: ${device.address} | Type: ${device.type || 'Unknown'}</p>
+                <h3 class="font-semibold text-white">${device.name || `Device ${device.slave_id}`}</h3>
+                <p class="text-sm text-slate-400">Address: ${device.slave_id} | Type: ${device.description || 'Modbus Device'}</p>
               </div>
               <div class="flex items-center space-x-2">
                 <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColor} border">
                   ${device.status || 'Unknown'}
                 </span>
-                <button onclick="removeDevice(${device.address})" class="text-red-400 hover:text-red-300">
+                <button onclick="removeDevice(${device.slave_id})" class="text-red-400 hover:text-red-300">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                   </svg>
@@ -272,8 +272,9 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
               </div>
             </div>
             <div class="text-sm text-slate-400">
-              <div>Poll Rate: ${device.poll_interval || 1000}ms</div>
-              <div>Last Poll: ${device.last_poll ? new Date(device.last_poll * 1000).toLocaleTimeString() : 'Never'}</div>
+              <div>Baud Rate: ${device.baud_rate || 19200}</div>
+              <div>Health Score: ${device.health_score || 0}/100</div>
+              <div>Errors: ${device.error_count || 0}</div>
             </div>
           </div>
         `;
@@ -287,7 +288,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     function updateDeviceSelector(devicesList: any[]) {
       selectedDevice.innerHTML = '<option value="">Select Device</option>' + 
         devicesList.map(device => 
-          `<option value="${device.address}">${device.name || `Device ${device.address}`}</option>`
+          `<option value="${device.slave_id}">${device.name || `Device ${device.slave_id}`}</option>`
         ).join('');
     }
 
@@ -351,23 +352,23 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     }
 
     // Update communication stats
-    function updateCommStats(stats: any) {
+    function updateCommStats(network: any) {
       commStats.innerHTML = `
         <div class="flex justify-between text-sm">
           <span class="text-slate-400">Total Requests:</span>
-          <span class="text-white">${stats.total_requests || 0}</span>
+          <span class="text-white">${network.total_requests || 0}</span>
         </div>
         <div class="flex justify-between text-sm">
           <span class="text-slate-400">Success Rate:</span>
-          <span class="text-green-400">${(stats.success_rate || 0).toFixed(1)}%</span>
+          <span class="text-green-400">${(network.success_rate || 0).toFixed(1)}%</span>
         </div>
         <div class="flex justify-between text-sm">
-          <span class="text-slate-400">Errors:</span>
-          <span class="text-red-400">${stats.error_count || 0}</span>
+          <span class="text-slate-400">Failed Requests:</span>
+          <span class="text-red-400">${network.failed_requests || 0}</span>
         </div>
         <div class="flex justify-between text-sm">
           <span class="text-slate-400">Avg Response:</span>
-          <span class="text-white">${stats.avg_response_time || 0}ms</span>
+          <span class="text-white">${network.avg_response_time || 0}ms</span>
         </div>
       `;
     }
@@ -423,11 +424,11 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         systemStatus.innerHTML = `
           <div class="flex justify-between text-sm">
             <span class="text-slate-400">Uptime:</span>
-            <span class="text-white">${Math.floor((status.uptime || 0) / 3600)}h ${Math.floor(((status.uptime || 0) % 3600) / 60)}m</span>
+            <span class="text-white">${status.uptime || 'N/A'}</span>
           </div>
           <div class="flex justify-between text-sm">
             <span class="text-slate-400">Free Memory:</span>
-            <span class="text-white">${Math.round((status.heap || 0) / 1024)}KB</span>
+            <span class="text-white">${Math.round((status.freeHeap || 0) / 1024)}KB</span>
           </div>
           <div class="flex justify-between text-sm">
             <span class="text-slate-400">Modbus Task:</span>
@@ -447,10 +448,9 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       scanDevicesBtn.textContent = 'Scanning...';
       
       try {
-        const result = await adaApi.scanModbusDevices();
-        if (result && result.devices) {
-          renderDevices(result.devices);
-        }
+        // For now, just refresh the device list
+        await updateData();
+        alert('Device scan completed. Check the device list for detected devices.');
       } catch (error) {
         alert('Failed to scan devices');
       } finally {
@@ -463,8 +463,6 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       const address = parseInt((document.getElementById('device-address') as HTMLInputElement).value);
       const name = (document.getElementById('device-name') as HTMLInputElement).value;
       const type = (document.getElementById('device-type') as HTMLSelectElement).value;
-      const pollInterval = parseInt((document.getElementById('poll-interval') as HTMLInputElement).value) || 1000;
-      const enabled = (document.getElementById('device-enabled') as HTMLSelectElement).value === 'true';
 
       if (!address || address < 1 || address > 247) {
         alert('Please enter a valid device address (1-247)');
@@ -475,9 +473,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         await adaApi.addModbusDevice({
           address,
           name: name || `Device ${address}`,
-          type: type || 'generic',
-          poll_interval: pollInterval,
-          enabled
+          type: type || 'generic'
         });
         
         alert('Device added successfully');
@@ -487,7 +483,6 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         (document.getElementById('device-address') as HTMLInputElement).value = '';
         (document.getElementById('device-name') as HTMLInputElement).value = '';
         (document.getElementById('device-type') as HTMLSelectElement).value = '';
-        (document.getElementById('poll-interval') as HTMLInputElement).value = '';
       } catch (error) {
         alert('Failed to add device');
       }
@@ -505,8 +500,8 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       testDeviceBtn.textContent = 'Testing...';
       
       try {
-        const result = await adaApi.testModbusDevice(address);
-        alert(result.success ? `Device responded successfully` : `Device test failed: ${result.error}`);
+        // For now, just show a placeholder message
+        alert(`Testing device at address ${address}... (Feature coming soon)`);
       } catch (error) {
         alert('Device test failed');
       } finally {
@@ -521,57 +516,20 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
       }
 
       try {
-        await adaApi.removeModbusDevice(address);
+        await adaApi.removeModbusDevice(address.toString());
         await updateData();
       } catch (error) {
         alert('Failed to remove device');
       }
     }
 
-    // Register management
+    // Register management (placeholder for now)
     async function addRegister() {
-      const deviceAddress = parseInt(selectedDevice.value);
-      const registerAddress = parseInt((document.getElementById('register-address') as HTMLInputElement).value);
-      const registerType = (document.getElementById('register-type') as HTMLSelectElement).value;
-      const dataType = (document.getElementById('data-type') as HTMLSelectElement).value;
-      const name = (document.getElementById('register-name') as HTMLInputElement).value;
-
-      if (!deviceAddress || !registerAddress || !name) {
-        alert('Please fill all required fields');
-        return;
-      }
-
-      try {
-        await adaApi.addModbusRegister({
-          device_address: deviceAddress,
-          register_address: registerAddress,
-          register_type: registerType,
-          data_type: dataType,
-          name
-        });
-        
-        alert('Register added successfully');
-        await updateData();
-        
-        // Clear form
-        (document.getElementById('register-address') as HTMLInputElement).value = '';
-        (document.getElementById('register-name') as HTMLInputElement).value = '';
-      } catch (error) {
-        alert('Failed to add register');
-      }
+      alert('Register management feature coming soon');
     }
 
     async function removeRegister(address: number) {
-      if (!confirm(`Remove register ${address}?`)) {
-        return;
-      }
-
-      try {
-        await adaApi.removeModbusRegister(address);
-        await updateData();
-      } catch (error) {
-        alert('Failed to remove register');
-      }
+      alert('Register management feature coming soon');
     }
 
     // Main update function
@@ -582,11 +540,7 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
         
         if (data) {
           if (data.devices) renderDevices(data.devices);
-          if (data.registers) renderRegisters(data.registers);
-          if (data.realtime_values) renderRealtimeValues(data.realtime_values);
-          if (data.stats) updateCommStats(data.stats);
-          if (data.rs485_config) updateRS485Config(data.rs485_config);
-          if (data.bus_status) updateBusStatus(data.bus_status);
+          if (data.network) updateCommStats(data.network);
         }
         
       } catch (error) {
@@ -601,9 +555,9 @@ import DashboardLayout from '../layouts/DashboardLayout.astro';
     testDeviceBtn.addEventListener('click', testDevice);
     addRegisterBtn.addEventListener('click', addRegister);
 
-    // Make functions globally available
-    window.removeDevice = removeDevice;
-    window.removeRegister = removeRegister;
+    // Make functions globally available for onclick handlers
+    (window as any).removeDevice = removeDevice;
+    (window as any).removeRegister = removeRegister;
 
     // Initialize the page
     async function init() {

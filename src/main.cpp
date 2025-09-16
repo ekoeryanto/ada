@@ -29,6 +29,7 @@
 #include "wifi_manager.h"
 #include "web_server.h"
 #include "ota_handler.h"
+#include "auto_update_handler.h"
 #include "sd_manager.h"
 #include "ntp_manager.h"
 #include "analog_voltage_manager.h"
@@ -370,18 +371,19 @@ void setup() {
         Serial.println("[Main] Modbus RTU Manager initialized successfully");
         systemMgr.setModuleHealth("modbus", HEALTH_OK);
         
-        // Configure demo device (Energy Meter example)
+        // Configure demo device (Altivar 61 VFD - MONITORING ONLY)
+        // Note: This system is for monitoring purposes only, no control commands
         ModbusDeviceConfig energyMeterConfig;
-        energyMeterConfig.name = "Energy_Meter";
-        energyMeterConfig.description = "3-Phase Energy Meter";
-        energyMeterConfig.manufacturer = "Generic";
-        energyMeterConfig.model = "EM-3000";
+        energyMeterConfig.name = "Altivar_61";
+        energyMeterConfig.description = "Schneider Altivar 61 VFD - Monitoring Only";
+        energyMeterConfig.manufacturer = "Schneider Electric";
+        energyMeterConfig.model = "Altivar 61";
         energyMeterConfig.slaveId = 2;
-        energyMeterConfig.baudRate = 9600;
+        energyMeterConfig.baudRate = 19200;
         energyMeterConfig.dataBits = 8;
-        energyMeterConfig.parity = 0;
+        energyMeterConfig.parity = 1;  // Even parity (8-E-1)
         energyMeterConfig.stopBits = 1;
-        energyMeterConfig.enabled = false;  // Disabled by default (may not be connected)
+        energyMeterConfig.enabled = true;  // Enabled for monitoring
         energyMeterConfig.group = "Power";
         energyMeterConfig.tags = "energy,power,meter";
         energyMeterConfig.responseTimeout = 2000;
@@ -391,28 +393,117 @@ void setup() {
         energyMeterConfig.healthMonitoring = true;
         energyMeterConfig.healthInterval = 60000;
         
-        // Voltage register
-        ModbusRegisterMap voltageReg;
-        voltageReg.name = "Voltage";
-        voltageReg.address = 0x100;
-        voltageReg.dataType = MB_TYPE_FLOAT32;
-        voltageReg.byteOrder = MB_BYTE_ORDER_ABCD;
-        voltageReg.registerCount = 2;
-        voltageReg.scaleFactor = 1.0f;
-        voltageReg.offset = 0.0f;
-        voltageReg.unit = "V";
-        voltageReg.group = "Power";
-        voltageReg.tags = "voltage,power";
-        voltageReg.readOnly = true;
-        voltageReg.minValue = 0.0f;
-        voltageReg.maxValue = 1000.0f;
-        voltageReg.autoUpdate = true;
-        voltageReg.updateInterval = 10000;
-        voltageReg.valid = false;
-        voltageReg.quality = 0;
-        voltageReg.timestamp = 0;
+        // Altivar 61 Monitoring Registers (Read-Only) - Correct Register Addresses
         
-        energyMeterConfig.inputRegisters.push_back(voltageReg);
+        // 1. Test Register - Register 3201 (verified to exist)
+        ModbusRegisterMap testReg;
+        testReg.name = "Test_Register_3201";
+        testReg.address = 3201;  // Verified working register
+        testReg.dataType = MB_TYPE_UINT16;
+        testReg.byteOrder = MB_BYTE_ORDER_ABCD;
+        testReg.registerCount = 1;
+        testReg.scaleFactor = 1.0f;
+        testReg.offset = 0.0f;
+        testReg.unit = "";
+        testReg.group = "Test";
+        testReg.tags = "test,verified,working";
+        testReg.readOnly = true;
+        testReg.minValue = 0.0f;
+        testReg.maxValue = 65535.0f;
+        testReg.autoUpdate = true;
+        testReg.updateInterval = 2000;  // 2 second updates for testing
+        testReg.valid = false;
+        testReg.quality = 0;
+        testReg.timestamp = 0;
+        energyMeterConfig.inputRegisters.push_back(testReg);
+        
+        // 2. Output Speed Feedback (RPM or %) - Register 3202 (0x0C82)
+        ModbusRegisterMap speedReg;
+        speedReg.name = "Output_Speed";
+        speedReg.address = 3202;  // 0x0C82
+        speedReg.dataType = MB_TYPE_UINT16;
+        speedReg.byteOrder = MB_BYTE_ORDER_ABCD;
+        speedReg.registerCount = 1;
+        speedReg.scaleFactor = 0.1f;  // Assuming 0.1% or 0.1 RPM resolution
+        speedReg.offset = 0.0f;
+        speedReg.unit = "RPM";
+        speedReg.group = "Motor";
+        speedReg.tags = "speed,rpm,output,motor,monitoring";
+        speedReg.readOnly = true;
+        speedReg.minValue = 0.0f;
+        speedReg.maxValue = 6000.0f;  // Typical max RPM
+        speedReg.autoUpdate = true;
+        speedReg.updateInterval = 3000;  // 3 second updates
+        speedReg.valid = false;
+        speedReg.quality = 0;
+        speedReg.timestamp = 0;
+        energyMeterConfig.inputRegisters.push_back(speedReg);
+        
+        // 3. Motor Current - Register 3204 (0x0C84)
+        ModbusRegisterMap currentReg;
+        currentReg.name = "Motor_Current";
+        currentReg.address = 3204;  // 0x0C84
+        currentReg.dataType = MB_TYPE_UINT16;
+        currentReg.byteOrder = MB_BYTE_ORDER_ABCD;
+        currentReg.registerCount = 1;
+        currentReg.scaleFactor = 0.1f;  // 0.1 A resolution
+        currentReg.offset = 0.0f;
+        currentReg.unit = "A";
+        currentReg.group = "Motor";
+        currentReg.tags = "current,motor,monitoring";
+        currentReg.readOnly = true;
+        currentReg.minValue = 0.0f;
+        currentReg.maxValue = 500.0f;
+        currentReg.autoUpdate = true;
+        currentReg.updateInterval = 3000;
+        currentReg.valid = false;
+        currentReg.quality = 0;
+        currentReg.timestamp = 0;
+        energyMeterConfig.inputRegisters.push_back(currentReg);
+        
+        // 4. Drive Thermal State - Register 3303 (0x0CE7)
+        ModbusRegisterMap thermalReg;
+        thermalReg.name = "Thermal_State";
+        thermalReg.address = 3303;  // 0x0CE7
+        thermalReg.dataType = MB_TYPE_UINT16;
+        thermalReg.byteOrder = MB_BYTE_ORDER_ABCD;
+        thermalReg.registerCount = 1;
+        thermalReg.scaleFactor = 1.0f;
+        thermalReg.offset = 0.0f;
+        thermalReg.unit = "%";
+        thermalReg.group = "Thermal";
+        thermalReg.tags = "thermal,temperature,monitoring,protection";
+        thermalReg.readOnly = true;
+        thermalReg.minValue = 0.0f;
+        thermalReg.maxValue = 120.0f;  // 120% thermal capacity
+        thermalReg.autoUpdate = true;
+        thermalReg.updateInterval = 10000;  // 10 second updates
+        thermalReg.valid = false;
+        thermalReg.quality = 0;
+        thermalReg.timestamp = 0;
+        energyMeterConfig.inputRegisters.push_back(thermalReg);
+        
+        // 5. Fault Code - Register 3027 (0x0BD3)
+        ModbusRegisterMap faultReg;
+        faultReg.name = "Fault_Code";
+        faultReg.address = 3027;  // 0x0BD3
+        faultReg.dataType = MB_TYPE_UINT16;
+        faultReg.byteOrder = MB_BYTE_ORDER_ABCD;
+        faultReg.registerCount = 1;
+        faultReg.scaleFactor = 1.0f;
+        faultReg.offset = 0.0f;
+        faultReg.unit = "";
+        faultReg.group = "Fault";
+        faultReg.tags = "fault,error,alarm,monitoring";
+        faultReg.readOnly = true;
+        faultReg.minValue = 0.0f;
+        faultReg.maxValue = 65535.0f;
+        faultReg.autoUpdate = true;
+        faultReg.updateInterval = 5000;  // 5 second updates for fault monitoring
+        faultReg.valid = false;
+        faultReg.quality = 0;
+        faultReg.timestamp = 0;
+        energyMeterConfig.inputRegisters.push_back(faultReg);
         
         // Add energy meter device (disabled by default)
         modbusManager.addDevice(energyMeterConfig);
@@ -515,6 +606,18 @@ void setup() {
         } else {
             Serial.println("[Main] Failed to initialize OTA handler - continuing without OTA");
             systemMgr.setModuleHealth("ota", HEALTH_ERROR);
+        }
+        
+        // Initialize Auto-Update handler
+        Serial.println("[Main] Initializing Auto-Update Handler...");
+        if (autoUpdateHandler.initialize()) {
+            Serial.println("[Main] Auto-Update handler initialized successfully");
+            autoUpdateHandler.begin();
+            Serial.printf("[Main] Auto-update enabled: %s\n", autoUpdateHandler.isEnabled() ? "true" : "false");
+            Serial.printf("[Main] Update server: %s\n", autoUpdateHandler.getServerUrl().c_str());
+            Serial.printf("[Main] Check interval: %lu ms\n", autoUpdateHandler.getCheckInterval());
+        } else {
+            Serial.println("[Main] Failed to initialize Auto-Update handler");
         }
         
         Serial.println("[Main] Network services initialized successfully!");
@@ -920,6 +1023,9 @@ void loop() {
     // Handle OTA updates - always handle when WiFi is connected
     if (wifiMgr.isConnected()) {
         otaHandler.handle();
+        
+        // Handle Auto-Update
+        autoUpdateHandler.handle();
     }
     
     // Handle web server (AsyncWebServer handles this automatically)
